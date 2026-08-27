@@ -462,6 +462,7 @@ function TodayScreen({
   counts,
   queueCounts,
   activeUnits,
+  masteredSelectedCount,
   dailyGoal,
   practiceMode,
   missMode,
@@ -474,6 +475,7 @@ function TodayScreen({
   counts: Record<Box, number>
   queueCounts: ReturnType<typeof getQueueCounts>
   activeUnits: CurriculumUnit[]
+  masteredSelectedCount: number
   dailyGoal: number
   practiceMode: PracticeMode
   missMode: MissMode
@@ -505,6 +507,7 @@ function TodayScreen({
   const hasFutureCards = queueCounts.future > 0
   const modeDescription = practiceMode === 'conjugation' ? 'conjugation cards' : practiceMode === 'vocabulary' ? 'vocabulary cards' : 'cards'
   const missDescription = missMode === 'step-back' ? 'Missed cards step back one box.' : 'Missed cards return to Box 1.'
+  const masteredOnly = activeUnits.length === 0 && masteredSelectedCount > 0
   return (
     <section className="page today-page">
       <header className="today-header">
@@ -529,22 +532,23 @@ function TodayScreen({
             </details>
             <details className="context-disclosure">
               <summary><span>Session details</span><Icon name="chevron" size={16} /></summary>
-              <p>Selected curriculum: <ActiveCurriculumLabel units={activeUnits} />. Mode: {practiceModeLabel(practiceMode)}. Session limit: up to {dailyGoal} cards.</p>
+              <p>Selected curriculum: {activeUnits.length > 0 ? <ActiveCurriculumLabel units={activeUnits} /> : masteredOnly ? `${masteredSelectedCount} mastered unit${masteredSelectedCount === 1 ? '' : 's'} on refresh` : 'No curriculum selected'}. Mode: {practiceModeLabel(practiceMode)}. Session limit: up to {dailyGoal} cards.</p>
               <p>Due cards come first, then new cards fill any open spots. A session may be shorter when fewer cards are ready.</p>
             </details>
           </div>
           {notice && <p className="inline-notice today-message" role="alert">{notice}</p>}
           {!hasCards && !notice && activeUnits.length > 0 && <p className="quiet-note today-message">{selectedCardCount === 0 ? `No ${modeDescription} are authored for the selected units yet. Switch practice mode or choose A-01–A-03.` : hasFutureCards ? 'No cards are due right now. Come back when the next review is ready.' : 'No cards are available right now.'}</p>}
-          {activeUnits.length === 0 && <p className="empty-guidance today-message">Open Menu → Curriculum to choose a starting area.</p>}
+          {!hasCards && !notice && masteredOnly && <p className="quiet-note today-message">Mastered objectives return for occasional refreshes. {hasFutureCards ? 'The next refresh is scheduled.' : 'No refresh is due right now.'}</p>}
+          {activeUnits.length === 0 && !masteredOnly && <p className="empty-guidance today-message">Open Menu → Curriculum to choose a starting area.</p>}
           {activeUnits.length > 0 && selectedCardCount === 0 && <p className="empty-guidance today-message">Switch practice mode or choose starter units A-01–A-03 for conjugation cards.</p>}
         </div>
         <section ref={actionPanelRef} className="next-card-panel">
           <div className="next-card-copy">
             <span className="focus-kicker">Next session</span>
-            <h2>{activeUnits.length === 0 ? 'Choose a curriculum to begin.' : selectedCardCount === 0 ? `No ${modeDescription} here yet` : hasCards ? `${sessionSize} cards ready` : 'All caught up'}</h2>
+            <h2>{masteredOnly ? hasCards ? `${sessionSize} refresh card${sessionSize === 1 ? '' : 's'} ready` : 'All caught up' : activeUnits.length === 0 ? 'Choose a curriculum to begin.' : selectedCardCount === 0 ? `No ${modeDescription} here yet` : hasCards ? `${sessionSize} cards ready` : 'All caught up'}</h2>
           </div>
           <button type="button" className="button button-primary button-large" onClick={onStart} disabled={!hasCards}>
-            {hasCards ? `Start ${sessionSize}-card practice` : activeUnits.length === 0 ? 'Choose a curriculum first' : 'All caught up'}
+            {hasCards ? `Start ${sessionSize}-card practice` : masteredOnly ? 'All caught up' : activeUnits.length === 0 ? 'Choose a curriculum first' : 'All caught up'}
             {hasCards && <Icon name="arrow" size={17} />}
           </button>
         </section>
@@ -556,6 +560,7 @@ function TodayScreen({
 function CurriculumScreen({
   selectedIds,
   masteredIds,
+  masteredSelectedCount,
   selectedCardCount,
   practiceMode,
   unitCardCounts,
@@ -566,6 +571,7 @@ function CurriculumScreen({
 }: {
   selectedIds: string[]
   masteredIds: ReadonlySet<string>
+  masteredSelectedCount: number
   selectedCardCount: number
   practiceMode: PracticeMode
   unitCardCounts: Record<string, number>
@@ -584,8 +590,8 @@ function CurriculumScreen({
         <span className="screen-kicker">Current selection</span>
         <strong className="selection-total">{selectedCardCount}</strong>
         <span className="selection-label">learning items available</span>
-        <p>{practiceModeLabel(practiceMode)} · {selectedIds.length === 0 ? 'Choose at least one unit to start.' : `${selectedIds.length} active unit${selectedIds.length === 1 ? '' : 's'}.`}</p>
-        <button type="button" className="button button-primary button-full" onClick={onBack} disabled={selectedIds.length === 0}>Practice selected units <Icon name="arrow" size={16} /></button>
+        <p>{practiceModeLabel(practiceMode)} · {selectedIds.length > 0 ? `${selectedIds.length} active unit${selectedIds.length === 1 ? '' : 's'}.` : masteredSelectedCount > 0 ? `${masteredSelectedCount} mastered unit${masteredSelectedCount === 1 ? '' : 's'} will return for occasional refreshes.` : 'Choose at least one unit to start.'}</p>
+        <button type="button" className="button button-primary button-full" onClick={onBack} disabled={selectedIds.length === 0 && masteredSelectedCount === 0}>Practice selected units <Icon name="arrow" size={16} /></button>
       </div>
       <div className="curriculum-list">
         {(['A', 'B', 'C'] as Level[]).map((level) => {
@@ -1099,9 +1105,10 @@ export default function App() {
   }, [screen])
 
   const masteredLessonIds = useMemo(() => getMasteredLessonIds(allTargets, state.progress), [state.progress])
+  const masteredSelectedLessonIds = useMemo(() => new Set(state.selectedLessonIds.filter((id) => masteredLessonIds.has(id))), [masteredLessonIds, state.selectedLessonIds])
   const activeLessonIds = useMemo(() => state.selectedLessonIds.filter((id) => !masteredLessonIds.has(id)), [masteredLessonIds, state.selectedLessonIds])
-  const queueCounts = useMemo(() => getQueueCounts(allTargets, state.progress, activeLessonIds, today, state.practiceMode, state.enabledActivityTypes, masteredLessonIds), [activeLessonIds, masteredLessonIds, state.enabledActivityTypes, state.progress, state.practiceMode, today])
-  const readyCardCount = useMemo(() => queueCards(allTargets, state.progress, activeLessonIds, today, state.dailyGoal, { mode: state.practiceMode, maxNewCards: state.dailyGoal, activityTypes: state.enabledActivityTypes, masteredLessonIds }).length, [activeLessonIds, masteredLessonIds, state.dailyGoal, state.enabledActivityTypes, state.practiceMode, state.progress, today])
+  const queueCounts = useMemo(() => getQueueCounts(allTargets, state.progress, activeLessonIds, today, state.practiceMode, state.enabledActivityTypes, masteredSelectedLessonIds), [activeLessonIds, masteredSelectedLessonIds, state.enabledActivityTypes, state.progress, state.practiceMode, today])
+  const readyCardCount = useMemo(() => queueCards(allTargets, state.progress, activeLessonIds, today, state.dailyGoal, { mode: state.practiceMode, maxNewCards: state.dailyGoal, activityTypes: state.enabledActivityTypes, masteredLessonIds: masteredSelectedLessonIds }).length, [activeLessonIds, masteredSelectedLessonIds, state.dailyGoal, state.enabledActivityTypes, state.practiceMode, state.progress, today])
   const activeUnits = useMemo(() => activeLessonIds.map((id) => curriculumById.get(id)).filter((unit): unit is CurriculumUnit => Boolean(unit)), [activeLessonIds])
   const unitCardCounts = useMemo(() => allTargets.reduce<Record<string, number>>((counts, card) => {
     if (cardMatchesMode(card, state.practiceMode, state.enabledActivityTypes)) counts[card.lessonId] = (counts[card.lessonId] ?? 0) + 1
@@ -1162,9 +1169,9 @@ export default function App() {
   }
 
   function startSession() {
-    const nextQueue = queueCards(allTargets, state.progress, activeLessonIds, today, state.dailyGoal, { mode: state.practiceMode, maxNewCards: state.dailyGoal, activityTypes: state.enabledActivityTypes, masteredLessonIds })
+    const nextQueue = queueCards(allTargets, state.progress, activeLessonIds, today, state.dailyGoal, { mode: state.practiceMode, maxNewCards: state.dailyGoal, activityTypes: state.enabledActivityTypes, masteredLessonIds: masteredSelectedLessonIds })
     if (nextQueue.length === 0) {
-      setNotice(activeLessonIds.length === 0 && masteredLessonIds.size === 0
+      setNotice(activeLessonIds.length === 0 && masteredSelectedLessonIds.size === 0
         ? 'Choose at least one curriculum unit before starting.'
         : queueCounts.future > 0
           ? 'No cards are due right now. Your next review will appear on its scheduled date.'
@@ -1381,10 +1388,10 @@ export default function App() {
 
   function renderScreen() {
     const hasMoreCards = queueCounts.overdue + queueCounts.due + queueCounts.newCards > 0
-    if (screen === 'curriculum') return <CurriculumScreen selectedIds={activeLessonIds} masteredIds={masteredLessonIds} selectedCardCount={selectedCardCount} practiceMode={state.practiceMode} unitCardCounts={unitCardCounts} onToggleLesson={toggleLesson} onToggleGroup={toggleGroup} onToggleLevel={toggleLevel} onBack={() => setScreen('today')} />
+    if (screen === 'curriculum') return <CurriculumScreen selectedIds={activeLessonIds} masteredIds={masteredLessonIds} masteredSelectedCount={masteredSelectedLessonIds.size} selectedCardCount={selectedCardCount} practiceMode={state.practiceMode} unitCardCounts={unitCardCounts} onToggleLesson={toggleLesson} onToggleGroup={toggleGroup} onToggleLevel={toggleLevel} onBack={() => setScreen('today')} />
     if (screen === 'quiz' && currentQuestion) return <QuizScreen question={currentQuestion} unit={currentUnit} currentBox={state.progress[currentQuestion.card.id]?.box ?? 1} index={sessionIndex} total={session.length} feedback={feedback} repairing={repairing} onAnswer={handleAnswer} onStartRepair={beginRepair} onContinue={continueSession} onExit={exitSession} onMenu={() => setMenuOpen(true)} menuOpen={menuOpen} menuTriggerRef={menuTriggerRef} viewMode={viewMode} onTogglePresentation={togglePresentationMode} />
     if (screen === 'results') return results ? <ResultsScreen results={results} shelf={shelf} hasMoreCards={hasMoreCards} onDone={() => setScreen('today')} onKeepGoing={startSession} /> : <ProgressionOverviewScreen state={state} shelf={shelf} activeUnits={activeUnits} onToday={() => setScreen('today')} onCurriculum={() => setScreen('curriculum')} />
-    return <TodayScreen counts={shelf} queueCounts={queueCounts} activeUnits={activeUnits} dailyGoal={state.dailyGoal} practiceMode={state.practiceMode} missMode={state.missMode} selectedCardCount={selectedCardCount} readyCardCount={readyCardCount} onStart={startSession} notice={notice} motion={shelfMotion} />
+    return <TodayScreen counts={shelf} queueCounts={queueCounts} activeUnits={activeUnits} masteredSelectedCount={masteredSelectedLessonIds.size} dailyGoal={state.dailyGoal} practiceMode={state.practiceMode} missMode={state.missMode} selectedCardCount={selectedCardCount} readyCardCount={readyCardCount} onStart={startSession} notice={notice} motion={shelfMotion} />
   }
 
   return (
