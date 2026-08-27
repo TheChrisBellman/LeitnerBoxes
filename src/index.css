@@ -1275,6 +1275,24 @@ button:disabled {
   background: var(--cobalt-soft);
 }
 
+.unit-option.is-mastered,
+.unit-option.is-mastered:hover {
+  border-color: var(--line);
+  background: var(--paper);
+  cursor: not-allowed;
+}
+
+.unit-option.is-mastered .unit-copy small,
+.unit-option.is-mastered .unit-count {
+  color: var(--green);
+  font-weight: 750;
+}
+
+.unit-option.is-mastered .custom-check {
+  border-color: var(--green);
+  background: var(--green-soft);
+}
+
 .unit-option:focus-within {
   border-color: var(--cobalt-dark);
   outline: 3px solid var(--cobalt-dark);

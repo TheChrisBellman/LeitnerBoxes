@@ -8,6 +8,7 @@ import {
   activityTypesForTarget,
   buildSessionQuestions,
   dateKey,
+  getMasteredLessonIds,
   getQueueCounts,
   matchesActivityTypes,
   queueCards,
@@ -554,6 +555,7 @@ function TodayScreen({
 
 function CurriculumScreen({
   selectedIds,
+  masteredIds,
   selectedCardCount,
   practiceMode,
   unitCardCounts,
@@ -563,6 +565,7 @@ function CurriculumScreen({
   onBack,
 }: {
   selectedIds: string[]
+  masteredIds: ReadonlySet<string>
   selectedCardCount: number
   practiceMode: PracticeMode
   unitCardCounts: Record<string, number>
@@ -576,7 +579,7 @@ function CurriculumScreen({
 
   return (
     <section className="page curriculum-page">
-      <ScreenHeader title="Curriculum" description="Choose the objectives and themes you want in your practice." onBack={onBack} />
+      <ScreenHeader title="Curriculum" description="Choose the objectives and themes you want in your practice. Mastered objectives pause automatically and return for occasional refreshes." onBack={onBack} />
       <div className="selection-summary surface-panel">
         <span className="screen-kicker">Current selection</span>
         <strong className="selection-total">{selectedCardCount}</strong>
@@ -588,39 +591,46 @@ function CurriculumScreen({
         {(['A', 'B', 'C'] as Level[]).map((level) => {
           const units = curriculumUnits.filter((unit) => unit.level === level)
           const groups = [...new Set(units.map((unit) => unit.group))]
-          const selectedInLevel = units.filter((unit) => selected.has(unit.id)).length
+          const selectableUnits = units.filter((unit) => !masteredIds.has(unit.id))
+          const selectedInLevel = selectableUnits.filter((unit) => selected.has(unit.id)).length
+          const allLevelMastered = selectableUnits.length === 0
           const expanded = expandedLevels[level]
           return (
             <section className="level-section" key={level}>
               <button type="button" className="level-header" onClick={() => setExpandedLevels((current) => ({ ...current, [level]: !current[level] }))} aria-expanded={expanded}>
                 <span className={`level-badge level-${level.toLowerCase()}`}>{level}</span>
-                <span className="level-header-copy"><strong>Level {level} · {levelNames[level]}</strong><small>{levelDescriptions[level]} · {selectedInLevel} / {units.length} selected</small></span>
+                <span className="level-header-copy"><strong>Level {level} · {levelNames[level]}</strong><small>{levelDescriptions[level]} · {allLevelMastered ? 'All mastered' : `${selectedInLevel} / ${selectableUnits.length} selected`}</small></span>
                 <Icon name="chevron" size={18} />
               </button>
               {expanded && (
                 <div className="level-body">
                   <div className="level-actions">
-                    <span>{selectedInLevel === units.length ? 'Every unit is active.' : 'Select the whole level'}</span>
-                    <button type="button" className="text-button" onClick={() => onToggleLevel(level)} aria-pressed={selectedInLevel === units.length}>{selectedInLevel === units.length ? 'Deselect all' : 'Select all'}</button>
+                    <span>{allLevelMastered ? 'Every unit is mastered.' : selectedInLevel === selectableUnits.length ? 'Every available unit is active.' : 'Select the whole level'}</span>
+                    <button type="button" className="text-button" onClick={() => onToggleLevel(level)} disabled={allLevelMastered} aria-pressed={!allLevelMastered && selectedInLevel === selectableUnits.length}>{allLevelMastered ? 'All mastered' : selectedInLevel === selectableUnits.length ? 'Deselect all' : 'Select all'}</button>
                   </div>
                   {groups.map((group) => {
                     const groupUnits = units.filter((unit) => unit.group === group)
-                    const selectedGroup = groupUnits.every((unit) => selected.has(unit.id))
+                    const selectableGroupUnits = groupUnits.filter((unit) => !masteredIds.has(unit.id))
+                    const allGroupMastered = selectableGroupUnits.length === 0
+                    const selectedGroup = !allGroupMastered && selectableGroupUnits.every((unit) => selected.has(unit.id))
                     return (
                       <div className="unit-group" key={group}>
                         <div className="unit-group-heading">
                           <span>{groupLabel(group)}</span>
-                          <button type="button" className="text-button" onClick={() => onToggleGroup(group)} aria-pressed={selectedGroup}>{selectedGroup ? 'Deselect all' : 'Select all'}</button>
+                          <button type="button" className="text-button" onClick={() => onToggleGroup(group)} disabled={allGroupMastered} aria-pressed={selectedGroup}>{allGroupMastered ? 'All mastered' : selectedGroup ? 'Deselect all' : 'Select all'}</button>
                         </div>
                         <div className="unit-options">
-                          {groupUnits.map((unit) => (
-                            <label className={`unit-option ${selected.has(unit.id) ? 'is-selected' : ''}`} key={unit.id}>
-                              <input type="checkbox" checked={selected.has(unit.id)} onChange={() => onToggleLesson(unit.id)} />
-                              <span className="custom-check" aria-hidden="true"><Icon name="check" size={13} /></span>
-                              <span className="unit-copy"><strong lang="fr">{unit.title}</strong><small>{unit.id.toUpperCase()}</small></span>
-                              <span className="unit-count">{unitCardCounts[unit.id] ?? 0}</span>
-                            </label>
-                          ))}
+                          {groupUnits.map((unit) => {
+                            const mastered = masteredIds.has(unit.id)
+                            return (
+                              <label className={`unit-option ${selected.has(unit.id) ? 'is-selected' : ''} ${mastered ? 'is-mastered' : ''}`} key={unit.id}>
+                                <input type="checkbox" checked={selected.has(unit.id)} disabled={mastered} onChange={() => onToggleLesson(unit.id)} />
+                                <span className="custom-check" aria-hidden="true"><Icon name="check" size={13} /></span>
+                                <span className="unit-copy"><strong lang="fr">{unit.title}</strong><small>{unit.id.toUpperCase()}{mastered ? ' · Mastered · occasional refresh' : ''}</small></span>
+                                <span className="unit-count">{mastered ? 'Mastered' : unitCardCounts[unit.id] ?? 0}</span>
+                              </label>
+                            )
+                          })}
                         </div>
                       </div>
                     )
@@ -1088,16 +1098,18 @@ export default function App() {
     }
   }, [screen])
 
-  const queueCounts = useMemo(() => getQueueCounts(allTargets, state.progress, state.selectedLessonIds, today, state.practiceMode, state.enabledActivityTypes), [state.enabledActivityTypes, state.progress, state.selectedLessonIds, state.practiceMode, today])
-  const readyCardCount = useMemo(() => queueCards(allTargets, state.progress, state.selectedLessonIds, today, state.dailyGoal, { mode: state.practiceMode, maxNewCards: state.dailyGoal, activityTypes: state.enabledActivityTypes }).length, [state.dailyGoal, state.enabledActivityTypes, state.practiceMode, state.progress, state.selectedLessonIds, today])
-  const activeUnits = useMemo(() => state.selectedLessonIds.map((id) => curriculumById.get(id)).filter((unit): unit is CurriculumUnit => Boolean(unit)), [state.selectedLessonIds])
+  const masteredLessonIds = useMemo(() => getMasteredLessonIds(allTargets, state.progress), [state.progress])
+  const activeLessonIds = useMemo(() => state.selectedLessonIds.filter((id) => !masteredLessonIds.has(id)), [masteredLessonIds, state.selectedLessonIds])
+  const queueCounts = useMemo(() => getQueueCounts(allTargets, state.progress, activeLessonIds, today, state.practiceMode, state.enabledActivityTypes, masteredLessonIds), [activeLessonIds, masteredLessonIds, state.enabledActivityTypes, state.progress, state.practiceMode, today])
+  const readyCardCount = useMemo(() => queueCards(allTargets, state.progress, activeLessonIds, today, state.dailyGoal, { mode: state.practiceMode, maxNewCards: state.dailyGoal, activityTypes: state.enabledActivityTypes, masteredLessonIds }).length, [activeLessonIds, masteredLessonIds, state.dailyGoal, state.enabledActivityTypes, state.practiceMode, state.progress, today])
+  const activeUnits = useMemo(() => activeLessonIds.map((id) => curriculumById.get(id)).filter((unit): unit is CurriculumUnit => Boolean(unit)), [activeLessonIds])
   const unitCardCounts = useMemo(() => allTargets.reduce<Record<string, number>>((counts, card) => {
     if (cardMatchesMode(card, state.practiceMode, state.enabledActivityTypes)) counts[card.lessonId] = (counts[card.lessonId] ?? 0) + 1
     return counts
   }, {}), [state.enabledActivityTypes, state.practiceMode])
-  const selectedCardCount = useMemo(() => allTargets.filter((card) => state.selectedLessonIds.includes(card.lessonId) && cardMatchesMode(card, state.practiceMode, state.enabledActivityTypes)).length, [state.enabledActivityTypes, state.selectedLessonIds, state.practiceMode])
+  const selectedCardCount = useMemo(() => allTargets.filter((card) => activeLessonIds.includes(card.lessonId) && cardMatchesMode(card, state.practiceMode, state.enabledActivityTypes)).length, [activeLessonIds, state.enabledActivityTypes, state.practiceMode])
   const displayMode = screen === 'quiz' || (screen === 'results' && results) ? sessionMode : state.practiceMode
-  const shelf = useMemo(() => shelfCounts(state.progress, state.selectedLessonIds, allTargets, displayMode, state.enabledActivityTypes), [state.enabledActivityTypes, state.progress, state.selectedLessonIds, displayMode])
+  const shelf = useMemo(() => shelfCounts(state.progress, activeLessonIds, allTargets, displayMode, state.enabledActivityTypes), [activeLessonIds, state.enabledActivityTypes, state.progress, displayMode])
   const currentQuestion = session[sessionIndex]
   const currentChoices = currentQuestion?.choices ?? []
   const currentUnit = currentQuestion ? levelForLesson(currentQuestion.card.lessonId) : undefined
@@ -1150,14 +1162,14 @@ export default function App() {
   }
 
   function startSession() {
-    const nextQueue = queueCards(allTargets, state.progress, state.selectedLessonIds, today, state.dailyGoal, { mode: state.practiceMode, maxNewCards: state.dailyGoal, activityTypes: state.enabledActivityTypes })
+    const nextQueue = queueCards(allTargets, state.progress, activeLessonIds, today, state.dailyGoal, { mode: state.practiceMode, maxNewCards: state.dailyGoal, activityTypes: state.enabledActivityTypes, masteredLessonIds })
     if (nextQueue.length === 0) {
-      setNotice(state.selectedLessonIds.length === 0
+      setNotice(activeLessonIds.length === 0 && masteredLessonIds.size === 0
         ? 'Choose at least one curriculum unit before starting.'
-        : selectedCardCount === 0
-          ? 'No cards of this type are authored for the selected units yet. Switch practice mode or choose A-01–A-03.'
-          : queueCounts.future > 0
-            ? 'No cards are due right now. Your next review will appear on its scheduled date.'
+        : queueCounts.future > 0
+          ? 'No cards are due right now. Your next review will appear on its scheduled date.'
+          : selectedCardCount === 0
+            ? 'No cards of this type are authored for the selected units yet. Switch practice mode or choose A-01–A-03.'
             : 'No cards are available right now.')
       return
     }
@@ -1230,7 +1242,9 @@ export default function App() {
     const completedStreak = completeStreak(state.streak, today)
     const nextState = { ...state, streak: completedStreak }
     commitState(nextState)
-    setResults({ ...sessionStats, box5Count: shelfCounts(nextState.progress, nextState.selectedLessonIds, allTargets, sessionMode, nextState.enabledActivityTypes)[5] })
+    const nextMasteredLessonIds = getMasteredLessonIds(allTargets, nextState.progress)
+    const nextActiveLessonIds = nextState.selectedLessonIds.filter((id) => !nextMasteredLessonIds.has(id))
+    setResults({ ...sessionStats, box5Count: shelfCounts(nextState.progress, nextActiveLessonIds, allTargets, sessionMode, nextState.enabledActivityTypes)[5] })
     setScreen('results')
     setFeedback(null)
     setRepairing(false)
@@ -1299,6 +1313,7 @@ export default function App() {
   }
 
   function toggleLesson(lessonId: string) {
+    if (masteredLessonIds.has(lessonId)) return
     updateState((previous) => {
       const selected = new Set(previous.selectedLessonIds)
       if (selected.has(lessonId)) selected.delete(lessonId)
@@ -1309,7 +1324,8 @@ export default function App() {
 
   function toggleGroup(group: string) {
     updateState((previous) => {
-      const groupIds = curriculumUnits.filter((unit) => unit.group === group).map((unit) => unit.id)
+      const mastered = getMasteredLessonIds(allTargets, previous.progress)
+      const groupIds = curriculumUnits.filter((unit) => unit.group === group && !mastered.has(unit.id)).map((unit) => unit.id)
       const selected = new Set(previous.selectedLessonIds)
       const shouldSelect = groupIds.some((id) => !selected.has(id))
       groupIds.forEach((id) => shouldSelect ? selected.add(id) : selected.delete(id))
@@ -1319,7 +1335,8 @@ export default function App() {
 
   function toggleLevel(level: Level) {
     updateState((previous) => {
-      const levelIds = curriculumUnits.filter((unit) => unit.level === level).map((unit) => unit.id)
+      const mastered = getMasteredLessonIds(allTargets, previous.progress)
+      const levelIds = curriculumUnits.filter((unit) => unit.level === level && !mastered.has(unit.id)).map((unit) => unit.id)
       const selected = new Set(previous.selectedLessonIds)
       const shouldSelect = levelIds.some((id) => !selected.has(id))
       levelIds.forEach((id) => shouldSelect ? selected.add(id) : selected.delete(id))
@@ -1364,7 +1381,7 @@ export default function App() {
 
   function renderScreen() {
     const hasMoreCards = queueCounts.overdue + queueCounts.due + queueCounts.newCards > 0
-    if (screen === 'curriculum') return <CurriculumScreen selectedIds={state.selectedLessonIds} selectedCardCount={selectedCardCount} practiceMode={state.practiceMode} unitCardCounts={unitCardCounts} onToggleLesson={toggleLesson} onToggleGroup={toggleGroup} onToggleLevel={toggleLevel} onBack={() => setScreen('today')} />
+    if (screen === 'curriculum') return <CurriculumScreen selectedIds={activeLessonIds} masteredIds={masteredLessonIds} selectedCardCount={selectedCardCount} practiceMode={state.practiceMode} unitCardCounts={unitCardCounts} onToggleLesson={toggleLesson} onToggleGroup={toggleGroup} onToggleLevel={toggleLevel} onBack={() => setScreen('today')} />
     if (screen === 'quiz' && currentQuestion) return <QuizScreen question={currentQuestion} unit={currentUnit} currentBox={state.progress[currentQuestion.card.id]?.box ?? 1} index={sessionIndex} total={session.length} feedback={feedback} repairing={repairing} onAnswer={handleAnswer} onStartRepair={beginRepair} onContinue={continueSession} onExit={exitSession} onMenu={() => setMenuOpen(true)} menuOpen={menuOpen} menuTriggerRef={menuTriggerRef} viewMode={viewMode} onTogglePresentation={togglePresentationMode} />
     if (screen === 'results') return results ? <ResultsScreen results={results} shelf={shelf} hasMoreCards={hasMoreCards} onDone={() => setScreen('today')} onKeepGoing={startSession} /> : <ProgressionOverviewScreen state={state} shelf={shelf} activeUnits={activeUnits} onToday={() => setScreen('today')} onCurriculum={() => setScreen('curriculum')} />
     return <TodayScreen counts={shelf} queueCounts={queueCounts} activeUnits={activeUnits} dailyGoal={state.dailyGoal} practiceMode={state.practiceMode} missMode={state.missMode} selectedCardCount={selectedCardCount} readyCardCount={readyCardCount} onStart={startSession} notice={notice} motion={shelfMotion} />

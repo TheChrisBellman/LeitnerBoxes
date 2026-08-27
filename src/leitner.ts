@@ -71,6 +71,23 @@ export function isDue(progress: CardProgress, today = dateKey()): boolean {
   return compareDateKeys(progress.due, today) <= 0
 }
 
+export function isBeyondBoxFive(progress: CardProgress | undefined): boolean {
+  return progress?.box === 5 && (progress.maintenanceStep ?? 0) >= 1
+}
+
+export function getMasteredLessonIds<T extends SchedulableCard>(
+  cards: readonly T[],
+  progress: Record<string, CardProgress>,
+): Set<string> {
+  const itemsByLesson = new Map<string, T[]>()
+  cards.forEach((card) => {
+    const items = itemsByLesson.get(card.lessonId) ?? []
+    items.push(card)
+    itemsByLesson.set(card.lessonId, items)
+  })
+  return new Set([...itemsByLesson].filter(([, items]) => items.every((card) => isBeyondBoxFive(progress[card.id]))).map(([lessonId]) => lessonId))
+}
+
 export type ScheduleResult = {
   progress: CardProgress
   previousBox: Box
@@ -133,6 +150,7 @@ export type QueueOptions = {
   mode?: PracticeMode
   maxNewCards?: number
   activityTypes?: readonly ActivityType[]
+  masteredLessonIds?: Iterable<string>
 }
 
 export type QuestionDirection = 'french-to-english' | 'english-to-french' | 'conjugation' | 'exercise'
@@ -518,17 +536,25 @@ export function getQueueCounts<T extends SchedulableCard>(
   today = dateKey(),
   mode: PracticeMode = 'mixed',
   activityTypes?: readonly ActivityType[],
+  masteredLessonIds?: Iterable<string>,
 ): QueueCounts {
   const selected = new Set(selectedLessonIds)
-  return cards.reduce<QueueCounts>((counts, card) => {
-    if (!selected.has(card.lessonId) || !matchesMode(card, mode) || !matchesActivityTypes(card, activityTypes)) return counts
+  const counts = cards.reduce<QueueCounts>((current, card) => {
+    if (!selected.has(card.lessonId) || !matchesMode(card, mode) || !matchesActivityTypes(card, activityTypes)) return current
     const item = progress[card.id]
-    if (!item) counts.newCards += 1
-    else if (compareDateKeys(item.due, today) < 0) counts.overdue += 1
-    else if (item.due === today) counts.due += 1
-    else counts.future += 1
-    return counts
+    if (!item) current.newCards += 1
+    else if (compareDateKeys(item.due, today) < 0) current.overdue += 1
+    else if (item.due === today) current.due += 1
+    else current.future += 1
+    return current
   }, { overdue: 0, due: 0, newCards: 0, future: 0 })
+  const refresh = masteredRefreshCandidates(cards, progress, selectedLessonIds, masteredLessonIds, today, mode, activityTypes, false)[0]
+  if (refresh) {
+    if (compareDateKeys(refresh.progress.due, today) < 0) counts.overdue += 1
+    else if (refresh.progress.due === today) counts.due += 1
+    else counts.future += 1
+  }
+  return counts
 }
 
 function orderReviews<T extends SchedulableCard>(
@@ -544,6 +570,32 @@ function orderReviews<T extends SchedulableCard>(
     return interleaveKinds(group, mode)
   })
   return ordered
+}
+
+function masteredRefreshCandidates<T extends SchedulableCard>(
+  cards: readonly T[],
+  progress: Record<string, CardProgress>,
+  selectedLessonIds: readonly string[],
+  masteredLessonIds: Iterable<string> | undefined,
+  today: string,
+  mode: PracticeMode,
+  activityTypes: readonly ActivityType[] | undefined,
+  dueOnly: boolean,
+): { card: T; index: number; progress: CardProgress }[] {
+  if (!masteredLessonIds) return []
+  const selected = new Set(selectedLessonIds)
+  const mastered = new Set(masteredLessonIds)
+  if (mastered.size === 0) return []
+  return cards
+    .map((card, index) => ({ card, index, progress: progress[card.id] }))
+    .filter((item): item is typeof item & { progress: CardProgress } => Boolean(item.progress)
+      && !selected.has(item.card.lessonId)
+      && mastered.has(item.card.lessonId)
+      && isBeyondBoxFive(item.progress)
+      && matchesMode(item.card, mode)
+      && matchesActivityTypes(item.card, activityTypes)
+      && (!dueOnly || isDue(item.progress, today)))
+    .sort((left, right) => compareDateKeys(left.progress.due, right.progress.due) || left.index - right.index)
 }
 
 function orderNew<T extends SchedulableCard>(
@@ -618,10 +670,12 @@ export function queueCards<T extends SchedulableCard>(
   const reviewCards = orderReviews(reviews, today, mode)
   const available = Number.isFinite(limit) ? Math.max(0, limit) : Number.POSITIVE_INFINITY
   const selectedReviews = reviewCards.slice(0, available)
-  const remaining = available === Number.POSITIVE_INFINITY ? Number.POSITIVE_INFINITY : available - selectedReviews.length
+  const refresh = masteredRefreshCandidates(cards, progress, selectedLessonIds, options.masteredLessonIds, today, mode, options.activityTypes, true)[0]
+  const selectedRefresh = refresh && selectedReviews.length < available ? [refresh.card] : []
+  const remaining = available === Number.POSITIVE_INFINITY ? Number.POSITIVE_INFINITY : available - selectedReviews.length - selectedRefresh.length
   const maxNewCards = Math.max(0, Math.floor(options.maxNewCards ?? MAX_NEW_CARDS_PER_SESSION))
   const selectedNew = orderNew(newItems, selectedLessonIds, mode, Math.min(remaining, maxNewCards), options.activityTypes)
-  return [...selectedReviews, ...selectedNew]
+  return [...selectedReviews, ...selectedRefresh, ...selectedNew]
 }
 
 export function shelfCounts(
