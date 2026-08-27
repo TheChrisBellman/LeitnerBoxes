@@ -693,7 +693,6 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'c-20', french: 'une qualification essentielle', answer: 'an essential qualification' },
   { lessonId: 'c-20', french: 'une qualité personnelle', answer: 'a personal quality' },
   { lessonId: 'c-20', french: 'une qualité professionnelle', answer: 'a professional quality' },
-  { lessonId: 'c-20', french: 'une qualité professionnelle', answer: 'a professional quality' },
 
   // L21 — natural resources and environment
   { lessonId: 'c-21', french: 'la consommation', answer: 'consumption' },
@@ -735,7 +734,7 @@ const lexiconEvidence: Record<string, { page: number; lineRange: string; section
   'c-02': { page: 9, lineRange: '110-156', section: 'Lexique L2 — self-knowledge' },
   'c-03': { page: 11, lineRange: '160-210', section: 'Lexique L3 — teamwork' },
   'c-04': { page: 14, lineRange: '222-274', section: 'Lexique L4 — change' },
-  'c-05': { page: 16, lineRange: '282-328', section: 'Lexique L5 — stress' },
+  'c-05': { page: 16, lineRange: '282-326', section: 'Lexique L5 — stress' },
   'c-06': { page: 18, lineRange: '334-372', section: 'Lexique L6 — work and personal life' },
   'c-07': { page: 20, lineRange: '380-445', section: 'Lexique L7 — communication' },
   'c-08': { page: 22, lineRange: '449-500', section: 'Lexique L8 — work environment' },
@@ -743,15 +742,20 @@ const lexiconEvidence: Record<string, { page: number; lineRange: string; section
   'c-10': { page: 26, lineRange: '567-620', section: 'Lexique L10 — negotiation and pressure tactics' },
   'c-11': { page: 28, lineRange: '628-668', section: 'Lexique L11 — collaboration and competition' },
   'c-12': { page: 30, lineRange: '676-717', section: 'Lexique L12 — collective agreement' },
-  'c-13': { page: 32, lineRange: '725-771', section: 'Lexique L13 — globalization' },
+  'c-13': { page: 32, lineRange: '725-769', section: 'Lexique L13 — globalization' },
   'c-14': { page: 34, lineRange: '777-842', section: 'Lexique L14 — client service' },
-  'c-15': { page: 36, lineRange: '846-1000', section: 'Lexique L15 — meetings' },
-  'c-16': { page: 38, lineRange: '902-1000', section: 'Lexique L16 — values and ethics' },
+  'c-15': { page: 36, lineRange: '846-894', section: 'Lexique L15 — meetings' },
+  'c-16': { page: 38, lineRange: '902-948', section: 'Lexique L16 — values and ethics' },
   'c-17': { page: 40, lineRange: '956-1018', section: 'Lexique L17 — ministry tasks' },
   'c-18': { page: 44, lineRange: '1030-1095', section: 'Lexique L18 — employment equity and diversity' },
-  'c-19': { page: 46, lineRange: '1099-1147', section: 'Lexique L19 — technology' },
-  'c-20': { page: 48, lineRange: '1153-1210', section: 'Lexique L20 — competencies' },
+  'c-19': { page: 46, lineRange: '1099-1145', section: 'Lexique L19 — technology' },
+  'c-20': { page: 48, lineRange: '1153-1205', section: 'Lexique L20 — competencies' },
   'c-21': { page: 50, lineRange: '1214-1268', section: 'Lexique L21 — natural resources and environment' },
+}
+
+const sourceFragments: Record<string, readonly string[]> = {
+  'c-15|respecter l’ordre du jour': ['l’ordre du jour', 'Respecter'],
+  'c-15|modifier l’ordre du jour': ['l’ordre du jour', 'Modifier'],
 }
 
 function categoryFor(row: SourceSupplementRow): SourceEvidence['category'] {
@@ -771,6 +775,7 @@ export const sourceSupplementsC: readonly SourceSupplement[] = sourceSupplementR
       section: evidence.section,
       category: categoryFor(row),
       evidenceType: 'source-table',
+      sourceFragments: sourceFragments[`${row.lessonId}|${row.french}`],
     },
   }
 })

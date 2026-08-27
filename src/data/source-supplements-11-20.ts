@@ -228,7 +228,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'a-19', french: 'adéquate', answer: 'adequate' },
   { lessonId: 'a-19', french: 'approprié', answer: 'appropriate' },
   { lessonId: 'a-19', french: 'appropriée', answer: 'appropriate' },
-  { lessonId: 'a-19', french: 'conforme', answer: 'conforming' },
+  { lessonId: 'a-19', french: 'conforme', answer: 'conform' },
   { lessonId: 'a-19', french: 'correct', answer: 'accurate' },
   { lessonId: 'a-19', french: 'dépassé', answer: 'outdated' },
   { lessonId: 'a-19', french: 'dépassée', answer: 'outdated' },
@@ -236,7 +236,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'a-19', french: 'efficace', answer: 'efficient' },
   { lessonId: 'a-19', french: 'inacceptable', answer: 'unacceptable' },
   { lessonId: 'a-19', french: 'normal', answer: 'normal' },
-  { lessonId: 'a-19', french: 'juste', answer: 'ordinary' },
+  { lessonId: 'a-19', french: 'juste', answer: 'accurate' },
   { lessonId: 'a-19', french: 'parfait', answer: 'perfect' },
   { lessonId: 'a-19', french: 'présentable', answer: 'presentable' },
   { lessonId: 'a-19', french: 'raisonnable', answer: 'reasonable' },
@@ -416,6 +416,24 @@ const objectiveEvidence: Record<string, { page: number; lineRange: string; secti
   'a-20': { page: 4, lineRange: '146-550', section: '20.1-20.2 physical, psychological, and intellectual quality charts' }
 }
 
+const a15RequestTerms = new Set(['demander', 'demandé', 'faire une demande', 'à la demande de', 'sur demande', 'dire à ... de', 'une requête', 'un requérant', 'une commande', 'commander', 'solliciter', 'une sollicitation', 'prier de', 'être prié de', 'prière de'])
+const a15ClaimTerms = new Set(['une revendication', 'revendiquer', 'quêter', 'un quêteux', 'une réclamation', 'réclamer', 'postuler'])
+const a15ObtainingTerms = new Set(['l’obtention', 'obtenir', 'la réception', 'recevoir', 'se procurer', 'aller chercher', 'une acquisition', 'acquérir', 'décrocher', 'gagner', 'empocher', 'toucher', 'retirer'])
+const a19ComparisonTerms = new Set(['égal', 'identique', 'pareil', 'même', 'différent', 'la différence', 'différencier', 'inférieur', 'supérieur', 'comparable', 'semblable', 'la comparaison', 'la ressemblance', 'comparer', 'ressembler', 'similaire', 'la similitude', 'comme', 'en comparaison avec', 'par rapport à', 'plus de', 'moins de', 'autant de'])
+
+function evidenceFor(row: SourceSupplementRow) {
+  if (row.lessonId === 'a-15') {
+    if (a15RequestTerms.has(row.french)) return { page: 10, lineRange: '201-240', section: '15.1 Notions — request indicators' }
+    if (a15ClaimTerms.has(row.french)) return { page: 11, lineRange: '246-266', section: '15.1 Notions — claim and application indicators' }
+    if (a15ObtainingTerms.has(row.french)) return { page: 12, lineRange: '272-314', section: '15.1 Notions — obtaining indicators' }
+  }
+  if (row.lessonId === 'a-19') {
+    if (a19ComparisonTerms.has(row.french)) return { page: 28, lineRange: '663-698', section: '19.2 Notions — comparison indicators' }
+    return { page: 18, lineRange: '382-413', section: '19.1 Notions — quality indicators' }
+  }
+  return objectiveEvidence[row.lessonId]
+}
+
 function categoryFor(row: SourceSupplementRow): SourceEvidence['category'] {
   if (/^ne \.\.\.|conditionnel|subjonctif|interrogation|style indirect|passé composé|imparfait|futur/.test(row.french)) return 'grammar'
   if (/^l?[ae]?\s*(accent|orthographe|forme|prononciation)/.test(row.french)) return 'spelling'
@@ -425,7 +443,7 @@ function categoryFor(row: SourceSupplementRow): SourceEvidence['category'] {
 }
 
 export const sourceSupplements1120: readonly SourceSupplement[] = sourceSupplementRows.map((row) => {
-  const evidence = objectiveEvidence[row.lessonId]
+  const evidence = evidenceFor(row)
   const objectiveNumber = Number(row.lessonId.slice(2))
   return {
     ...row,

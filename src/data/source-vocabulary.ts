@@ -2,6 +2,7 @@ import { sourceSupplements } from './source-supplements.ts'
 import { sourceSupplements1120 } from './source-supplements-11-20.ts'
 import { sourceSupplements2140 } from './source-supplements-21-40.ts'
 import { sourceSupplementsC } from './source-supplements-c.ts'
+import { sourceSupplementsFollowup } from './source-supplements-followup.ts'
 import type { SourceEvidence, SourceSupplement } from './source-evidence.ts'
 import type { CardTier, Word } from './types.ts'
 
@@ -30,6 +31,7 @@ const sourceRows: readonly SourceRow[] = [
   { lessonId: "a-01", french: "la députée", answer: "the member of Parliament" },
   { lessonId: "a-01", french: "la gestionnaire", answer: "the manager" },
   { lessonId: "a-01", french: "la ministre", answer: "the minister" },
+  // Quarantined: this term was found only in an answer key, not a primary table.
   { lessonId: "a-01", french: "la mécanicienne", answer: "the mechanic" },
   { lessonId: "a-01", french: "la professeure", answer: "the teacher" },
   { lessonId: "a-01", french: "la réceptionniste", answer: "the receptionist" },
@@ -45,28 +47,35 @@ const sourceRows: readonly SourceRow[] = [
   { lessonId: "a-01", french: "le chef de division", answer: "the division head" },
   { lessonId: "a-01", french: "le chef de projet", answer: "the project leader" },
   { lessonId: "a-01", french: "le chef de section", answer: "the section head" },
+  // Quarantined: this term was found only in an answer key, not a primary table.
   { lessonId: "a-01", french: "le chercheur", answer: "the research scientist" },
   { lessonId: "a-01", french: "le commis", answer: "the clerk" },
   { lessonId: "a-01", french: "le commissionnaire", answer: "the commissionaire" },
   { lessonId: "a-01", french: "le conseiller", answer: "the advisor" },
   { lessonId: "a-01", french: "le coordonnateur", answer: "the coordinator" },
   { lessonId: "a-01", french: "le directeur général", answer: "the director general" },
+  // Quarantined: this term was found only in an answer key, not a primary table.
   { lessonId: "a-01", french: "le douanier", answer: "the customs officer" },
+  // Quarantined: this term was found only in an answer key, not a primary table.
   { lessonId: "a-01", french: "le juge", answer: "the judge" },
   { lessonId: "a-01", french: "le ministre", answer: "the minister" },
   { lessonId: "a-01", french: "le médecin", answer: "the doctor" },
   { lessonId: "a-01", french: "le programmeur", answer: "the programmer" },
+  // Quarantined: this term was found only in an answer key, not a primary table.
   { lessonId: "a-01", french: "le recherchiste", answer: "the researcher" },
   { lessonId: "a-01", french: "le réceptionniste", answer: "the receptionist" },
+  // Quarantined: this term was found only in an answer key, not a primary table.
   { lessonId: "a-01", french: "le rédacteur", answer: "the editor" },
   { lessonId: "a-01", french: "le secrétaire", answer: "the secretary" },
   { lessonId: "a-01", french: "le spécialiste", answer: "the specialist" },
+  // Quarantined: this term was found only in an answer key, not a primary table.
   { lessonId: "a-01", french: "le sténographe", answer: "the stenographer" },
   { lessonId: "a-01", french: "le superviseur", answer: "the supervisor" },
   { lessonId: "a-01", french: "le technicien", answer: "the technician" },
   { lessonId: "a-01", french: "le sous-ministre", answer: "the deputy minister" },
   { lessonId: "a-01", french: "l’adjoint", answer: "the assistant" },
   { lessonId: "a-01", french: "l’agent", answer: "the officer" },
+  // Quarantined: this term was found only in an answer key, not a primary table.
   { lessonId: "a-01", french: "l’infirmier", answer: "the nurse" },
   { lessonId: "a-01", french: "l’ingénieur", answer: "the engineer" },
   { lessonId: "a-01", french: "l’économiste", answer: "the economist" },
@@ -239,7 +248,7 @@ const sourceRows: readonly SourceRow[] = [
   { lessonId: "a-19", french: "acceptable", answer: "acceptable" },
   { lessonId: "a-19", french: "adéquat", answer: "adequate" },
   { lessonId: "a-19", french: "approprié", answer: "appropriate" },
-  { lessonId: "a-19", french: "conforme", answer: "conforming, accurate" },
+  { lessonId: "a-19", french: "conforme", answer: "conform" },
   { lessonId: "a-19", french: "convenir à", answer: "to suit" },
   { lessonId: "a-19", french: "correspondre à", answer: "to correspond to" },
   { lessonId: "a-19", french: "dépassé", answer: "outdated" },
@@ -279,6 +288,7 @@ const sourceRows: readonly SourceRow[] = [
   { lessonId: "a-21", french: "stipuler", answer: "to stipulate" },
   { lessonId: "a-21", french: "s’appliquer à", answer: "to apply to" },
   { lessonId: "a-22", french: "arriver pile", answer: "to arrive right on time, on the dot" },
+  // Quarantined: this term was found only in an answer key, not a primary table.
   { lessonId: "a-22", french: "devancer l’échéance", answer: "to beat the deadline" },
   { lessonId: "a-22", french: "diviser", answer: "to divide" },
   { lessonId: "a-22", french: "la composante", answer: "component" },
@@ -351,12 +361,15 @@ const sourceRows: readonly SourceRow[] = [
   { lessonId: "a-27", french: "agrafer", answer: "to staple" },
   { lessonId: "a-27", french: "archiviste", answer: "archivist" },
   { lessonId: "a-27", french: "biologiste", answer: "biologist" },
+  // Quarantined: this term was found only in an answer key, not a primary table.
   { lessonId: "a-27", french: "cliquer sur l’icône", answer: "to click on the icon" },
+  // Quarantined: this term was found only in an answer key, not a primary table.
   { lessonId: "a-27", french: "composer le numéro", answer: "to dial the number" },
   { lessonId: "a-27", french: "comédienne", answer: "actress" },
   { lessonId: "a-27", french: "décorateur", answer: "decorator" },
   { lessonId: "a-27", french: "décrocher", answer: "to pick up, unhook" },
   { lessonId: "a-27", french: "décrocher le combiné", answer: "to pick up the receiver" },
+  // Quarantined: this term was found only in an answer key, not a primary table.
   { lessonId: "a-27", french: "démarrer l’ordinateur", answer: "to start the computer" },
   { lessonId: "a-27", french: "emballer", answer: "to pack" },
   { lessonId: "a-27", french: "médecin", answer: "doctor" },
@@ -520,6 +533,7 @@ const sourceRows: readonly SourceRow[] = [
   { lessonId: "c-07", french: "le porte-parole", answer: "spokesperson" },
   { lessonId: "c-08", french: "les biens immobiliers", answer: "real property" },
   { lessonId: "c-08", french: "un bruit", answer: "A noise" },
+  // Quarantined: this term was found only in an answer key, not a primary table.
   { lessonId: "c-08", french: "une tâche exigeante", answer: "a demanding task" },
   { lessonId: "c-09", french: "diriger une équipe", answer: "to lead a team" },
   { lessonId: "c-09", french: "déléguer", answer: "to delegate" },
@@ -554,6 +568,7 @@ const sourceRows: readonly SourceRow[] = [
   { lessonId: "c-20", french: "la dotation", answer: "staffing" },
   { lessonId: "c-20", french: "les compétences linguistiques", answer: "language skills" },
   { lessonId: "c-20", french: "un agent de libération conditionnelle", answer: "a parole officer" },
+  // Quarantined: this term was found only in an answer key, not a primary table.
   { lessonId: "c-20", french: "un agent d’approvisionnement", answer: "a procurement officer" },
   { lessonId: "c-20", french: "un analyste de politiques", answer: "a policy analyst" },
   { lessonId: "c-20", french: "un employé fiable", answer: "a reliable employee" },
@@ -667,7 +682,13 @@ export const a04SourceSupplements: readonly SourceSupplement[] = a04FormGroups.f
   }
 }))
 
-const completeSourceRows = [...sourceRows, ...a04SourceSupplements, ...sourceSupplements, ...sourceSupplements1120, ...sourceSupplements2140, ...sourceSupplementsC].filter((row, index, rows) => rows.findIndex((candidate) => candidate.lessonId === row.lessonId && normalize(candidate.french) === normalize(row.french)) === index)
+const completeSourceRows = [...sourceRows, ...a04SourceSupplements, ...sourceSupplements, ...sourceSupplements1120, ...sourceSupplements2140, ...sourceSupplementsC, ...sourceSupplementsFollowup].filter((row, index, rows) => rows.findIndex((candidate) => candidate.lessonId === row.lessonId && normalize(candidate.french) === normalize(row.french)) === index)
+export const quarantinedSourceKeys = new Set([
+  'a-01|la mécanicienne', 'a-01|le chercheur', 'a-01|le douanier', 'a-01|le juge',
+  'a-01|le recherchiste', 'a-01|le rédacteur', 'a-01|le sténographe', 'a-01|l’infirmier',
+  'a-22|devancer l’échéance', 'a-27|cliquer sur l’icône', 'a-27|composer le numéro',
+  'a-27|démarrer l’ordinateur', 'c-08|une tâche exigeante', 'c-20|un agent d’approvisionnement',
+].map((key) => key.replace(/[‘’]/g, "'")))
 
 const sourceTier: CardTier = 'expansion'
 type ResponseForm = 'question' | 'full-sentence' | 'infinitive' | 'fragment'
@@ -691,10 +712,12 @@ function normalize(value: string): string {
   return value.trim().toLocaleLowerCase('fr').replace(/[‘’]/g, "'").replace(/\s+/g, ' ')
 }
 
+const activeSourceRows = sourceRows.filter((row) => !quarantinedSourceKeys.has(`${row.lessonId}|${normalize(row.french)}`))
+
 function answerChoices(row: SourceRow, index: number): [string, string, string] {
   const form = responseForm(row.answer)
-  const localCandidates = sourceRows.filter((candidate) => candidate.lessonId === row.lessonId && candidate !== row && responseForm(candidate.answer) === form)
-  const globalCandidates = sourceRows.filter((candidate) => candidate.lessonId !== row.lessonId && responseForm(candidate.answer) === form)
+  const localCandidates = activeSourceRows.filter((candidate) => candidate.lessonId === row.lessonId && candidate !== row && responseForm(candidate.answer) === form)
+  const globalCandidates = activeSourceRows.filter((candidate) => candidate.lessonId !== row.lessonId && responseForm(candidate.answer) === form)
   const localStart = localCandidates.length > 0 ? index % localCandidates.length : 0
   const candidates = [...localCandidates.slice(localStart), ...localCandidates.slice(0, localStart), ...globalCandidates, ...fallbackAnswers[form]].map((candidate) => typeof candidate === 'string' ? candidate : candidate.answer)
   const seen = new Set([normalize(row.answer)])
@@ -710,8 +733,8 @@ function answerChoices(row: SourceRow, index: number): [string, string, string] 
 }
 
 function reverseChoices(row: SourceRow, index: number): [string, string, string] {
-  const local = sourceRows.filter((candidate) => candidate.lessonId === row.lessonId && candidate !== row)
-  const candidates = [...local, ...sourceRows.filter((candidate) => candidate.lessonId !== row.lessonId && candidate !== row)]
+  const local = activeSourceRows.filter((candidate) => candidate.lessonId === row.lessonId && candidate !== row)
+  const candidates = [...local, ...activeSourceRows.filter((candidate) => candidate.lessonId !== row.lessonId && candidate !== row)]
   const seen = new Set([normalize(row.french)])
   const choices: string[] = []
   for (let offset = 0; choices.length < 3 && offset < candidates.length * 2; offset += 1) {
@@ -726,7 +749,7 @@ function reverseChoices(row: SourceRow, index: number): [string, string, string]
 
 const orderByLesson = new Map<string, number>()
 
-export const sourceVocabulary: Word[] = completeSourceRows.map((row, index) => {
+const completeSourceVocabulary: Word[] = completeSourceRows.map((row, index) => {
   const order = (orderByLesson.get(row.lessonId) ?? 24) + 1
   orderByLesson.set(row.lessonId, order)
   return {
@@ -742,3 +765,5 @@ export const sourceVocabulary: Word[] = completeSourceRows.map((row, index) => {
     order,
   }
 })
+
+export const sourceVocabulary = completeSourceVocabulary.filter((row) => !quarantinedSourceKeys.has(`${row.lessonId}|${normalize(row.french)}`))

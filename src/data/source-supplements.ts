@@ -463,6 +463,41 @@ const objectiveEvidence: Record<string, { page: number; lineRange: string; secti
   'a-10': { page: 3, lineRange: '186-3165', section: '10.1-10.13 execution, grammar, and computing charts' }
 }
 
+const a01IdentityTerms = new Set(['nom', 'ici', 'à l’appareil', 's’appeler', 'se présenter', 'être', 'quel', 'quelle', 'quels', 'quelles', 'de la part de qui', 'qui', 'titre', 'profession', 'chef de section', 'avocate'])
+const a01GrammarTerms = new Set(['je suis', 'tu es', 'il est', 'elle est', 'on est', 'nous sommes', 'vous êtes', 'ils sont', 'elles sont', 'c’est', 'ce sont'])
+const a01WhQuestionTerms = new Set(['quels', 'quelles'])
+const a01SpellingTerms = new Set(['l’accent aigu', 'l’accent grave', 'l’accent circonflexe', 'la cédille', 'le tréma', 'le trait d’union', 'l’apostrophe', 'la majuscule', 'la minuscule'])
+const a02IdentificationTerms = new Set(['qu’est-ce que c’est?', 'quoi', 'comment', 'quel', 'c’est', 'ce sont', 'ça s’appelle'])
+const a02Page18Terms = new Set(['la version', 'l’édition'])
+const a02Page19Terms = new Set(['la note', 'le programme', 'le rapport', 'l’édition', 'la lettre', 'l’appendice', 'l’article', 'la bibliographie', 'la brochure', 'le budget', 'le bulletin', 'le chèque', 'la circulaire', 'le communiqué', 'le contrat', 'le document', 'la documentation', 'le document en annexe', 'le guide', 'le lexique', 'le manuel', 'le message', 'la publication', 'le reçu', 'le texte', 'le volume'])
+const a02Page20Terms = new Set(['le diagramme', 'le graphique', 'l’illustration', 'la photo', 'le plan', 'la copie', 'l’original', 'la photocopie', 'la chemise', 'le dossier', 'le courrier', 'le courriel', 'la demande', 'le dépliant', 'le discours', 'le fichier', 'le formulaire', 'la facture', 'le procès-verbal', 'l’ordre du jour', 'la carte', 'le dessin', 'la maquette', 'le schéma'])
+const a02Page21Terms = new Set(['l’exemplaire', 'la réédition', 'la réimpression', 'la traduction'])
+const a02Page26Terms = new Set(['le téléviseur', 'la chaise', 'la bibliothèque', 'le pantalon', 'le chapeau', 'le manteau', 'le parapluie', 'le portefeuille', 'la clé'])
+const a02DefiniteArticles = new Set(['le', 'la', 'l’', 'les'])
+const a02IndefiniteArticles = new Set(['un', 'une', 'des'])
+const a02PartitiveArticles = new Set(['du', 'de la', 'de l’'])
+
+function evidenceFor(row: SourceSupplementRow) {
+  if (row.lessonId === 'a-01') {
+    if (a01SpellingTerms.has(row.french)) return { page: 66, lineRange: '2016-2048', section: '1.10 Stratégies de communication — spelling chart' }
+    if (a01WhQuestionTerms.has(row.french)) return { page: 34, lineRange: '1033-1063', section: '1.4 Grammaire — quel(s) and quelle(s) question forms' }
+    if (a01GrammarTerms.has(row.french)) return { page: 24, lineRange: '729-738', section: '1.3 Grammaire — subject pronouns with être in the present' }
+    if (a01IdentityTerms.has(row.french)) return { page: 12, lineRange: '222-275', section: '1.1 Notions — names, titles, and identification' }
+  }
+  if (row.lessonId === 'a-02') {
+    if (a02IdentificationTerms.has(row.french)) return { page: 9, lineRange: '132-166', section: '2.1 Notions — identification requests and statements' }
+    if (a02Page18Terms.has(row.french)) return { page: 18, lineRange: '317-339', section: '2.1 Notions — document names with similar French and English forms' }
+    if (a02Page19Terms.has(row.french)) return { page: 19, lineRange: '353-407', section: '2.1 Notions — written document names' }
+    if (a02Page20Terms.has(row.french)) return { page: 20, lineRange: '413-474', section: '2.1 Notions — illustrated, reproduced, and differently named documents' }
+    if (a02Page21Terms.has(row.french)) return { page: 21, lineRange: '480-484', section: '2.1 Notions — reproduced document names' }
+    if (a02Page26Terms.has(row.french)) return { page: 26, lineRange: '656-688', section: '2.2 Grammaire — noun gender chart' }
+    if (a02DefiniteArticles.has(row.french)) return { page: 22, lineRange: '496-523', section: '2.2 Grammaire — definite articles' }
+    if (a02IndefiniteArticles.has(row.french)) return { page: 22, lineRange: '525-537', section: '2.2 Grammaire — indefinite articles' }
+    if (a02PartitiveArticles.has(row.french)) return { page: 23, lineRange: '542-558', section: '2.2 Grammaire — partitive articles' }
+  }
+  return objectiveEvidence[row.lessonId]
+}
+
 function categoryFor(row: SourceSupplementRow): SourceEvidence['category'] {
   if (row.lessonId === 'a-01' && /accent|cédille|tréma|trait d’union|apostrophe|majuscule|minuscule/.test(row.french)) return 'spelling'
   if (row.lessonId === 'a-01' && /^(?:je|tu|il|elle|on|nous|vous|ils|elles) |^(?:c’est|ce sont)$/.test(row.french)) return 'grammar'
@@ -473,7 +508,7 @@ function categoryFor(row: SourceSupplementRow): SourceEvidence['category'] {
 }
 
 export const sourceSupplements: readonly SourceSupplement[] = sourceSupplementRows.map((row) => {
-  const evidence = objectiveEvidence[row.lessonId]
+  const evidence = evidenceFor(row)
   const objectiveNumber = Number(row.lessonId.slice(2))
   return {
     ...row,

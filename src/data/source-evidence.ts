@@ -10,6 +10,8 @@ export type SourceEvidence = {
   section: string
   category: SourceCategory
   evidenceType: SourceEvidenceType
+  /** Terms that are split across adjacent table cells rather than contiguous text. */
+  sourceFragments?: readonly string[]
 }
 
 export type SourceSupplement = Pick<VocabularyCard, 'lessonId' | 'french' | 'answer'> & {
