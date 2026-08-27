@@ -1,0 +1,23 @@
+{
+  "name": "leitner-boxes",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Client-side French workplace vocabulary practice with a five-box Leitner review system.",
+  "license": "GPL-2.0-only",
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit && vite build"
+  },
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "typescript": "~5.8.3",
+    "vite": "^7.0.0"
+  }
+}
