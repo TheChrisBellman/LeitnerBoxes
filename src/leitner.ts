@@ -1,9 +1,8 @@
-import { conjugationCatches } from './data/conjugation-catches.ts'
-import { allExercises, dialoguesById, exercisesByTargetId, passagesById, scenariosById } from './data/pilot-exercises.ts'
-import { ACTIVITY_TYPES, type ActivityType, type AuthoredExercise, type CardKind, type CardTier, type ExerciseLanguage, type ExerciseTarget, type PracticeCard, type PracticeTarget, type VocabularyCard } from './data/types.ts'
+import { ACTIVITY_TYPES, type ActivityType, type CardKind, type CardTier, type Language, type PracticeCard, type PracticeTarget, type VocabularyCard } from './data/types.ts'
 
 export type Box = 1 | 2 | 3 | 4 | 5
-export type PracticeMode = 'mixed' | 'vocabulary' | 'conjugation'
+// `mixed` remains a storage-compatible alias for the source vocabulary activities.
+export type PracticeMode = 'mixed' | 'vocabulary'
 export type MissMode = 'step-back' | 'full-reset'
 export const MAX_NEW_CARDS_PER_SESSION = 4
 
@@ -18,10 +17,9 @@ export type CardProgress = {
 export type SchedulableCard = {
   id: string
   lessonId: string
-  kind?: CardKind | 'exercise'
+  kind?: CardKind
   tier?: CardTier
   order?: number
-  targetType?: 'card' | 'exercise'
   queuePriority?: number
 }
 
@@ -153,36 +151,26 @@ export type QueueOptions = {
   masteredLessonIds?: Iterable<string>
 }
 
-export type QuestionDirection = 'french-to-english' | 'english-to-french' | 'conjugation' | 'exercise'
-export type ExerciseFormat = 'choice' | 'cloze' | 'arrange' | 'typed' | 'correction'
-export type QuestionContextKind = 'passage' | 'dialogue' | 'situation'
+export type QuestionDirection = 'french-to-english' | 'english-to-french'
+export type QuestionFormat = 'choice' | 'arrange' | 'typed'
 
 export type PracticeQuestion = {
   card: PracticeTarget
-  kind: CardKind | 'exercise'
   direction: QuestionDirection
-  format: ExerciseFormat
+  format: QuestionFormat
   prompt: string
-  promptLanguage: ExerciseLanguage
+  promptLanguage: Language
   answer: string
-  answerLanguage: 'fr' | 'en'
+  answerLanguage: Language
   distractors: string[]
   tokens?: string[]
   acceptedAnswers?: string[]
-  exercise?: AuthoredExercise
-  answerDisplay?: string
-  choiceLabels?: Record<string, string>
-  context?: string
-  contextTitle?: string
-  contextLabel?: string
-  contextKind?: QuestionContextKind
-  contextLanguage?: ExerciseLanguage
 }
 
-const keyboardSafeAnswer = /^[A-Za-z]+(?:[- '’][A-Za-z]+)*$/
+const frenchTypedAnswer = /^\p{L}+(?:[- '’]\p{L}+)*$/u
 
-export function isKeyboardSafeTypedAnswer(value: string): boolean {
-  return keyboardSafeAnswer.test(value.trim())
+export function isFrenchTypedAnswer(value: string): boolean {
+  return frenchTypedAnswer.test(value.trim())
 }
 
 function normalizeTypedAnswer(value: string): string {
@@ -210,61 +198,23 @@ export function vocabularyResponseForm(value: string): VocabularyResponseForm {
   return 'fragment'
 }
 
-const conjugationSubjectPrefix = /^(?:j['’]\s*|je\s+|tu\s+|il\/elle\s+|ils\/elles\s+|il\s+|elle\s+|nous\s+|vous\s+|ils\s+|elles\s+|on\s+)/iu
-const conjugationReflexivePrefix = /^(?:m['’]\s*|t['’]\s*|s['’]\s*|me\s+|te\s+|se\s+|nous\s+|vous\s+)/iu
-
-function normalizeConjugationPart(value: string): string {
-  return value.trim()
-    .replace(conjugationSubjectPrefix, '')
-    .trim()
-    .replace(conjugationReflexivePrefix, '')
-    .trim()
-}
-
-export function normalizeConjugationForm(value: string): string {
-  const combinedSubject = value.trim().replace(/^(?:il|ils)\/(?:elle|elles)\s+/iu, '')
-  return [...new Set(combinedSubject
-    .split(/\s*\/\s*/)
-    .map(normalizeConjugationPart)
-    .filter(Boolean))].join(' / ')
-}
-
-function conjugationDistractors(
-  card: PracticeCard & { kind: 'conjugation' },
-  questionPool: readonly PracticeCard[],
-): string[] {
-  const sameVerb = questionPool.filter((item): item is PracticeCard & { kind: 'conjugation' } =>
-    item.kind === 'conjugation' && item.id !== card.id && item.infinitive === card.infinitive,
-  )
-  const sameLesson = questionPool.filter((item): item is PracticeCard & { kind: 'conjugation' } =>
-    item.kind === 'conjugation' && item.id !== card.id && item.lessonId === card.lessonId,
-  )
-  const allConjugations = questionPool.filter((item): item is PracticeCard & { kind: 'conjugation' } =>
-    item.kind === 'conjugation' && item.id !== card.id,
-  )
-  const answer = normalizeConjugationForm(card.answer)
-  const conjugationCatch = conjugationCatches[`${card.infinitive}|${card.person}`]
-  const candidates = [
-    ...(conjugationCatch ? [conjugationCatch] : []),
-    ...card.distractors,
-    ...sameVerb.flatMap((item) => [item.answer, ...item.distractors]),
-    ...sameLesson.flatMap((item) => [item.answer, ...item.distractors]),
-    ...allConjugations.flatMap((item) => [item.answer, ...item.distractors]),
-  ]
-
-  return [...new Set(candidates
-    .map(normalizeConjugationForm)
-    .filter((item) => item && item !== answer))].slice(0, 3)
+function normalizeResponse(value: string): string {
+  return value.trim().toLocaleLowerCase('fr').replace(/\s+/g, ' ')
 }
 
 export function buildVocabularyQuestion(
   card: VocabularyCard,
   reverse: boolean,
-  _vocabularyPool: readonly PracticeCard[],
+  vocabularyPool: readonly PracticeCard[] = [],
 ): PracticeQuestion {
+  const acceptedAnswers = reverse
+    ? [...new Set(vocabularyPool
+      .filter((candidate) => candidate.lessonId === card.lessonId && normalizeResponse(candidate.answer) === normalizeResponse(card.answer))
+      .map((candidate) => candidate.french)
+      .filter((french) => french !== card.french))]
+    : []
   return {
     card,
-    kind: card.kind,
     direction: reverse ? 'english-to-french' : 'french-to-english',
     format: 'choice',
     prompt: reverse ? card.answer : card.french,
@@ -272,6 +222,7 @@ export function buildVocabularyQuestion(
     answer: reverse ? card.french : card.answer,
     answerLanguage: reverse ? 'fr' : 'en',
     distractors: reverse ? [...card.reverseDistractors] : [...card.distractors],
+    ...(acceptedAnswers.length > 0 ? { acceptedAnswers } : {}),
   }
 }
 
@@ -280,253 +231,40 @@ function arrangementTokens(value: string): string[] | undefined {
   return tokens.length >= 2 && tokens.length <= 8 ? tokens : undefined
 }
 
-function conjugationClozePrompt(answer: string, normalizedAnswer: string): string {
-  return normalizedAnswer.split(/\s*\/\s*/).reduce((prompt, form) => prompt.split(form).join('_____'), answer)
-}
-
-function exerciseVariants(targetId: string, exercises: readonly AuthoredExercise[]): AuthoredExercise[] {
-  return exercises === allExercises
-    ? exercisesByTargetId.get(targetId) ?? []
-    : exercises.filter((exercise) => exercise.targetId === targetId)
-}
-
-function dialogueText(dialogueId: string): { text: string; title: string } | undefined {
-  const dialogue = dialoguesById.get(dialogueId)
-  if (!dialogue) return undefined
-  return {
-    title: dialogue.title,
-    text: dialogue.turns.map((turn) => `${turn.speaker}: ${turn.text}`).join('\n'),
-  }
-}
-
-function buildExerciseQuestion(
-  card: ExerciseTarget,
-  exercise: AuthoredExercise,
-): PracticeQuestion {
-  const base = {
-    card,
-    kind: card.kind,
-    direction: 'exercise' as const,
-    promptLanguage: exercise.promptLanguage ?? 'fr',
-    answerLanguage: 'fr' as const,
-    contextLanguage: exercise.contextLanguage ?? 'fr',
-    exercise,
-  }
-
-  if (exercise.kind === 'contextual-cloze') {
-    return {
-      ...base,
-      format: 'cloze',
-      prompt: exercise.prompt,
-      answer: exercise.answer,
-      distractors: [...exercise.distractors],
-      context: exercise.context,
-      contextKind: exercise.context ? 'situation' : undefined,
-    }
-  }
-
-  if (exercise.kind === 'best-response') {
-    const dialogue = exercise.dialogueId ? dialogueText(exercise.dialogueId) : undefined
-    return {
-      ...base,
-      format: 'choice',
-      prompt: exercise.prompt,
-      answer: exercise.answer,
-      distractors: [...exercise.distractors],
-      context: dialogue ? `${dialogue.text}\n\n${exercise.situation}` : exercise.situation,
-      contextTitle: dialogue?.title,
-      contextKind: dialogue ? 'dialogue' : 'situation',
-    }
-  }
-
-  if (exercise.kind === 'reading') {
-    const passage = passagesById.get(exercise.passageId)
-    return {
-      ...base,
-      format: 'choice',
-      prompt: exercise.prompt,
-      answer: exercise.answer,
-      distractors: [...exercise.distractors],
-      context: passage?.text,
-      contextTitle: passage?.title,
-      contextLabel: passage?.genre,
-      contextKind: passage ? 'passage' : undefined,
-    }
-  }
-
-  if (exercise.kind === 'transformation') {
-    return {
-      ...base,
-      format: 'choice',
-      prompt: exercise.prompt,
-      answer: exercise.answer,
-      distractors: [...exercise.distractors],
-      context: exercise.source,
-      contextLabel: 'Phrase de départ',
-      contextKind: 'situation',
-    }
-  }
-
-  if (exercise.kind === 'ordered') {
-    return {
-      ...base,
-      format: 'arrange',
-      prompt: exercise.prompt,
-      answer: exercise.answer,
-      distractors: [],
-      tokens: [...exercise.tokens],
-      acceptedAnswers: exercise.acceptedAnswers ? [...exercise.acceptedAnswers] : undefined,
-      context: exercise.context,
-      contextKind: exercise.context ? 'situation' : undefined,
-    }
-  }
-
-  if (exercise.kind === 'correction') {
-    const choices = exercise.segments.map((segment) => segment.id)
-    if (exercise.allowNoCorrection) choices.push('none')
-    const choiceLabels = Object.fromEntries(exercise.segments.map((segment, index) => [
-      segment.id,
-      `Segment ${String.fromCharCode(65 + index)} — ${segment.text}`,
-    ]))
-    if (exercise.allowNoCorrection) choiceLabels.none = 'Aucune erreur'
-    return {
-      ...base,
-      format: 'correction',
-      prompt: exercise.prompt,
-      answer: exercise.answerSegmentId,
-      answerDisplay: exercise.correction,
-      distractors: choices.filter((choice) => choice !== exercise.answerSegmentId),
-      choiceLabels,
-      context: exercise.segments.map((segment) => segment.text).join(' '),
-      contextLabel: 'Phrase à relire',
-      contextKind: 'situation',
-    }
-  }
-
-  if (exercise.kind === 'typed') {
-    return {
-      ...base,
-      format: 'typed',
-      prompt: exercise.prompt,
-      answer: exercise.answer,
-      distractors: [],
-      acceptedAnswers: exercise.acceptedAnswers ? [...exercise.acceptedAnswers] : undefined,
-      context: exercise.context,
-      contextKind: exercise.context ? 'situation' : undefined,
-    }
-  }
-
-  const scenario = scenariosById.get(exercise.scenarioId)
-  const node = scenario?.nodes.find((candidate) => candidate.id === exercise.nodeId)
-  const choices = node?.choices ?? []
-  return {
-    ...base,
-    format: 'choice',
-    prompt: node?.prompt ?? '',
-    answer: node?.answer ?? '',
-    distractors: choices.filter((choice) => choice !== node?.answer),
-    context: scenario?.setup,
-    contextTitle: scenario?.title,
-    contextKind: scenario ? 'situation' : undefined,
-  }
-}
-
 export function buildSessionQuestions(
-  cards: readonly PracticeTarget[],
-  vocabularyPool: readonly PracticeCard[] = cards.filter((card): card is PracticeCard => card.kind !== 'exercise'),
+  cards: readonly PracticeCard[],
   progress: Record<string, CardProgress> = {},
-  exercises: readonly AuthoredExercise[] = allExercises,
   enabledActivityTypes: readonly ActivityType[] = ACTIVITY_TYPES,
+  vocabularyPool: readonly PracticeCard[] = cards,
 ): PracticeQuestion[] {
   let vocabularyOrdinal = 0
 
   return cards.map((card) => {
-    if (card.kind === 'exercise') {
-      const variants = exerciseVariants(card.id, exercises).filter((exercise) => enabledActivityTypes.includes(exercise.kind))
-      const box = progress[card.id]?.box ?? 1
-      const exercise = variants.length > 0 ? variants[(box - 1) % variants.length] : undefined
-      return exercise ? buildExerciseQuestion(card, exercise) : {
-        card,
-        kind: card.kind,
-        direction: 'exercise',
-        format: 'choice',
-        prompt: '',
-        promptLanguage: 'fr',
-        answer: '',
-        answerLanguage: 'fr',
-        distractors: [],
-      }
-    }
-
     const box = progress[card.id]?.box ?? 1
-    if (card.kind === 'conjugation') {
-      const answer = normalizeConjugationForm(card.answer)
-      const typed = enabledActivityTypes.includes('typed') && box >= 3 && isKeyboardSafeTypedAnswer(answer)
-      return {
-        card,
-        kind: card.kind,
-        direction: 'conjugation',
-        format: typed ? 'typed' : 'cloze',
-        prompt: typed ? card.infinitive : conjugationClozePrompt(card.answer, answer),
-        promptLanguage: 'fr',
-        answer,
-        answerLanguage: 'fr',
-        distractors: conjugationDistractors(card, vocabularyPool),
-      }
-    }
-
     const reverse = vocabularyOrdinal++ % 2 === 1 || box >= 3
     const question = buildVocabularyQuestion(card, reverse, vocabularyPool)
     if (!reverse) return question
-    if (enabledActivityTypes.includes('typed') && box >= 3 && isKeyboardSafeTypedAnswer(question.answer)) return { ...question, format: 'typed' }
+    if (enabledActivityTypes.includes('typed') && box >= 3 && isFrenchTypedAnswer(question.answer)) return { ...question, format: 'typed' }
     const tokens = enabledActivityTypes.includes('ordered') && box >= 2 ? arrangementTokens(question.answer) : undefined
     return tokens ? { ...question, format: 'arrange', tokens } : question
   })
 }
 
-function matchesMode(card: SchedulableCard, mode: PracticeMode): boolean {
-  if (card.kind === 'exercise' || card.targetType === 'exercise') return mode === 'mixed'
-  if (mode === 'mixed') return true
-  return mode === 'vocabulary' ? card.kind !== 'conjugation' : card.kind === 'conjugation'
+function matchesMode(_card: SchedulableCard, _mode: PracticeMode): boolean {
+  return true
 }
 
-export function activityTypesForTarget(card: SchedulableCard): ActivityType[] {
-  if (card.kind === 'exercise' || card.targetType === 'exercise') {
-    return [...new Set((exercisesByTargetId.get(card.id) ?? []).map((exercise) => exercise.kind))]
-  }
-  return [card.kind === 'conjugation' ? 'conjugation' : 'vocabulary']
+export function activityTypesForTarget(_card: SchedulableCard): ActivityType[] {
+  return [...ACTIVITY_TYPES]
 }
 
 export function matchesActivityTypes(card: SchedulableCard, activityTypes?: readonly ActivityType[]): boolean {
   if (!activityTypes) return true
-  const enabled = new Set(activityTypes)
-  return activityTypesForTarget(card).some((type) => enabled.has(type))
+  return activityTypesForTarget(card).some((type) => activityTypes.includes(type))
 }
 
 function tierRank(tier: CardTier | undefined): number {
   return tier === 'expansion' ? 1 : tier === 'applied' ? 2 : 0
-}
-
-function cardKind(card: SchedulableCard): CardKind | 'exercise' {
-  return card.kind ?? 'vocabulary'
-}
-
-function interleaveKinds<T extends SchedulableCard>(items: T[], mode: PracticeMode): T[] {
-  if (mode !== 'mixed' || items.length < 2) return items
-  const kinds = [...new Set(items.map(cardKind))]
-  const buckets = new Map(kinds.map((kind) => [kind, items.filter((item) => cardKind(item) === kind)]))
-  const result: T[] = []
-  let kindIndex = kinds.indexOf(cardKind(items[0]))
-  while (result.length < items.length) {
-    const bucket = buckets.get(kinds[kindIndex]) ?? []
-    if (bucket.length > 0) result.push(bucket.shift() as T)
-    kindIndex = (kindIndex + 1) % kinds.length
-    if ((buckets.get(kinds[kindIndex])?.length ?? 0) === 0 && result.length < items.length) {
-      const nextIndex = kinds.findIndex((kind) => (buckets.get(kind)?.length ?? 0) > 0)
-      if (nextIndex >= 0) kindIndex = nextIndex
-    }
-  }
-  return result
 }
 
 export function getQueueCounts<T extends SchedulableCard>(
@@ -557,21 +295,6 @@ export function getQueueCounts<T extends SchedulableCard>(
   return counts
 }
 
-function orderReviews<T extends SchedulableCard>(
-  items: { card: T; index: number; progress: CardProgress }[],
-  today: string,
-  mode: PracticeMode,
-): T[] {
-  const ordered = [0, 1].flatMap((rank) => {
-    const group = items
-      .filter(({ progress }) => (compareDateKeys(progress.due, today) < 0 ? 0 : 1) === rank)
-      .sort((left, right) => compareDateKeys(left.progress.due, right.progress.due) || left.index - right.index)
-      .map(({ card }) => card)
-    return interleaveKinds(group, mode)
-  })
-  return ordered
-}
-
 function masteredRefreshCandidates<T extends SchedulableCard>(
   cards: readonly T[],
   progress: Record<string, CardProgress>,
@@ -598,12 +321,19 @@ function masteredRefreshCandidates<T extends SchedulableCard>(
     .sort((left, right) => compareDateKeys(left.progress.due, right.progress.due) || left.index - right.index)
 }
 
+function orderReviews<T extends SchedulableCard>(
+  items: { card: T; index: number; progress: CardProgress }[],
+  today: string,
+): T[] {
+  return items
+    .sort((left, right) => compareDateKeys(left.progress.due, today) < 0 ? -1 : compareDateKeys(right.progress.due, today) < 0 ? 1 : compareDateKeys(left.progress.due, right.progress.due) || left.index - right.index)
+    .map(({ card }) => card)
+}
+
 function orderNew<T extends SchedulableCard>(
   items: { card: T; index: number }[],
   selectedLessonIds: readonly string[],
-  mode: PracticeMode,
   limit: number,
-  activityTypes?: readonly ActivityType[],
 ): T[] {
   if (limit <= 0) return []
   const buckets = new Map<string, { card: T; index: number }[]>()
@@ -619,33 +349,14 @@ function orderNew<T extends SchedulableCard>(
       || left.index - right.index,
   ))
 
-  const unitIds = selectedLessonIds.filter((lessonId) => (buckets.get(lessonId)?.length ?? 0) > 0)
+  const unitIds = [...new Set(selectedLessonIds)].filter((lessonId) => (buckets.get(lessonId)?.length ?? 0) > 0)
   const result: T[] = []
   let unitIndex = 0
-  let nextKind: CardKind = 'vocabulary'
-  const availableActivityTypes = activityTypes?.filter((type) => items.some((item) => activityTypesForTarget(item.card).includes(type))) ?? []
-  let nextActivityIndex = 0
   while (result.length < limit && unitIds.length > 0) {
-    let chosenUnitIndex = unitIndex % unitIds.length
-    const requestedType = availableActivityTypes.length > 0 ? availableActivityTypes[nextActivityIndex % availableActivityTypes.length] : undefined
-    if (requestedType) {
-      const typeUnitIndex = unitIds.findIndex((lessonId) => (buckets.get(lessonId) ?? []).some((item) => activityTypesForTarget(item.card).includes(requestedType)))
-      if (typeUnitIndex >= 0) chosenUnitIndex = typeUnitIndex
-    }
-    const lessonId = unitIds[chosenUnitIndex]
-    const bucket = buckets.get(lessonId) ?? []
-    const firstPriority = bucket[0]?.card.queuePriority ?? 1
-    const firstTier = tierRank(bucket[0]?.card.tier)
-    const preferredIndex = requestedType
-      ? bucket.findIndex((item) => activityTypesForTarget(item.card).includes(requestedType))
-      : mode === 'mixed'
-        ? bucket.findIndex((item) => (item.card.queuePriority ?? 1) === firstPriority && tierRank(item.card.tier) === firstTier && cardKind(item.card) === nextKind)
-        : -1
-    const priorityIndex = bucket.findIndex((item) => (item.card.queuePriority ?? 1) === firstPriority)
-    const item = bucket.splice(preferredIndex >= 0 ? preferredIndex : priorityIndex >= 0 ? priorityIndex : 0, 1)[0]
-    result.push(item.card)
-    if (requestedType) nextActivityIndex += 1
-    else if (mode === 'mixed') nextKind = nextKind === 'vocabulary' ? 'conjugation' : 'vocabulary'
+    const chosenUnitIndex = unitIndex % unitIds.length
+    const bucket = buckets.get(unitIds[chosenUnitIndex]) ?? []
+    const item = bucket.shift()
+    if (item) result.push(item.card)
     if (bucket.length === 0) unitIds.splice(chosenUnitIndex, 1)
     else unitIndex = chosenUnitIndex + 1
   }
@@ -667,14 +378,14 @@ export function queueCards<T extends SchedulableCard>(
     .filter(({ card, progress: item }) => selected.has(card.lessonId) && matchesMode(card, mode) && matchesActivityTypes(card, options.activityTypes) && (!item || isDue(item, today)))
   const reviews = eligible.filter((item): item is typeof item & { progress: CardProgress } => Boolean(item.progress))
   const newItems = eligible.filter(({ progress: item }) => !item)
-  const reviewCards = orderReviews(reviews, today, mode)
+  const reviewCards = orderReviews(reviews, today)
   const available = Number.isFinite(limit) ? Math.max(0, limit) : Number.POSITIVE_INFINITY
   const selectedReviews = reviewCards.slice(0, available)
   const refresh = masteredRefreshCandidates(cards, progress, selectedLessonIds, options.masteredLessonIds, today, mode, options.activityTypes, true)[0]
   const selectedRefresh = refresh && selectedReviews.length < available ? [refresh.card] : []
   const remaining = available === Number.POSITIVE_INFINITY ? Number.POSITIVE_INFINITY : available - selectedReviews.length - selectedRefresh.length
   const maxNewCards = Math.max(0, Math.floor(options.maxNewCards ?? MAX_NEW_CARDS_PER_SESSION))
-  const selectedNew = orderNew(newItems, selectedLessonIds, mode, Math.min(remaining, maxNewCards), options.activityTypes)
+  const selectedNew = orderNew(newItems, selectedLessonIds, Math.min(remaining, maxNewCards))
   return [...selectedReviews, ...selectedRefresh, ...selectedNew]
 }
 

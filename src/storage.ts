@@ -39,7 +39,7 @@ export function defaultState(): StoredState {
     version: STORAGE_VERSION,
     theme: 'light',
     dailyGoal: 12,
-    practiceMode: 'mixed',
+    practiceMode: 'vocabulary',
     missMode: 'step-back',
     correctAdvanceMode: 'automatic',
     enabledActivityTypes: [...ACTIVITY_TYPES],
@@ -66,8 +66,14 @@ function isProgress(value: unknown): value is CardProgress {
     && (maintenanceStep === undefined || (candidate.box === 5 && isMaintenanceStep(maintenanceStep)))
 }
 
-function isPracticeMode(value: unknown): value is PracticeMode {
-  return value === 'mixed' || value === 'vocabulary' || value === 'conjugation'
+type LegacyPracticeMode = PracticeMode | 'conjugation'
+
+function isCurrentPracticeMode(value: unknown): value is PracticeMode {
+  return value === 'mixed' || value === 'vocabulary'
+}
+
+function isLegacyPracticeMode(value: unknown): value is LegacyPracticeMode {
+  return isCurrentPracticeMode(value) || value === 'conjugation'
 }
 
 function isMissMode(value: unknown): value is MissMode {
@@ -90,14 +96,15 @@ function isActivityTypes(value: unknown): value is ActivityType[] {
   return Array.isArray(value) && value.length > 0 && new Set(value).size === value.length && value.every(isActivityType)
 }
 
-function activityTypesForMode(mode: PracticeMode): ActivityType[] {
-  if (mode === 'mixed') return [...ACTIVITY_TYPES]
-  return mode === 'vocabulary' ? ['vocabulary', 'ordered', 'typed'] : ['conjugation', 'typed']
+function normalizeActivityTypes(value: unknown): ActivityType[] {
+  if (!Array.isArray(value)) return [...ACTIVITY_TYPES]
+  const enabled = [...new Set(value.filter(isActivityType))]
+  return enabled.length > 0 ? enabled : [...ACTIVITY_TYPES]
 }
 
 function isStateFields(value: Record<string, unknown>): boolean {
   if (typeof value.dailyGoal !== 'number' || !Number.isInteger(value.dailyGoal) || value.dailyGoal < 1 || value.dailyGoal > 50) return false
-  if (value.enabledActivityTypes !== undefined && !isActivityTypes(value.enabledActivityTypes)) return false
+  if (value.enabledActivityTypes !== undefined && !Array.isArray(value.enabledActivityTypes)) return false
   if (value.missMode !== undefined && !isMissMode(value.missMode)) return false
   if (!Array.isArray(value.selectedLessonIds) || value.selectedLessonIds.some((id) => typeof id !== 'string' || id.length === 0)) return false
   if (!value.progress || typeof value.progress !== 'object' || Array.isArray(value.progress)) return false
@@ -110,7 +117,7 @@ function isStateFields(value: Record<string, unknown>): boolean {
 export function isStoredState(value: unknown): value is StoredState {
   if (!value || typeof value !== 'object') return false
   const candidate = value as Record<string, unknown>
-  return candidate.version === STORAGE_VERSION && isTheme(candidate.theme) && isPracticeMode(candidate.practiceMode) && isMissMode(candidate.missMode) && isCorrectAdvanceMode(candidate.correctAdvanceMode) && isActivityTypes(candidate.enabledActivityTypes) && isStateFields(candidate)
+  return candidate.version === STORAGE_VERSION && isTheme(candidate.theme) && isCurrentPracticeMode(candidate.practiceMode) && isMissMode(candidate.missMode) && isCorrectAdvanceMode(candidate.correctAdvanceMode) && isActivityTypes(candidate.enabledActivityTypes) && isStateFields(candidate)
 }
 
 function migrateStoredState(value: unknown): StoredState | undefined {
@@ -118,16 +125,15 @@ function migrateStoredState(value: unknown): StoredState | undefined {
   if (!value || typeof value !== 'object') return undefined
   const candidate = value as Record<string, unknown>
   if ((candidate.version !== 1 && candidate.version !== 2 && candidate.version !== 3 && candidate.version !== 4 && candidate.version !== 5) || !isStateFields(candidate)) return undefined
-  if (candidate.version >= 2 && !isPracticeMode(candidate.practiceMode)) return undefined
-  const practiceMode = candidate.version === 1 ? 'mixed' : candidate.practiceMode as PracticeMode
+  if (candidate.version >= 2 && !isLegacyPracticeMode(candidate.practiceMode)) return undefined
   return {
     version: STORAGE_VERSION,
     theme: isTheme(candidate.theme) ? candidate.theme : 'light',
     dailyGoal: candidate.dailyGoal as number,
-    practiceMode,
+    practiceMode: 'vocabulary',
     missMode: isMissMode(candidate.missMode) ? candidate.missMode : 'step-back',
     correctAdvanceMode: isCorrectAdvanceMode(candidate.correctAdvanceMode) ? candidate.correctAdvanceMode : 'automatic',
-    enabledActivityTypes: isActivityTypes(candidate.enabledActivityTypes) ? [...candidate.enabledActivityTypes] : activityTypesForMode(practiceMode),
+    enabledActivityTypes: normalizeActivityTypes(candidate.enabledActivityTypes),
     selectedLessonIds: candidate.selectedLessonIds as string[],
     progress: candidate.progress as Record<string, CardProgress>,
     streak: candidate.streak as StoredState['streak'],
@@ -142,8 +148,7 @@ function sanitizeState(state: StoredState): StoredState {
   const progress: Record<string, CardProgress> = Object.fromEntries(
     Object.entries(state.progress).filter(([targetId]) => knownTargetIds.has(targetId)),
   )
-  const enabledActivityTypes = [...new Set(state.enabledActivityTypes.filter(isActivityType))]
-  return { ...state, selectedLessonIds, progress, enabledActivityTypes: enabledActivityTypes.length > 0 ? enabledActivityTypes : [...ACTIVITY_TYPES] }
+  return { ...state, practiceMode: 'vocabulary', selectedLessonIds, progress, enabledActivityTypes: normalizeActivityTypes(state.enabledActivityTypes) }
 }
 
 function browserStorage(): StorageLike | undefined {

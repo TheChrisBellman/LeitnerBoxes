@@ -13,7 +13,7 @@ LeitnerBoxes is an unofficial study aid. Its progression structure and unit head
 - [PFL2 A/B archive](https://publications.aws.tpsgc-pwgsc.cloud-nuage.canada.ca/site/fra/recherche/CataloguedesproduitsdeformationlinguistiqueAB.html)
 - [PFL2 C archive catalogue](https://publications.gc.ca/site/eng/search/LanguageLearningProductsCatalogueC.html?wbdisable=false)
 
-The practice cards, translations, distractors, and software are independently authored. The app is not affiliated with or endorsed by the Government of Canada and does not include the source courses' exercises, recordings, or instructional text. Reuse of source material remains subject to the [Canada.ca terms and conditions](https://www.canada.ca/en/transparency/terms.html?lang=en).
+The app ships a source-aligned vocabulary corpus selected from the public PFL2 PDFs so learners can practise terms that occur in the lessons. The 550 cards are organized by the source curriculum units and use deterministic, form-matched answer choices from the reviewed lesson vocabulary. The source courses' exercises, recordings, and instructional text are not reproduced. The app is not affiliated with or endorsed by the Government of Canada. Government source material remains subject to the [Canada.ca terms and conditions](https://www.canada.ca/en/transparency/terms.html?lang=en).
 
 ## Privacy
 
@@ -21,4 +21,4 @@ The app has no accounts or backend. Learning progress and preferences stay in th
 
 ## License
 
-The software and independently authored practice content are licensed under GPL-2.0-only; see [LICENSE](LICENSE). Runtime dependency notices are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Government of Canada source headings are identified above and are not relicensed by this file.
+The application code is licensed under GPL-2.0-only; see [LICENSE](LICENSE). Runtime dependency notices are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Government of Canada source material and headings are identified above and are not relicensed by this file.
