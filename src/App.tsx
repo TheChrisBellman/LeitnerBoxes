@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { curriculumById, curriculumUnits, type CurriculumUnit, type Level } from './data/curriculum'
-import { allTargets } from './data/words'
+import { allExercises } from './data/pilot-exercises'
+import { allCards, allTargets } from './data/words'
 import { ACTIVITY_TYPES, type ActivityType, type PracticeTarget } from './data/types'
 import {
   BOXES,
@@ -70,18 +71,34 @@ const levelDescriptions: Record<Level, string> = {
 
 const activityOptions: { type: ActivityType; label: string; description: string }[] = [
   { type: 'vocabulary', label: 'Vocabulary', description: 'French and English meaning recall.' },
+  { type: 'conjugation', label: 'Conjugation', description: 'Present-tense form recall.' },
+  { type: 'best-response', label: 'Best response', description: 'Choose the most useful workplace reply.' },
+  { type: 'contextual-cloze', label: 'Contextual cloze', description: 'Complete a sentence in context.' },
   { type: 'ordered', label: 'Tap to order', description: 'Build a French phrase from word tiles.' },
-  { type: 'typed', label: 'Typed recall', description: 'Type the French answer when accents allow.' },
+  { type: 'correction', label: 'Bounded correction', description: 'Find the segment that needs correction.' },
+  { type: 'reading', label: 'Reading comprehension', description: 'Read a passage and answer questions.' },
+  { type: 'transformation', label: 'Reformulation', description: 'Choose an equivalent expression.' },
+  { type: 'scenario', label: 'Scenario choice', description: 'Choose the next workplace action.' },
+  { type: 'typed', label: 'Typed recall', description: 'Type the French answer.' },
 ]
 
-function practiceModeForActivityTypes(_types: readonly ActivityType[]): PracticeMode {
-  return 'vocabulary'
+function activityTypesForMode(mode: PracticeMode): ActivityType[] {
+  if (mode === 'mixed') return [...ACTIVITY_TYPES]
+  return mode === 'vocabulary' ? ['vocabulary', 'ordered', 'typed'] : ['conjugation', 'typed']
+}
+
+function practiceModeForActivityTypes(types: readonly ActivityType[]): PracticeMode {
+  const matches = (preset: readonly ActivityType[]) => types.length === preset.length && preset.every((type) => types.includes(type))
+  if (matches(activityTypesForMode('vocabulary'))) return 'vocabulary'
+  if (matches(activityTypesForMode('conjugation'))) return 'conjugation'
+  return 'mixed'
 }
 
 function activityTypeForQuestion(question: PracticeQuestion): ActivityType {
+  if (question.exercise) return question.exercise.kind
   if (question.format === 'typed') return 'typed'
   if (question.format === 'arrange') return 'ordered'
-  return 'vocabulary'
+  return question.kind === 'conjugation' ? 'conjugation' : 'vocabulary'
 }
 
 function shuffleByActivityType<T>(items: readonly T[], getType: (item: T) => ActivityType): T[] {
@@ -137,23 +154,87 @@ function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
 }
 
 function choicesFor(question: PracticeQuestion): string[] {
-  return question.format === 'choice' ? shuffle([question.answer, ...question.distractors]) : []
+  return question.format === 'choice' || question.format === 'cloze' || question.format === 'correction'
+    ? shuffle([question.answer, ...question.distractors])
+    : []
 }
 
-function practiceModeLabel(_mode: PracticeMode): string {
-  return 'PDF vocabulary'
+function practiceModeLabel(mode: PracticeMode): string {
+  return mode === 'vocabulary' ? 'Vocabulary only' : mode === 'conjugation' ? 'Conjugation only' : 'Mixed practice'
 }
 
-function cardMatchesMode(card: PracticeTarget, _mode: PracticeMode, enabledActivityTypes?: readonly ActivityType[]): boolean {
-  return matchesActivityTypes(card, enabledActivityTypes)
+function cardMatchesMode(card: PracticeTarget, mode: PracticeMode, enabledActivityTypes?: readonly ActivityType[]): boolean {
+  const modeMatches = card.kind === 'exercise' ? mode === 'mixed' : mode === 'mixed' || card.kind === mode
+  return modeMatches && matchesActivityTypes(card, enabledActivityTypes)
 }
 
 function levelForLesson(lessonId: string): CurriculumUnit | undefined {
   return curriculumById.get(lessonId)
 }
 
-function answerDisplayFor(_question: PracticeQuestion, value: string): string {
-  return value
+function answerDisplayFor(question: PracticeQuestion, value = question.answer): string {
+  if (value === question.answer && question.answerDisplay) return question.answerDisplay
+  if (value === question.answer && question.card.kind === 'conjugation') return question.card.answer
+  return question.choiceLabels?.[value] ?? value
+}
+
+function exerciseLabel(question: PracticeQuestion): string | undefined {
+  switch (question.exercise?.kind) {
+    case 'contextual-cloze': return 'Contextual cloze'
+    case 'correction': return 'Bounded correction'
+    case 'best-response': return 'Best response'
+    case 'reading': return 'Reading comprehension'
+    case 'scenario': return 'Scenario choice'
+    case 'transformation': return 'Reformulation'
+    case 'ordered': return 'Tap to order'
+    case 'typed': return 'Contextual typed recall'
+    default: return undefined
+  }
+}
+
+function ExerciseContext({ question }: { question: PracticeQuestion }) {
+  if (!question.context && question.exercise?.kind !== 'correction') return null
+  if (question.exercise?.kind === 'correction') {
+    return (
+      <div className="exercise-context correction-context">
+        <span className="exercise-context-label">{question.contextLabel}</span>
+        <p lang={question.contextLanguage ?? 'fr'} className="correction-sentence">
+          {question.exercise.segments.map((segment, index) => (
+            <span className="correction-segment" key={segment.id}>
+              <strong aria-hidden="true">{String.fromCharCode(65 + index)}</strong>
+              <span>{segment.text}</span>
+            </span>
+          ))}
+        </p>
+      </div>
+    )
+  }
+  if (!question.context) return null
+  if (question.contextKind === 'passage') {
+    return (
+      <article className="exercise-context reading-passage" lang={question.contextLanguage ?? 'fr'}>
+        <header>
+          {question.contextLabel && <span className="exercise-context-label">{question.contextLabel}</span>}
+          {question.contextTitle && <h2>{question.contextTitle}</h2>}
+        </header>
+        <p>{question.context}</p>
+      </article>
+    )
+  }
+  if (question.contextKind === 'dialogue') {
+    return (
+      <blockquote className="exercise-context dialogue-context" lang={question.contextLanguage ?? 'fr'}>
+        {question.contextTitle && <cite>{question.contextTitle}</cite>}
+        <p>{question.context}</p>
+      </blockquote>
+    )
+  }
+  return (
+    <div className="exercise-context situation-context" lang={question.contextLanguage ?? 'fr'}>
+      {question.contextLabel && <span className="exercise-context-label">{question.contextLabel}</span>}
+      <p>{question.context}</p>
+    </div>
+  )
 }
 
 function groupLabel(group: string): string {
@@ -191,11 +272,13 @@ function MobileHeader({ onMenu, menuOpen, triggerRef, screen, onNavigate }: { on
 function MenuSheet({
   screen,
   dailyGoal,
+  practiceMode,
   missMode,
   correctAdvanceMode,
   enabledActivityTypes,
   theme,
   onDailyGoalChange,
+  onPracticeModeChange,
   onMissModeChange,
   onCorrectAdvanceModeChange,
   onActivityTypesChange,
@@ -206,11 +289,13 @@ function MenuSheet({
 }: {
   screen: Screen
   dailyGoal: number
+  practiceMode: PracticeMode
   missMode: MissMode
   correctAdvanceMode: CorrectAdvanceMode
   enabledActivityTypes: readonly ActivityType[]
   theme: Theme
   onDailyGoalChange: (value: number) => void
+  onPracticeModeChange: (value: PracticeMode) => void
   onMissModeChange: (value: MissMode) => void
   onCorrectAdvanceModeChange: (value: CorrectAdvanceMode) => void
   onActivityTypesChange: (value: ActivityType[]) => void
@@ -254,12 +339,17 @@ function MenuSheet({
         <section className="menu-group" aria-labelledby="menu-practice-heading">
           <h3 id="menu-practice-heading">Practice</h3>
           <div className="menu-setting">
-            <span className="menu-setting-label">Practice mode</span>
-            <p className="menu-helper">PDF-aligned vocabulary with meaning recall, tap-to-order, and typed recall.</p>
+            <label htmlFor="practice-mode">Practice mode</label>
+            <select id="practice-mode" name="practice-mode" autoComplete="off" value={practiceMode} onChange={(event) => onPracticeModeChange(event.target.value as PracticeMode)}>
+              <option value="mixed">Mixed: selected activities</option>
+              <option value="vocabulary">Vocabulary only</option>
+              <option value="conjugation">Conjugation only</option>
+            </select>
+            <p className="menu-helper">Mixed practice uses the checked activity types below.</p>
           </div>
           <fieldset className="activity-picker">
             <legend>Activity types</legend>
-            <p className="menu-helper">Choose the source-aligned ways to practise each vocabulary card.</p>
+            <p className="menu-helper">At least one activity stays enabled. Available activities are mixed into each session when they are due or new.</p>
             <div className="activity-options">
               {activityOptions.map(({ type, label, description }) => {
                 const checked = enabledActivityTypes.includes(type)
@@ -311,7 +401,7 @@ function MenuSheet({
             <button type="button" className="button menu-reset-button" onClick={onResetLocalData}>Reset all local data</button>
             <p>Erases progress, streak, curriculum selection, and preferences from this browser.</p>
           </div>
-          <p className="menu-disclaimer">Unofficial companion. Selected lesson terms and glosses come from public PFL2 PDFs. Progress stays in this browser.</p>
+          <p className="menu-disclaimer">Unofficial companion. Selected lesson terms and glosses come from public PFL2 PDFs; other activities are independently authored. Progress stays in this browser.</p>
           <p className="menu-last-updated"><time dateTime="2026-08-27">Last updated: 27 August 2026</time></p>
         </section>
       </aside>
@@ -417,7 +507,7 @@ function TodayScreen({
   const sessionSize = readyCardCount
   const hasCards = readyCardCount > 0
   const hasFutureCards = queueCounts.future > 0
-  const modeDescription = 'vocabulary cards'
+  const modeDescription = practiceMode === 'conjugation' ? 'conjugation cards' : practiceMode === 'vocabulary' ? 'vocabulary cards' : 'cards'
   const missDescription = missMode === 'step-back' ? 'Missed cards step back one box.' : 'Missed cards return to Box 1.'
   const masteredOnly = activeUnits.length === 0 && masteredSelectedCount > 0
   return (
@@ -449,10 +539,10 @@ function TodayScreen({
             </details>
           </div>
           {notice && <p className="inline-notice today-message" role="alert">{notice}</p>}
-          {!hasCards && !notice && activeUnits.length > 0 && <p className="quiet-note today-message">{selectedCardCount === 0 ? `No ${modeDescription} are available for the selected units yet.` : hasFutureCards ? 'No cards are due right now. Come back when the next review is ready.' : 'No cards are available right now.'}</p>}
+          {!hasCards && !notice && activeUnits.length > 0 && <p className="quiet-note today-message">{selectedCardCount === 0 ? `No ${modeDescription} are authored for the selected units yet. Switch practice mode or choose A-01–A-03.` : hasFutureCards ? 'No cards are due right now. Come back when the next review is ready.' : 'No cards are available right now.'}</p>}
           {!hasCards && !notice && masteredOnly && <p className="quiet-note today-message">Mastered objectives return for occasional refreshes. {hasFutureCards ? 'The next refresh is scheduled.' : 'No refresh is due right now.'}</p>}
           {activeUnits.length === 0 && !masteredOnly && <p className="empty-guidance today-message">Open Menu → Curriculum to choose a starting area.</p>}
-          {activeUnits.length > 0 && selectedCardCount === 0 && <p className="empty-guidance today-message">Choose a unit with source-aligned vocabulary.</p>}
+          {activeUnits.length > 0 && selectedCardCount === 0 && <p className="empty-guidance today-message">Switch practice mode or choose starter units A-01–A-03 for conjugation cards.</p>}
         </div>
         <section ref={actionPanelRef} className="next-card-panel">
           <div className="next-card-copy">
@@ -644,6 +734,7 @@ function SuccessOverlay({
         <div className="success-copy" role="status" aria-live="polite" aria-labelledby="success-title" aria-atomic="true">
           <strong id="success-title">{title}</strong>
           <span className="success-answer" lang={question.answerLanguage}>{fullAnswer}</span>
+          {question.exercise?.feedback && <span className="success-explanation">{question.exercise.feedback}</span>}
           <span className="success-movement">{movement}</span>
           {shouldAutoAdvance && <span className="success-next">Next card…</span>}
         </div>
@@ -676,13 +767,20 @@ function FeedbackPanel({
 
   const fullAnswer = answerDisplayFor(question, feedback.answer)
   const selectedAnswer = answerDisplayFor(question, feedback.selectedChoice)
-  const explanation = question.format === 'typed'
+  const authoredExplanation = question.exercise?.feedback
+  const explanation = authoredExplanation ?? (question.format === 'typed'
     ? feedback.correct ? 'You recalled the answer without choices.' : 'Check the spelling, then type the answer again.'
     : question.format === 'arrange'
       ? feedback.correct ? 'You built the French answer in the correct order.' : 'Review the word order, then build it again.'
-      : question.direction === 'english-to-french'
-        ? 'You matched the English meaning to its French form.'
-        : 'You matched the French phrase to its English meaning.'
+      : question.format === 'correction'
+        ? feedback.correct ? 'You identified the segment that needs attention.' : 'Review the marked segments and choose the one that needs attention.'
+        : question.format === 'cloze'
+          ? feedback.correct ? 'You chose the form that completes the sentence.' : `The blank needs the ${question.card.kind === 'conjugation' ? question.card.person : 'matching'} form.`
+          : question.card.kind === 'conjugation'
+            ? feedback.correct ? `You matched the ${question.card.person} form.` : `The prompt asks for ${question.card.person}.`
+            : question.direction === 'english-to-french'
+              ? 'You matched the English meaning to its French form.'
+              : 'You matched the French phrase to its English meaning.')
   const retryNote = question.format === 'typed'
     ? 'Type it again without looking at the correction.'
     : question.format === 'arrange'
@@ -769,13 +867,60 @@ function QuizScreen({
 
   useEffect(() => {
     setTypedAnswer('')
+    accentSelectionRef.current = null
+    accentPointerHandledRef.current = false
     setSelectedTokenIndexes([])
     const indexes = (question.tokens ?? []).map((_, tokenIndex) => tokenIndex)
     setTokenOrder(indexes.length > 1 ? [...indexes.slice(1), indexes[0]] : indexes)
     if (!repairing) return
     if (question.format === 'typed') typedInputRef.current?.focus({ preventScroll: true })
-    else if (question.format === 'choice') firstChoiceRef.current?.focus({ preventScroll: true })
+    else if (question.format === 'choice' || question.format === 'cloze' || question.format === 'correction') firstChoiceRef.current?.focus({ preventScroll: true })
   }, [question.card.id, question.format, question.tokens, repairing])
+
+  const questionLabel = exerciseLabel(question) ?? (question.format === 'typed'
+    ? question.kind === 'conjugation' ? 'Conjugation · Typed recall' : 'Vocabulary · Typed recall'
+    : question.format === 'arrange'
+      ? 'Vocabulary · Build the answer'
+      : question.format === 'cloze'
+        ? 'Conjugation · Fill the blank'
+        : question.direction === 'english-to-french'
+          ? 'Vocabulary · English → French'
+          : 'Vocabulary · French → English')
+  const questionInstruction = question.exercise?.kind === 'correction'
+    ? 'Choose the marked segment that needs correction.'
+    : question.exercise?.kind === 'reading'
+      ? 'Read the passage, then choose the best answer.'
+      : question.exercise?.kind === 'scenario'
+        ? 'What should you say next?'
+        : question.exercise?.kind === 'best-response'
+          ? 'Choose the most appropriate response.'
+          : question.exercise?.kind === 'transformation'
+            ? 'Choose the best reformulation.'
+            : question.exercise?.kind === 'contextual-cloze'
+              ? 'Choose the word or phrase that completes the context.'
+              : question.exercise?.kind === 'ordered'
+                ? 'Tap the words to build the directive.'
+                : question.format === 'typed'
+                  ? question.kind === 'conjugation' ? 'Type the present-tense form. This answer needs no accents.' : 'Type the French answer. Use the accent buttons if needed.'
+                  : question.format === 'arrange'
+                    ? 'Tap the words to build the French answer.'
+                    : question.format === 'cloze'
+                      ? 'Choose the present-tense form that completes the sentence.'
+                      : question.direction === 'english-to-french'
+                        ? 'How do you say this in French?'
+                        : 'What does it mean in English?'
+  const answerGroupLabel = question.exercise?.kind === 'correction'
+    ? 'Choose the segment to correct'
+    : question.exercise
+      ? 'Choose the best answer'
+      : question.kind === 'conjugation'
+        ? 'Choose the French conjugation'
+        : question.direction === 'english-to-french'
+          ? 'Choose the French translation'
+          : 'Choose the English translation'
+  const hasLongPrompt = question.prompt.length > 12
+  const arrangedAnswer = selectedTokenIndexes.map((tokenIndex) => question.tokens?.[tokenIndex] ?? '').join(' ')
+  const remainingTokenIndexes = tokenOrder.filter((tokenIndex) => !selectedTokenIndexes.includes(tokenIndex))
 
   useEffect(() => {
     const input = typedInputRef.current
@@ -795,27 +940,6 @@ function QuizScreen({
       viewport.removeEventListener('resize', keepInputVisible)
     }
   }, [question.card.id, question.format])
-
-  const questionLabel = question.format === 'typed'
-    ? 'Vocabulary · Typed recall'
-    : question.format === 'arrange'
-      ? 'Vocabulary · Build the answer'
-      : question.direction === 'english-to-french'
-        ? 'Vocabulary · English → French'
-        : 'Vocabulary · French → English'
-  const questionInstruction = question.format === 'typed'
-    ? 'Type the French answer. Use the accent buttons if needed.'
-    : question.format === 'arrange'
-      ? 'Tap the words to build the French answer.'
-      : question.direction === 'english-to-french'
-        ? 'How do you say this in French?'
-        : 'What does it mean in English?'
-  const answerGroupLabel = question.direction === 'english-to-french'
-    ? 'Choose the French translation'
-    : 'Choose the English translation'
-  const hasLongPrompt = question.prompt.length > 12
-  const arrangedAnswer = selectedTokenIndexes.map((tokenIndex) => question.tokens?.[tokenIndex] ?? '').join(' ')
-  const remainingTokenIndexes = tokenOrder.filter((tokenIndex) => !selectedTokenIndexes.includes(tokenIndex))
 
   function submitTypedAnswer(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -901,14 +1025,16 @@ function QuizScreen({
       </ol>
       <div className="quiz-workspace">
         <div className="quiz-prompt-column">
-          <div key={question.card.id} className={`prompt-card ${hasLongPrompt ? 'has-long-prompt' : ''}`}>
+          <div key={question.card.id} className={`prompt-card question-type-${question.kind} exercise-format-${question.format} ${hasLongPrompt ? 'has-long-prompt' : ''}`}>
             <div className="question-meta">
               <span className="question-type-label">{questionLabel}</span>
               {unit && <span className="question-unit-context"><strong>{unit.id.toUpperCase()}</strong><span lang="fr">{unit.title}</span></span>}
             </div>
+            <ExerciseContext question={question} />
             <div className="prompt-copy">
-              <div className="prompt-headline">
+              <div className={`prompt-headline ${question.kind === 'conjugation' ? 'is-conjugation' : ''}`}>
                 <h1 ref={questionHeadingRef} tabIndex={-1} lang={question.promptLanguage}>{question.prompt}</h1>
+                {question.card.kind === 'conjugation' && question.format !== 'cloze' && <span className="conjugation-person">{question.card.person}</span>}
               </div>
               <p>{questionInstruction}</p>
             </div>
@@ -921,16 +1047,21 @@ function QuizScreen({
               ? 'Type the answer again without looking at the correction.'
               : question.format === 'arrange'
                 ? 'Build the answer again without looking at the correction.'
-                : 'Choose the answer again without looking at the correction.'}</span>
+                : question.exercise?.kind === 'correction'
+                  ? 'Choose the marked segment again without looking at the correction.'
+                  : question.card.kind === 'conjugation'
+                    ? `Choose the form that matches ${question.card.person}.`
+                    : 'Choose the answer again without looking at the correction.'}</span>
           </div>}
-          {question.format === 'choice' && <div className="choice-list" role="group" aria-label={answerGroupLabel}>
+          {(question.format === 'choice' || question.format === 'cloze' || question.format === 'correction') && <div className="choice-list" role="group" aria-label={answerGroupLabel}>
             {question.choices.map((choice, choiceIndex) => {
+              const choiceLabel = question.choiceLabels?.[choice] ?? choice
               const isCorrect = Boolean(feedback?.correct || feedback?.stage === 'repair') && feedback?.answer === choice
               const isSelected = feedback?.selectedChoice === choice
               return (
-                <button ref={choiceIndex === 0 ? firstChoiceRef : undefined} type="button" className={`choice-button ${isCorrect ? 'is-correct' : ''} ${isSelected && !isCorrect ? 'is-incorrect' : ''}`} key={choice} onClick={() => onAnswer(choice)} disabled={Boolean(feedback?.correct || (feedback?.stage === 'repair' && choice !== feedback.answer))} aria-label={feedback?.stage === 'repair' && !feedback.correct && choice === feedback.answer ? `${choice}. ${index + 1 === total ? 'Show results' : 'Continue to the next card'}` : undefined}>
+                <button ref={choiceIndex === 0 ? firstChoiceRef : undefined} type="button" className={`choice-button ${isCorrect ? 'is-correct' : ''} ${isSelected && !isCorrect ? 'is-incorrect' : ''}`} key={choice} onClick={() => onAnswer(choice)} disabled={Boolean(feedback?.correct || (feedback?.stage === 'repair' && choice !== feedback.answer))} aria-label={feedback?.stage === 'repair' && !feedback.correct && choice === feedback.answer ? `${choiceLabel}. ${index + 1 === total ? 'Show results' : 'Continue to the next card'}` : undefined}>
                   <span className="choice-number">{feedback && isCorrect ? <Icon name="check" size={16} /> : choiceIndex + 1}</span>
-                  <span lang={question.answerLanguage}>{choice}</span>
+                  <span lang={question.answerLanguage}>{choiceLabel}</span>
                   {feedback && isSelected && !isCorrect && <Icon name="close" size={18} />}
                 </button>
               )
@@ -1014,7 +1145,7 @@ export default function App() {
   const [session, setSession] = useState<ActiveQuestion[]>([])
   const [sessionLessonIds, setSessionLessonIds] = useState<string[]>([])
   const [focusedSession, setFocusedSession] = useState(false)
-  const [sessionMode, setSessionMode] = useState<PracticeMode>('vocabulary')
+  const [sessionMode, setSessionMode] = useState<PracticeMode>('mixed')
   const [sessionIndex, setSessionIndex] = useState(0)
   const [feedback, setFeedback] = useState<Feedback | null>(null)
   const [repairing, setRepairing] = useState(false)
@@ -1094,14 +1225,14 @@ export default function App() {
     return counts
   }, {}), [state.enabledActivityTypes, state.practiceMode])
   const selectedCardCount = useMemo(() => allTargets.filter((card) => activeLessonIds.includes(card.lessonId) && cardMatchesMode(card, state.practiceMode, state.enabledActivityTypes)).length, [activeLessonIds, state.enabledActivityTypes, state.practiceMode])
+  const displayMode = screen === 'quiz' || (screen === 'results' && results) ? sessionMode : state.practiceMode
+  const shelf = useMemo(() => shelfCounts(state.progress, activeLessonIds, allTargets, displayMode, state.enabledActivityTypes), [activeLessonIds, state.enabledActivityTypes, state.progress, displayMode])
   const sessionSelection = useMemo(() => {
     const selectedIds = sessionLessonIds.length > 0 ? sessionLessonIds : [...activeLessonIds, ...masteredSelectedLessonIds]
     const mastered = new Set(selectedIds.filter((id) => masteredLessonIds.has(id)))
     return { active: selectedIds.filter((id) => !mastered.has(id)), mastered }
   }, [activeLessonIds, masteredLessonIds, masteredSelectedLessonIds, sessionLessonIds])
   const sessionQueueCounts = useMemo(() => getQueueCounts(allTargets, state.progress, sessionSelection.active, today, state.practiceMode, state.enabledActivityTypes, sessionSelection.mastered), [sessionSelection, state.enabledActivityTypes, state.practiceMode, state.progress, today])
-  const displayMode = screen === 'quiz' || (screen === 'results' && results) ? sessionMode : state.practiceMode
-  const shelf = useMemo(() => shelfCounts(state.progress, activeLessonIds, allTargets, displayMode, state.enabledActivityTypes), [activeLessonIds, state.enabledActivityTypes, state.progress, displayMode])
   const sessionShelf = useMemo(() => shelfCounts(state.progress, focusedSession && sessionLessonIds.length > 0 ? sessionLessonIds : sessionSelection.active, allTargets, displayMode, state.enabledActivityTypes), [displayMode, focusedSession, sessionLessonIds, sessionSelection.active, state.enabledActivityTypes, state.progress])
   const currentQuestion = session[sessionIndex]
   const currentChoices = currentQuestion?.choices ?? []
@@ -1167,7 +1298,7 @@ export default function App() {
         : focusedQueueCounts.future > 0
           ? 'No cards are due right now. Your next review will appear on its scheduled date.'
           : focusedCardCount === 0
-            ? 'No source-aligned vocabulary is available for the selected units yet.'
+            ? 'No learning items are available for the selected units yet.'
             : 'No cards are available right now.')
       if (lessonIds !== undefined) {
         setScreen('today')
@@ -1176,7 +1307,7 @@ export default function App() {
       return
     }
     const nextSession = shuffleByActivityType(
-      buildSessionQuestions(nextQueue, state.progress, state.enabledActivityTypes, allTargets).map((question) => ({
+      buildSessionQuestions(nextQueue, state.progress, state.enabledActivityTypes, allCards, allExercises).map((question) => ({
         ...question,
         choices: choicesFor(question),
       })),
@@ -1269,6 +1400,10 @@ export default function App() {
     updateState((previous) => ({ ...previous, dailyGoal: value }))
   }
 
+  function updatePracticeMode(value: PracticeMode) {
+    updateState((previous) => ({ ...previous, practiceMode: value, enabledActivityTypes: activityTypesForMode(value) }))
+  }
+
   function updateActivityTypes(values: ActivityType[]) {
     const enabledActivityTypes = ACTIVITY_TYPES.filter((type) => values.includes(type))
     if (enabledActivityTypes.length === 0) return
@@ -1306,7 +1441,7 @@ export default function App() {
     setSession([])
     setSessionLessonIds([])
     setFocusedSession(false)
-    setSessionMode('vocabulary')
+    setSessionMode('mixed')
     setSessionIndex(0)
     setFeedback(null)
     setRepairing(false)
@@ -1372,7 +1507,7 @@ export default function App() {
   }, [menuOpen])
 
   useEffect(() => {
-    if (menuOpen || screen !== 'quiz' || !currentQuestion || feedback?.correct || currentQuestion.format !== 'choice') return undefined
+    if (menuOpen || screen !== 'quiz' || !currentQuestion || feedback?.correct || !['choice', 'cloze', 'correction'].includes(currentQuestion.format)) return undefined
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.repeat) return
       const index = Number(event.key) - 1
@@ -1402,7 +1537,7 @@ export default function App() {
         {screen !== 'quiz' && <MobileHeader onMenu={() => setMenuOpen(true)} menuOpen={menuOpen} triggerRef={menuTriggerRef} screen={screen} onNavigate={navigate} />}
         <main id="main-content" className={`app-content ${screen === 'quiz' ? 'is-quiz' : ''}`} tabIndex={-1}>{renderScreen()}</main>
       </div>
-      {menuOpen && <MenuSheet screen={screen} dailyGoal={state.dailyGoal} missMode={state.missMode} correctAdvanceMode={state.correctAdvanceMode} enabledActivityTypes={state.enabledActivityTypes} theme={state.theme} onDailyGoalChange={updateDailyGoal} onMissModeChange={updateMissMode} onCorrectAdvanceModeChange={updateCorrectAdvanceMode} onActivityTypesChange={updateActivityTypes} onThemeChange={updateTheme} onResetLocalData={resetLocalData} onNavigate={navigate} onClose={closeMenu} />}
+      {menuOpen && <MenuSheet screen={screen} dailyGoal={state.dailyGoal} practiceMode={state.practiceMode} missMode={state.missMode} correctAdvanceMode={state.correctAdvanceMode} enabledActivityTypes={state.enabledActivityTypes} theme={state.theme} onDailyGoalChange={updateDailyGoal} onPracticeModeChange={updatePracticeMode} onMissModeChange={updateMissMode} onCorrectAdvanceModeChange={updateCorrectAdvanceMode} onActivityTypesChange={updateActivityTypes} onThemeChange={updateTheme} onResetLocalData={resetLocalData} onNavigate={navigate} onClose={closeMenu} />}
       {screen === 'quiz' && currentQuestion && feedback?.correct && <SuccessOverlay question={currentQuestion} feedback={feedback} index={sessionIndex} total={session.length} advanceMode={state.correctAdvanceMode} onContinue={continueSession} />}
     </div>
   )
