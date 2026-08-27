@@ -1,10 +1,15 @@
+import { sourceSupplements } from './source-supplements.ts'
+import { sourceSupplements1120 } from './source-supplements-11-20.ts'
+import { sourceSupplements2140 } from './source-supplements-21-40.ts'
+import { sourceSupplementsC } from './source-supplements-c.ts'
+import type { SourceEvidence, SourceSupplement } from './source-evidence.ts'
 import type { CardTier, Word } from './types.ts'
 
 /**
- * Focused vocabulary selected from the public Government of Canada PFL2
- * PDFs (SC102-2 objectives and the SC102-1/SC103-29 Level C support material).
- * The source terms/glosses are paired with deterministic, form-matched answer
- * choices selected from the curated lesson pools in this module.
+ * Vocabulary, grammar, spelling, and phonetics terms explicitly mapped from
+ * the public Government of Canada PFL2 PDFs (SC102-2 objectives and the
+ * SC102-1/SC103-29 Level C support material). Incidental prose, recordings,
+ * exercises, and answer keys are not copied into this corpus.
  * See README.md for the public-source attribution and unofficial status.
  */
 type SourceRow = { lessonId: string; french: string; answer: string }
@@ -562,6 +567,108 @@ const sourceRows: readonly SourceRow[] = [
   { lessonId: "c-21", french: "polluer", answer: "to pollute" },
 ]
 
+const a04FormGroups: readonly (readonly [string, readonly string[]])[] = [
+  ['to have', ['avoir']],
+  ['to own', ['posséder']],
+  ['owner', ['propriétaire']],
+  ['my', ['mon', 'ma', 'mes']],
+  ['your', ['ton', 'ta', 'tes', 'votre', 'vos']],
+  ['his, her, or its', ['son', 'sa', 'ses']],
+  ['our', ['notre', 'nos']],
+  ['their', ['leur', 'leurs']],
+  ['mine', ['le mien', 'la mienne', 'les miens', 'les miennes']],
+  ['yours', ['le tien', 'la tienne', 'les tiens', 'les tiennes', 'le vôtre', 'la vôtre', 'les vôtres']],
+  ['his, hers, or its', ['le sien', 'la sienne', 'les siens', 'les siennes']],
+  ['ours', ['le nôtre', 'la nôtre', 'les nôtres']],
+  ['theirs', ['le leur', 'la leur', 'les leurs']],
+  ['possession', ['possession']],
+  ['to belong to', ['être à', 'appartenir à']],
+  ['of', ['de']],
+  ['white', ['blanc', 'blanche']],
+  ['blue', ['bleu', 'bleue']],
+  ['yellow', ['jaune']],
+  ['black', ['noir', 'noire']],
+  ['red', ['rouge']],
+  ['green', ['vert', 'verte']],
+  ['round', ['rond', 'ronde']],
+  ['square', ['carré', 'carrée']],
+  ['oval', ['ovale']],
+  ['rectangular', ['rectangulaire']],
+  ['triangular', ['triangulaire']],
+  ['long', ['long', 'longue']],
+  ['thin', ['mince']],
+  ['thick', ['épais', 'épaisse']],
+  ['low', ['bas', 'basse']],
+  ['high', ['haut', 'haute']],
+  ['small', ['petit', 'petite']],
+  ['big, large', ['gros', 'grosse']],
+  ['tall, large', ['grand', 'grande']],
+  ['short', ['court', 'courte']],
+  ['narrow', ['étroit', 'étroite']],
+  ['wide', ['large']],
+  ['deep', ['profond', 'profonde']],
+  ['wood', ['en bois']],
+  ['wool', ['en laine']],
+  ['metal', ['en métal']],
+  ['metallic', ['métallique']],
+  ['synthetic', ['synthétique']],
+  ['cardboard', ['en carton']],
+  ['paper', ['en papier']],
+  ['brick', ['en brique', 'en briques']],
+  ['leather', ['en cuir']],
+  ['brand new', ['neuf', 'neuve']],
+  ['old', ['vieux', 'vieille']],
+  ['used', ['usagé', 'usagée']],
+  ['worn out', ['usé', 'usée']],
+  ['in good condition', ['en bon état']],
+  ['in poor condition', ['en mauvais état']],
+  ['excellent', ['excellent']],
+  ['damaged', ['abîmé', 'abîmée', 'endommagé', 'endommagée']],
+  ['I have', ['j’ai']],
+  ['you have', ['tu as', 'vous avez']],
+  ['he, she, or it has', ['il a', 'elle a']],
+  ['we have', ['on a', 'nous avons']],
+  ['they have', ['ils ont', 'elles ont']],
+  ['it is', ['c’est']],
+  ['they are', ['ce sont']],
+  ['good', ['bon']],
+  ['bad', ['mauvais']],
+  ['young', ['jeune']],
+  ['other', ['autre']],
+  ['brief', ['bref']],
+  ['beautiful', ['beau']],
+  ['intonation', ['l’intonation']],
+  ['stress', ['l’accentuation']],
+  ['rhythm', ['le rythme']],
+  ['mute e', ['la chute du e muet']],
+  ['assimilation', ['l’assimilation']],
+  ['linking', ['la liaison']],
+]
+export const a04SourceSupplements: readonly SourceSupplement[] = a04FormGroups.flatMap(([answer, frenchForms]) => frenchForms.map((french) => {
+  const category: SourceEvidence['category'] = /intonation|accentuation|rythme|chute du e|assimilation|liaison/.test(french) ? 'phonetics' : /^(?:mon|ma|mes|ton|ta|tes|son|sa|ses|notre|nos|votre|vos|leur|leurs|le mien|la mienne|les miens|les miennes|le tien|la tienne|les tiens|les tiennes|le vôtre|la vôtre|les vôtres|le sien|la sienne|les siens|les siennes|le nôtre|la nôtre|les nôtres|le leur|la leur|les leurs|de|j’ai|tu as|il a|elle a|on a|nous avons|vous avez|ils ont|elles ont|c’est|ce sont)$/.test(french) ? 'grammar' : /^(?:blanc|blanche|bleu|bleue|jaune|noir|noire|rouge|vert|verte|rond|ronde|carré|carrée|ovale|rectangulaire|triangulaire|long|longue|mince|épais|épaisse|bas|basse|haut|haute|petit|petite|gros|grosse|grand|grande|court|courte|étroit|étroite|large|profond|profonde|en bois|en laine|en métal|métallique|synthétique|en carton|en papier|en brique|en briques|en cuir|neuf|neuve|vieux|vieille|usagé|usagée|usé|usée|en bon état|en mauvais état|excellent|abîmé|abîmée|endommagé|endommagée|bon|mauvais|jeune|autre|bref|beau)$/.test(french) ? 'spelling' : 'vocabulary'
+  const placement = /^(?:bon|mauvais|jeune|autre|bref|beau)$/.test(french)
+  const condition = answer === 'brand new' || answer === 'old' || answer === 'used' || answer === 'worn out' || /état|excellent|endommagé|abîmé/.test(french)
+  const physical = category === 'spelling' && !placement
+  const phonetics = category === 'phonetics'
+  const grammar = category === 'grammar'
+  const avoirGrammar = /^(?:j’ai|tu as|il a|elle a|on a|nous avons|vous avez|ils ont|elles ont|c’est|ce sont)$/.test(french)
+  return {
+    lessonId: 'a-04',
+    french,
+    answer,
+    evidence: {
+      pdf: 'SC102-2-4-2005-fra.pdf',
+      page: phonetics ? 60 : placement ? 50 : avoirGrammar ? 24 : condition ? 11 : physical ? 10 : 3,
+      lineRange: phonetics ? '1985-2009' : placement ? '1648-1670' : avoirGrammar ? '712-1210' : condition ? '443-458' : physical ? '371-458' : '192-253',
+      section: phonetics ? '4.8 Phonétique' : placement ? '4.4 Grammaire' : grammar ? '4.1 and 4.3 Grammaire' : physical ? '4.2 Notions and 4.4 Grammaire' : '4.1 Notions',
+      category,
+      evidenceType: 'source-table',
+    },
+  }
+}))
+
+const completeSourceRows = [...sourceRows, ...a04SourceSupplements, ...sourceSupplements, ...sourceSupplements1120, ...sourceSupplements2140, ...sourceSupplementsC].filter((row, index, rows) => rows.findIndex((candidate) => candidate.lessonId === row.lessonId && normalize(candidate.french) === normalize(row.french)) === index)
+
 const sourceTier: CardTier = 'expansion'
 type ResponseForm = 'question' | 'full-sentence' | 'infinitive' | 'fragment'
 
@@ -581,7 +688,7 @@ const fallbackAnswers: Record<ResponseForm, string[]> = {
 }
 
 function normalize(value: string): string {
-  return value.trim().toLocaleLowerCase('fr').replace(/\s+/g, ' ')
+  return value.trim().toLocaleLowerCase('fr').replace(/[‘’]/g, "'").replace(/\s+/g, ' ')
 }
 
 function answerChoices(row: SourceRow, index: number): [string, string, string] {
@@ -619,7 +726,7 @@ function reverseChoices(row: SourceRow, index: number): [string, string, string]
 
 const orderByLesson = new Map<string, number>()
 
-export const sourceVocabulary: Word[] = sourceRows.map((row, index) => {
+export const sourceVocabulary: Word[] = completeSourceRows.map((row, index) => {
   const order = (orderByLesson.get(row.lessonId) ?? 24) + 1
   orderByLesson.set(row.lessonId, order)
   return {

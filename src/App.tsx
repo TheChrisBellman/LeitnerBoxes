@@ -1146,6 +1146,7 @@ export default function App() {
   const [sessionLessonIds, setSessionLessonIds] = useState<string[]>([])
   const [focusedSession, setFocusedSession] = useState(false)
   const [sessionMode, setSessionMode] = useState<PracticeMode>('mixed')
+  const [sessionActivityTypes, setSessionActivityTypes] = useState<ActivityType[]>([...ACTIVITY_TYPES])
   const [sessionIndex, setSessionIndex] = useState(0)
   const [feedback, setFeedback] = useState<Feedback | null>(null)
   const [repairing, setRepairing] = useState(false)
@@ -1232,8 +1233,8 @@ export default function App() {
     const mastered = new Set(selectedIds.filter((id) => masteredLessonIds.has(id)))
     return { active: selectedIds.filter((id) => !mastered.has(id)), mastered }
   }, [activeLessonIds, masteredLessonIds, masteredSelectedLessonIds, sessionLessonIds])
-  const sessionQueueCounts = useMemo(() => getQueueCounts(allTargets, state.progress, sessionSelection.active, today, state.practiceMode, state.enabledActivityTypes, sessionSelection.mastered), [sessionSelection, state.enabledActivityTypes, state.practiceMode, state.progress, today])
-  const sessionShelf = useMemo(() => shelfCounts(state.progress, focusedSession && sessionLessonIds.length > 0 ? sessionLessonIds : sessionSelection.active, allTargets, displayMode, state.enabledActivityTypes), [displayMode, focusedSession, sessionLessonIds, sessionSelection.active, state.enabledActivityTypes, state.progress])
+  const sessionQueueCounts = useMemo(() => getQueueCounts(allTargets, state.progress, sessionSelection.active, today, sessionMode, sessionActivityTypes, sessionSelection.mastered), [sessionActivityTypes, sessionMode, sessionSelection, state.progress, today])
+  const sessionShelf = useMemo(() => shelfCounts(state.progress, focusedSession && sessionLessonIds.length > 0 ? sessionLessonIds : sessionSelection.active, allTargets, displayMode, sessionActivityTypes), [displayMode, focusedSession, sessionActivityTypes, sessionLessonIds, sessionSelection.active, state.progress])
   const currentQuestion = session[sessionIndex]
   const currentChoices = currentQuestion?.choices ?? []
   const currentUnit = currentQuestion ? levelForLesson(currentQuestion.card.lessonId) : undefined
@@ -1289,9 +1290,11 @@ export default function App() {
     const requestedLessonIds = [...new Set(lessonIds ?? [...activeLessonIds, ...masteredSelectedLessonIds])]
     const focusedMasteredLessonIds = new Set(requestedLessonIds.filter((id) => masteredLessonIds.has(id)))
     const focusedActiveLessonIds = requestedLessonIds.filter((id) => !focusedMasteredLessonIds.has(id))
-    const focusedQueueCounts = getQueueCounts(allTargets, state.progress, focusedActiveLessonIds, today, state.practiceMode, state.enabledActivityTypes, focusedMasteredLessonIds)
-    const focusedCardCount = allTargets.filter((card) => focusedActiveLessonIds.includes(card.lessonId) && cardMatchesMode(card, state.practiceMode, state.enabledActivityTypes)).length
-    const nextQueue = queueCards(allTargets, state.progress, focusedActiveLessonIds, today, state.dailyGoal, { mode: state.practiceMode, maxNewCards: state.dailyGoal, activityTypes: state.enabledActivityTypes, masteredLessonIds: focusedMasteredLessonIds })
+    const sessionPracticeMode = lessonIds === undefined ? state.practiceMode : 'vocabulary'
+    const sessionTypes = lessonIds === undefined ? state.enabledActivityTypes : ['vocabulary', 'ordered', 'typed'] as ActivityType[]
+    const focusedQueueCounts = getQueueCounts(allTargets, state.progress, focusedActiveLessonIds, today, sessionPracticeMode, sessionTypes, focusedMasteredLessonIds)
+    const focusedCardCount = allTargets.filter((card) => focusedActiveLessonIds.includes(card.lessonId) && cardMatchesMode(card, sessionPracticeMode, sessionTypes)).length
+    const nextQueue = queueCards(allTargets, state.progress, focusedActiveLessonIds, today, state.dailyGoal, { mode: sessionPracticeMode, maxNewCards: state.dailyGoal, activityTypes: sessionTypes, masteredLessonIds: focusedMasteredLessonIds })
     if (nextQueue.length === 0) {
       setNotice(focusedActiveLessonIds.length === 0 && focusedMasteredLessonIds.size === 0
         ? 'Choose at least one curriculum unit before starting.'
@@ -1307,7 +1310,7 @@ export default function App() {
       return
     }
     const nextSession = shuffleByActivityType(
-      buildSessionQuestions(nextQueue, state.progress, state.enabledActivityTypes, allCards, allExercises).map((question) => ({
+      buildSessionQuestions(nextQueue, state.progress, sessionTypes, allCards, allExercises).map((question) => ({
         ...question,
         choices: choicesFor(question),
       })),
@@ -1316,7 +1319,8 @@ export default function App() {
     setSession(nextSession)
     setSessionLessonIds(requestedLessonIds)
     setFocusedSession(lessonIds !== undefined)
-    setSessionMode(state.practiceMode)
+    setSessionMode(sessionPracticeMode)
+    setSessionActivityTypes([...sessionTypes])
     setSessionIndex(0)
     setFeedback(null)
     setRepairing(false)
@@ -1442,6 +1446,7 @@ export default function App() {
     setSessionLessonIds([])
     setFocusedSession(false)
     setSessionMode('mixed')
+    setSessionActivityTypes([...ACTIVITY_TYPES])
     setSessionIndex(0)
     setFeedback(null)
     setRepairing(false)
