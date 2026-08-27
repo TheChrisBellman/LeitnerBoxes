@@ -4,6 +4,8 @@
 
 A browser-based French workplace vocabulary practice app using a five-box Leitner review system. This repository publishes the static site artifact hosted by GitHub Pages.
 
+The application source is retained under [`src/`](src/) for auditability; [`site/`](site/) contains the hosted release artifact.
+
 ## About
 
 LeitnerBoxes is an unofficial study aid. Its progression structure and unit headings broadly follow archived Government of Canada PFL2 language-training materials:
@@ -19,4 +21,4 @@ The app has no accounts or backend. Learning progress and preferences stay in th
 
 ## License
 
-The software and independently authored practice content are licensed under GPL-2.0-only; see [LICENSE](LICENSE). Government of Canada source headings are identified above and are not relicensed by this file.
+The software and independently authored practice content are licensed under GPL-2.0-only; see [LICENSE](LICENSE). Runtime dependency notices are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Government of Canada source headings are identified above and are not relicensed by this file.
