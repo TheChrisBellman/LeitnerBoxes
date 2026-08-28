@@ -6,7 +6,8 @@
   "license": "GPL-2.0-only",
   "type": "module",
   "scripts": {
-    "build": "tsc --noEmit && vite build"
+    "build": "tsc --noEmit && vite build",
+    "audit:source": "node --experimental-strip-types scripts/build-source-coverage-report.mjs"
   },
   "dependencies": {
     "react": "^19.1.0",

@@ -3,7 +3,7 @@ import { sourceSupplements1120 } from './source-supplements-11-20.ts'
 import { sourceSupplements2140 } from './source-supplements-21-40.ts'
 import { sourceSupplementsC } from './source-supplements-c.ts'
 import { sourceSupplementsFollowup } from './source-supplements-followup.ts'
-import type { SourceEvidence, SourceSupplement } from './source-evidence.ts'
+import { englishEvidenceFragments, type SourceEvidence, type SourceSupplement } from './source-evidence.ts'
 import type { CardTier, Word } from './types.ts'
 
 /**
@@ -582,6 +582,9 @@ const sourceRows: readonly SourceRow[] = [
   { lessonId: "c-21", french: "polluer", answer: "to pollute" },
 ]
 
+const a04EnglishEvidenceOverrides: Record<string, readonly string[]> = {
+  avoir: ['I have'],
+}
 const a04FormGroups: readonly (readonly [string, readonly string[]])[] = [
   ['to have', ['avoir']],
   ['to own', ['posséder']],
@@ -657,7 +660,7 @@ const a04FormGroups: readonly (readonly [string, readonly string[]])[] = [
   ['rhythm', ['le rythme']],
   ['mute e', ['la chute du e muet']],
   ['assimilation', ['l’assimilation']],
-  ['linking', ['la liaison']],
+  ['liaison', ['la liaison']],
 ]
 export const a04SourceSupplements: readonly SourceSupplement[] = a04FormGroups.flatMap(([answer, frenchForms]) => frenchForms.map((french) => {
   const category: SourceEvidence['category'] = /intonation|accentuation|rythme|chute du e|assimilation|liaison/.test(french) ? 'phonetics' : /^(?:mon|ma|mes|ton|ta|tes|son|sa|ses|notre|nos|votre|vos|leur|leurs|le mien|la mienne|les miens|les miennes|le tien|la tienne|les tiens|les tiennes|le vôtre|la vôtre|les vôtres|le sien|la sienne|les siens|les siennes|le nôtre|la nôtre|les nôtres|le leur|la leur|les leurs|de|j’ai|tu as|il a|elle a|on a|nous avons|vous avez|ils ont|elles ont|c’est|ce sont)$/.test(french) ? 'grammar' : /^(?:blanc|blanche|bleu|bleue|jaune|noir|noire|rouge|vert|verte|rond|ronde|carré|carrée|ovale|rectangulaire|triangulaire|long|longue|mince|épais|épaisse|bas|basse|haut|haute|petit|petite|gros|grosse|grand|grande|court|courte|étroit|étroite|large|profond|profonde|en bois|en laine|en métal|métallique|synthétique|en carton|en papier|en brique|en briques|en cuir|neuf|neuve|vieux|vieille|usagé|usagée|usé|usée|en bon état|en mauvais état|excellent|abîmé|abîmée|endommagé|endommagée|bon|mauvais|jeune|autre|bref|beau)$/.test(french) ? 'spelling' : 'vocabulary'
@@ -674,21 +677,41 @@ export const a04SourceSupplements: readonly SourceSupplement[] = a04FormGroups.f
     evidence: {
       pdf: 'SC102-2-4-2005-fra.pdf',
       page: phonetics ? 60 : placement ? 50 : avoirGrammar ? 24 : condition ? 11 : physical ? 10 : 3,
-      lineRange: phonetics ? '1985-2009' : placement ? '1648-1670' : avoirGrammar ? '712-1210' : condition ? '443-458' : physical ? '371-458' : '192-253',
+      lineRange: phonetics ? '1985-2050' : placement ? '1648-1670' : avoirGrammar ? '712-1210' : condition ? '443-458' : physical ? '371-458' : '192-253',
       section: phonetics ? '4.8 Phonétique' : placement ? '4.4 Grammaire' : grammar ? '4.1 and 4.3 Grammaire' : physical ? '4.2 Notions and 4.4 Grammaire' : '4.1 Notions',
       category,
       evidenceType: 'source-table',
+      englishFragments: a04EnglishEvidenceOverrides[french] ?? englishEvidenceFragments(answer),
     },
   }
 }))
 
 const completeSourceRows = [...sourceRows, ...a04SourceSupplements, ...sourceSupplements, ...sourceSupplements1120, ...sourceSupplements2140, ...sourceSupplementsC, ...sourceSupplementsFollowup].filter((row, index, rows) => rows.findIndex((candidate) => candidate.lessonId === row.lessonId && normalize(candidate.french) === normalize(row.french)) === index)
+const a06RetainedTerms = new Set(['plus', 'moins', 'fois', 'multiplié par', 'divisé par', 'égal', 'ce', 'cet', 'cette', 'ces', 'celui-ci', 'celui-là', 'celle-ci', 'celle-là', 'ceux-ci', 'ceux-là', 'celles-ci', 'celles-là', 'ça', 'ceci', 'cela'])
+const supplementalRowsWithoutPrimaryEnglish = [
+  ...sourceSupplements.filter((row) => (row.lessonId === 'a-01' && ['ici', 'à l’appareil', 's’appeler', 'se présenter', 'être', 'titre'].includes(row.french)) || (row.lessonId === 'a-02' && row.french === 'comment') || (row.lessonId === 'a-03' && /^(?:je|tu|il|elle|on|nous|vous|ils|elles) (?:fais|fait|faisons|faites|font|viens|vient|venons|venez|viennent)$/.test(row.french)) || (row.lessonId === 'a-06' && !a06RetainedTerms.has(row.french)) || (row.lessonId === 'a-07' && ['va', 'comment', 'par où'].includes(row.french)) || (row.lessonId === 'a-08' && ['mercredi', 'samedi', 'février', 'décembre', 'minuit'].includes(row.french)) || (row.lessonId === 'a-09' && row.french === 'être en train de') || (row.lessonId === 'a-10' && ['réserver', 'réviser', 'entretenir'].includes(row.french))),
+  ...sourceSupplements1120.filter((row) => (row.lessonId === 'a-01' && ['s’appeler', 'se présenter'].includes(row.french)) || (row.lessonId === 'a-11' && ['difficilement', 'sans difficulté', 'intelligemment', 'différemment', 'suffisamment', 'étant', 'ayant', 'sachant', 'soigneusement', 'avec soin', 'poliment'].includes(row.french)) || (row.lessonId === 'a-12' && ['partager', 'répartir', 'en deux', 'en équipes de deux'].includes(row.french)) || (row.lessonId === 'a-14' && ['se répéter', 'il y aura', 'a lieu', 'être annulé', 'il est utile de', 'il est nécessaire de', 'il faut', 'il est important de'].includes(row.french)) || (row.lessonId === 'a-16' && row.french === 'se trouver') || (row.lessonId === 'a-21' && ['déclencher', 'avertir', 'le périmètre', 'l’épaisseur', 'la largeur', 'la hauteur', 'la profondeur'].includes(row.french)) || (row.lessonId === 'a-22' && ['il y a', 'se tromper'].includes(row.french)) || (row.lessonId === 'a-24' && ['le plus-que-parfait', 'j’étais tombé'].includes(row.french)) || (row.lessonId === 'a-31' && ['j’aurais aimé', 'vouloir que', 's’attendre à ce que', 'aimer mieux que', 'demander que', 'insister pour que', 'préférer que', 'tenir à ce que'].includes(row.french))),
+  ...sourceSupplements2140.filter((row) => ['a-23', 'a-32', 'b-33', 'b-34', 'b-35', 'b-36', 'b-37', 'b-39', 'b-40'].includes(row.lessonId) || (row.lessonId === 'a-21' && ['déclencher', 'avertir', 'le périmètre', 'l’épaisseur', 'la largeur', 'la hauteur', 'la profondeur', 'la longueur'].includes(row.french)) || (row.lessonId === 'a-22' && ['il y a', 'se tromper', 's’entendre'].includes(row.french)) || (row.lessonId === 'a-24' && ['le plus-que-parfait', 'j’étais tombé', 'j’avais mangé'].includes(row.french)) || (row.lessonId === 'a-29' && ['empêcher de', 'parvenir à', 'réussir à'].includes(row.french)) || (row.lessonId === 'a-30' && row.french === 'avoir le droit de') || (row.lessonId === 'a-31' && ['j’aurais aimé', 'vouloir que', 's’attendre à ce que', 'aimer mieux que', 'demander que', 'insister pour que', 'préférer que', 'tenir à ce que'].includes(row.french))),
+  ...sourceSupplementsC.filter((row) => (row.lessonId === 'c-04' && ['un changement organisationnel', 's’adapter à la nouvelle situation'].includes(row.french))),
+]
+
 export const quarantinedSourceKeys = new Set([
   'a-01|la mécanicienne', 'a-01|le chercheur', 'a-01|le douanier', 'a-01|le juge',
   'a-01|le recherchiste', 'a-01|le rédacteur', 'a-01|le sténographe', 'a-01|l’infirmier',
   'a-22|devancer l’échéance', 'a-27|cliquer sur l’icône', 'a-27|composer le numéro',
+  'a-27|démarrer l’ordinateur', 'a-19|moins de', 'c-08|une tâche exigeante', 'c-20|un agent d’approvisionnement',
+  ...supplementalRowsWithoutPrimaryEnglish.map((row) => `${row.lessonId}|${row.french}`),
+].map((key) => key.replace(/[‘’]/g, "'").toLocaleLowerCase('fr')))
+const baselineSourceKeys = new Set(sourceRows.map((row) => `${row.lessonId}|${normalize(row.french)}`))
+const baselineQuarantinedSourceKeys = new Set([
+  'a-01|la mécanicienne', 'a-01|le chercheur', 'a-01|le douanier', 'a-01|le juge',
+  'a-01|le recherchiste', 'a-01|le rédacteur', 'a-01|le sténographe', 'a-01|l’infirmier',
+  'a-22|devancer l’échéance', 'a-27|cliquer sur l’icône', 'a-27|composer le numéro',
   'a-27|démarrer l’ordinateur', 'c-08|une tâche exigeante', 'c-20|un agent d’approvisionnement',
-].map((key) => key.replace(/[‘’]/g, "'")))
+].map((key) => key.replace(/[‘’]/g, "'").toLocaleLowerCase('fr')))
+export function isQuarantinedSourceKey(key: string): boolean {
+  return quarantinedSourceKeys.has(key.replace(/[‘’]/g, "'").toLocaleLowerCase('fr')) && (!baselineSourceKeys.has(key) || baselineQuarantinedSourceKeys.has(key))
+}
 
 const sourceTier: CardTier = 'expansion'
 type ResponseForm = 'question' | 'full-sentence' | 'infinitive' | 'fragment'
@@ -712,7 +735,7 @@ function normalize(value: string): string {
   return value.trim().toLocaleLowerCase('fr').replace(/[‘’]/g, "'").replace(/\s+/g, ' ')
 }
 
-const activeSourceRows = sourceRows.filter((row) => !quarantinedSourceKeys.has(`${row.lessonId}|${normalize(row.french)}`))
+const activeSourceRows = sourceRows.filter((row) => !baselineQuarantinedSourceKeys.has(`${row.lessonId}|${normalize(row.french)}`))
 
 function answerChoices(row: SourceRow, index: number): [string, string, string] {
   const form = responseForm(row.answer)
@@ -766,4 +789,4 @@ const completeSourceVocabulary: Word[] = completeSourceRows.map((row, index) => 
   }
 })
 
-export const sourceVocabulary = completeSourceVocabulary.filter((row) => !quarantinedSourceKeys.has(`${row.lessonId}|${normalize(row.french)}`))
+export const sourceVocabulary = completeSourceVocabulary.filter((row) => !isQuarantinedSourceKey(`${row.lessonId}|${normalize(row.french)}`))

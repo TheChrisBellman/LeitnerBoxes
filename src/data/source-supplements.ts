@@ -1,4 +1,4 @@
-import type { SourceEvidence, SourceSupplement, SourceSupplementRow } from './source-evidence.ts'
+import { englishEvidenceFragments, type SourceEvidence, type SourceSupplement, type SourceSupplementRow } from './source-evidence.ts'
 
 /**
  * Additional explicitly mapped forms found in the objective workbooks' named
@@ -13,10 +13,10 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'a-01', french: 's’appeler', answer: 'to be called' },
   { lessonId: 'a-01', french: 'se présenter', answer: 'to introduce oneself' },
   { lessonId: 'a-01', french: 'être', answer: 'to be' },
-  { lessonId: 'a-01', french: 'quel', answer: 'what or which' },
-  { lessonId: 'a-01', french: 'quelle', answer: 'what or which' },
-  { lessonId: 'a-01', french: 'quels', answer: 'what or which' },
-  { lessonId: 'a-01', french: 'quelles', answer: 'what or which' },
+  { lessonId: 'a-01', french: 'quel', answer: 'what' },
+  { lessonId: 'a-01', french: 'quelle', answer: 'what' },
+  { lessonId: 'a-01', french: 'quels', answer: 'what' },
+  { lessonId: 'a-01', french: 'quelles', answer: 'what' },
   { lessonId: 'a-01', french: 'de la part de qui', answer: 'who is calling' },
   { lessonId: 'a-01', french: 'qui', answer: 'who' },
   { lessonId: 'a-01', french: 'titre', answer: 'title' },
@@ -51,7 +51,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'a-02', french: 'qu’est-ce que c’est?', answer: 'what is it?' },
   { lessonId: 'a-02', french: 'quoi', answer: 'what' },
   { lessonId: 'a-02', french: 'comment', answer: 'how' },
-  { lessonId: 'a-02', french: 'quel', answer: 'what or which' },
+  { lessonId: 'a-02', french: 'quel', answer: 'what' },
   { lessonId: 'a-02', french: 'c’est', answer: 'it is' },
   { lessonId: 'a-02', french: 'ce sont', answer: 'they are' },
   { lessonId: 'a-02', french: 'ça s’appelle', answer: 'it is called' },
@@ -108,7 +108,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'a-02', french: 'le schéma', answer: 'the diagram, sketch' },
   { lessonId: 'a-02', french: 'l’exemplaire', answer: 'the copy' },
   { lessonId: 'a-02', french: 'la réédition', answer: 'the new edition' },
-  { lessonId: 'a-02', french: 'la réimpression', answer: 'the reprint' },
+  { lessonId: 'a-02', french: 'la réimpression', answer: 'the new edition' },
   { lessonId: 'a-02', french: 'la traduction', answer: 'the translation' },
   { lessonId: 'a-02', french: 'le téléviseur', answer: 'the television set' },
   { lessonId: 'a-02', french: 'la chaise', answer: 'the chair' },
@@ -405,7 +405,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'a-10', french: 'entretenir', answer: 'to maintain' },
   { lessonId: 'a-10', french: 'le a commercial', answer: 'the at sign' },
   { lessonId: 'a-10', french: 'l’arobas', answer: 'the at sign' },
-  { lessonId: 'a-10', french: 'la base de données', answer: 'database' },
+  { lessonId: 'a-10', french: 'la base de données', answer: 'data base' },
   { lessonId: 'a-10', french: 'le bogue', answer: 'bug' },
   { lessonId: 'a-10', french: 'le clavier', answer: 'keyboard' },
   { lessonId: 'a-10', french: 'le coupe-feu', answer: 'firewall' },
@@ -438,7 +438,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'a-10', french: 'le signet', answer: 'bookmark' },
   { lessonId: 'a-10', french: 'le favori', answer: 'favorite' },
   { lessonId: 'a-10', french: 'la souris', answer: 'mouse' },
-  { lessonId: 'a-10', french: 'le tableur', answer: 'spreadsheet program' },
+  { lessonId: 'a-10', french: 'le tableur', answer: 'program for spreadsheets' },
   { lessonId: 'a-10', french: 'le tapis de souris', answer: 'mouse pad' },
   { lessonId: 'a-10', french: 'la touche', answer: 'key' },
   { lessonId: 'a-10', french: 'le traitement de texte', answer: 'word processing' },
@@ -474,12 +474,15 @@ const a02Page20Terms = new Set(['le diagramme', 'le graphique', 'l’illustratio
 const a02Page21Terms = new Set(['l’exemplaire', 'la réédition', 'la réimpression', 'la traduction'])
 const a02Page26Terms = new Set(['le téléviseur', 'la chaise', 'la bibliothèque', 'le pantalon', 'le chapeau', 'le manteau', 'le parapluie', 'le portefeuille', 'la clé'])
 const a02DefiniteArticles = new Set(['le', 'la', 'l’', 'les'])
-const a02IndefiniteArticles = new Set(['un', 'une', 'des'])
-const a02PartitiveArticles = new Set(['du', 'de la', 'de l’'])
+const a02IndefiniteArticles = new Set(['un', 'une'])
+const a02PartitiveArticles = new Set(['des', 'du', 'de la', 'de l’'])
+const englishEvidenceOverrides: Record<string, readonly string[]> = {
+  'a-10|le pirate informatique': ['cracker', 'hacker'],
+}
 
 function evidenceFor(row: SourceSupplementRow) {
   if (row.lessonId === 'a-01') {
-    if (a01SpellingTerms.has(row.french)) return { page: 66, lineRange: '2016-2048', section: '1.10 Stratégies de communication — spelling chart' }
+    if (a01SpellingTerms.has(row.french)) return { page: 66, lineRange: '2016-2050', section: '1.10 Stratégies de communication — spelling chart' }
     if (a01WhQuestionTerms.has(row.french)) return { page: 34, lineRange: '1033-1063', section: '1.4 Grammaire — quel(s) and quelle(s) question forms' }
     if (a01GrammarTerms.has(row.french)) return { page: 24, lineRange: '729-738', section: '1.3 Grammaire — subject pronouns with être in the present' }
     if (a01IdentityTerms.has(row.french)) return { page: 12, lineRange: '222-275', section: '1.1 Notions — names, titles, and identification' }
@@ -519,6 +522,7 @@ export const sourceSupplements: readonly SourceSupplement[] = sourceSupplementRo
       section: evidence.section,
       category: categoryFor(row),
       evidenceType: 'source-table',
+      englishFragments: englishEvidenceOverrides[`${row.lessonId}|${row.french}`] ?? englishEvidenceFragments(row.answer),
     },
   }
 })

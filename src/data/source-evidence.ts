@@ -12,6 +12,12 @@ export type SourceEvidence = {
   evidenceType: SourceEvidenceType
   /** Terms that are split across adjacent table cells rather than contiguous text. */
   sourceFragments?: readonly string[]
+  /** English gloss pieces used when the source wraps alternatives across lines. */
+  englishFragments?: readonly string[]
+}
+
+export function englishEvidenceFragments(answer: string): readonly string[] {
+  return answer.split(/[,;/]|\([^)]*\)|\s+\bor\b\s+/i).map((part) => part.trim()).filter(Boolean)
 }
 
 export type SourceSupplement = Pick<VocabularyCard, 'lessonId' | 'french' | 'answer'> & {

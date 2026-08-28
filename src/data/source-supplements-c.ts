@@ -1,4 +1,4 @@
-import type { SourceEvidence, SourceSupplement, SourceSupplementRow } from './source-evidence.ts'
+import { englishEvidenceFragments, type SourceEvidence, type SourceSupplement, type SourceSupplementRow } from './source-evidence.ts'
 
 /** Explicitly mapped lexical entries from the PFL2-C lexicon workbook. */
 const sourceSupplementRows: readonly SourceSupplementRow[] = [
@@ -241,7 +241,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'c-07', french: 'ouvert', answer: 'open' },
   { lessonId: 'c-07', french: 'avoir l’esprit ouvert', answer: 'to be open-minded' },
   { lessonId: 'c-07', french: 'parler', answer: 'to speak' },
-  { lessonId: 'c-07', french: 'se parler', answer: 'to talk to each other' },
+  { lessonId: 'c-07', french: 'se parler', answer: 'to talk' },
   { lessonId: 'c-07', french: 'ouvertement', answer: 'openly' },
   { lessonId: 'c-07', french: 'franchement', answer: 'frankly' },
 
@@ -356,7 +356,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'c-11', french: 'une attitude positive', answer: 'a positive attitude' },
   { lessonId: 'c-11', french: 'une attitude négative', answer: 'a negative attitude' },
   { lessonId: 'c-11', french: 'avoir une bonne attitude', answer: 'to have the right attitude' },
-  { lessonId: 'c-11', french: 'un problème d’attitude', answer: 'to have an attitude problem' },
+  { lessonId: 'c-11', french: 'un problème d’attitude', answer: 'to have an attitude' },
   { lessonId: 'c-11', french: 'une question d’attitude', answer: 'a question of attitude' },
   { lessonId: 'c-11', french: 'un climat de travail', answer: 'a work environment' },
   { lessonId: 'c-11', french: 'un bon climat', answer: 'a nice environment' },
@@ -423,9 +423,9 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'c-13', french: 'un gouvernement', answer: 'a government' },
   { lessonId: 'c-13', french: 'une identité culturelle', answer: 'a cultural identity' },
   { lessonId: 'c-13', french: 'une perte d’identité', answer: 'a loss of identity' },
-  { lessonId: 'c-13', french: 'la main-d’œuvre', answer: 'workforce, labour' },
-  { lessonId: 'c-13', french: 'la main-d’œuvre bon marché', answer: 'cheap labour' },
-  { lessonId: 'c-13', french: 'l’exploitation de la main-d’œuvre', answer: 'labour exploitation' },
+  { lessonId: 'c-13', french: 'la main-d’œuvre', answer: 'workforce, labor' },
+  { lessonId: 'c-13', french: 'la main-d’œuvre bon marché', answer: 'cheap labor' },
+  { lessonId: 'c-13', french: 'l’exploitation de la main-d’œuvre', answer: 'labor exploitation' },
   { lessonId: 'c-13', french: 'un mouvement antimondialisation', answer: 'an antiglobalization movement' },
   { lessonId: 'c-13', french: 'un mouvement de protestation', answer: 'a protest movement' },
   { lessonId: 'c-13', french: 'une multinationale', answer: 'a multinational company' },
@@ -460,9 +460,9 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'c-14', french: 'fiable', answer: 'dependable' },
   { lessonId: 'c-14', french: 'un renseignement', answer: 'information' },
   { lessonId: 'c-14', french: 'renseigner', answer: 'to inform' },
-  { lessonId: 'c-14', french: 'répondre à un besoin', answer: 'to respond to a need' },
-  { lessonId: 'c-14', french: 'répondre à une demande', answer: 'to respond to a request' },
-  { lessonId: 'c-14', french: 'répondre à une plainte', answer: 'to respond to a complaint' },
+  { lessonId: 'c-14', french: 'répondre à un besoin', answer: 'to react to a need' },
+  { lessonId: 'c-14', french: 'répondre à une demande', answer: 'to react to a request' },
+  { lessonId: 'c-14', french: 'répondre à une plainte', answer: 'to react to a complaint' },
   { lessonId: 'c-14', french: 'le respect', answer: 'respect' },
   { lessonId: 'c-14', french: 'manquer de respect', answer: 'to be lacking respect' },
   { lessonId: 'c-14', french: 'traiter avec respect', answer: 'to treat with respect' },
@@ -470,7 +470,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'c-14', french: 'la satisfaction du client', answer: 'client satisfaction' },
   { lessonId: 'c-14', french: 'un service courtois', answer: 'a courteous service' },
   { lessonId: 'c-14', french: 'un service efficace', answer: 'an efficient service' },
-  { lessonId: 'c-14', french: 'un service en ligne', answer: 'an online service' },
+  { lessonId: 'c-14', french: 'un service en ligne', answer: 'on-line service' },
   { lessonId: 'c-14', french: 'un service rapide', answer: 'a quick service' },
   { lessonId: 'c-14', french: 'assurer un service', answer: 'to service' },
   { lessonId: 'c-14', french: 'fournir un service', answer: 'to provide a service' },
@@ -757,6 +757,23 @@ const sourceFragments: Record<string, readonly string[]> = {
   'c-15|respecter l’ordre du jour': ['l’ordre du jour', 'Respecter'],
   'c-15|modifier l’ordre du jour': ['l’ordre du jour', 'Modifier'],
 }
+const englishEvidenceOverrides: Record<string, readonly string[]> = {
+  'c-02|une tendance': ['a tendancy'],
+  'c-10|la négociation': ['negociation'],
+  'c-10|le déroulement de la négociation': ['the course', 'negociation'],
+  'c-10|l’objet de la négociation': ['the subject', 'negociation'],
+  'c-10|l’ouverture de la négociation': ['the start', 'negociation'],
+  'c-10|le processus de négociation': ['negociation', 'process'],
+  'c-10|négocier': ['to negociate'],
+  'c-12|la table de négociations': ['negociation table'],
+  'c-04|à l’aise': ['confortable'],
+  'c-10|sont en cours': ['bargaining', 'ongoing'],
+  'c-10|sont rompues': ['bargaining', 'broken down'],
+  'c-19|un ordinateur personnel': ['personnel computer'],
+  'c-20|une qualité personnelle': ['personal', 'quality'],
+  'c-20|une qualité professionnelle': ['professional', 'quality'],
+  'c-15|une réunion improductive': ['counter', 'productive'],
+}
 
 function categoryFor(row: SourceSupplementRow): SourceEvidence['category'] {
   if (row.answer.toLowerCase().startsWith('to ')) return 'verb/form'
@@ -776,6 +793,7 @@ export const sourceSupplementsC: readonly SourceSupplement[] = sourceSupplementR
       category: categoryFor(row),
       evidenceType: 'source-table',
       sourceFragments: sourceFragments[`${row.lessonId}|${row.french}`],
+      englishFragments: englishEvidenceOverrides[`${row.lessonId}|${row.french}`] ?? englishEvidenceFragments(row.answer),
     },
   }
 })

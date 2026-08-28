@@ -1,4 +1,4 @@
-import type { SourceEvidence, SourceSupplement, SourceSupplementRow } from './source-evidence.ts'
+import { englishEvidenceFragments, type SourceEvidence, type SourceSupplement, type SourceSupplementRow } from './source-evidence.ts'
 
 type EvidenceSpec = Pick<SourceEvidence, 'pdf' | 'page' | 'lineRange' | 'section' | 'category'>
 
@@ -37,7 +37,7 @@ const a01OrganizationRows: readonly SourceSupplementRow[] = [
 
 const a02DocumentRows: readonly SourceSupplementRow[] = [
   { lessonId: 'a-02', french: 'l’annexe', answer: 'the appendix' },
-  { lessonId: 'a-02', french: 'diffusion restreinte', answer: 'restricted diffusion' },
+  { lessonId: 'a-02', french: 'diffusion restreinte', answer: 'restricted' },
   { lessonId: 'a-02', french: 'protégé', answer: 'protected' },
   { lessonId: 'a-02', french: 'confidentiel', answer: 'confidential' },
   { lessonId: 'a-02', french: 'secret', answer: 'secret' },
@@ -89,7 +89,7 @@ const a19OpinionRows: readonly SourceSupplementRow[] = [
 
 const withEvidence = (rows: readonly SourceSupplementRow[], spec: EvidenceSpec): readonly SourceSupplement[] => rows.map((row) => ({
   ...row,
-  evidence: { ...spec, evidenceType: 'source-table' },
+  evidence: { ...spec, evidenceType: 'source-table', englishFragments: englishEvidenceFragments(row.answer) },
 }))
 
 export const sourceSupplementsFollowup: readonly SourceSupplement[] = [

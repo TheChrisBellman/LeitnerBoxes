@@ -1,4 +1,4 @@
-import type { SourceEvidence, SourceSupplement, SourceSupplementRow } from './source-evidence.ts'
+import { englishEvidenceFragments, type SourceEvidence, type SourceSupplement, type SourceSupplementRow } from './source-evidence.ts'
 
 /** Explicitly mapped entries from the SC102-2 objectives 11 through 20. */
 const sourceSupplementRows: readonly SourceSupplementRow[] = [
@@ -25,7 +25,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'a-11', french: 'très', answer: 'very' },
   { lessonId: 'a-11', french: 'extrêmement', answer: 'extremely' },
   { lessonId: 'a-11', french: 'pas mal', answer: 'quite a lot' },
-  { lessonId: 'a-11', french: 'assez', answer: 'fairly, enough' },
+  { lessonId: 'a-11', french: 'assez', answer: 'enough' },
   { lessonId: 'a-11', french: 'plutôt', answer: 'rather' },
   { lessonId: 'a-11', french: 'un peu', answer: 'a little' },
   { lessonId: 'a-11', french: 'plus ou moins', answer: 'more or less' },
@@ -66,7 +66,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'a-12', french: 'quelques-uns', answer: 'a few, some' },
   { lessonId: 'a-12', french: 'un bon nombre de', answer: 'a good number of' },
   { lessonId: 'a-12', french: 'un grand nombre de', answer: 'a great number of' },
-  { lessonId: 'a-12', french: 'en grande quantité', answer: 'in large amounts' },
+  { lessonId: 'a-12', french: 'en grande quantité', answer: 'large amount' },
   { lessonId: 'a-12', french: 'de nombreux', answer: 'numerous' },
   { lessonId: 'a-12', french: 'un certain nombre de', answer: 'a number of' },
   { lessonId: 'a-12', french: 'la grande majorité de', answer: 'the great majority of' },
@@ -135,7 +135,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   // SC102-2-15 — requesting and obtaining
   { lessonId: 'a-15', french: 'demander', answer: 'to ask, ask for, request' },
   { lessonId: 'a-15', french: 'demandé', answer: 'wanted' },
-  { lessonId: 'a-15', french: 'faire une demande', answer: 'to make a request' },
+  { lessonId: 'a-15', french: 'faire une demande', answer: 'to apply for, to make a request' },
   { lessonId: 'a-15', french: 'à la demande de', answer: 'at someone’s request' },
   { lessonId: 'a-15', french: 'sur demande', answer: 'on request' },
   { lessonId: 'a-15', french: 'dire à ... de', answer: 'to tell someone to' },
@@ -182,7 +182,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'a-17', french: 'être là', answer: 'to be there' },
   { lessonId: 'a-17', french: 'être ici', answer: 'to be here' },
   { lessonId: 'a-17', french: 'il y a', answer: 'there is or there are' },
-  { lessonId: 'a-17', french: 'rester', answer: 'to remain' },
+  { lessonId: 'a-17', french: 'rester', answer: 'to have ... left' },
   { lessonId: 'a-17', french: 'présent', answer: 'present' },
   { lessonId: 'a-17', french: 'être parti', answer: 'to have left' },
   { lessonId: 'a-17', french: 'être partie', answer: 'to have left' },
@@ -242,7 +242,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'a-19', french: 'raisonnable', answer: 'reasonable' },
   { lessonId: 'a-19', french: 'satisfaisant', answer: 'satisfactory' },
   { lessonId: 'a-19', french: 'satisfaisante', answer: 'satisfactory' },
-  { lessonId: 'a-19', french: 'aller', answer: 'to suit' },
+  { lessonId: 'a-19', french: 'aller', answer: 'to pass' },
   { lessonId: 'a-19', french: 'convenir à', answer: 'to suit' },
   { lessonId: 'a-19', french: 'correspondre à', answer: 'to correspond to' },
   { lessonId: 'a-19', french: 'faire l’affaire', answer: 'to suit' },
@@ -251,7 +251,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'a-19', french: 'satisfaire à', answer: 'to satisfy' },
   { lessonId: 'a-19', french: 'se conformer à', answer: 'to comply with' },
   { lessonId: 'a-19', french: 'valoir', answer: 'to be worth' },
-  { lessonId: 'a-19', french: 'valoir la peine', answer: 'to be worth it' },
+  { lessonId: 'a-19', french: 'valoir la peine', answer: 'to be worth' },
   { lessonId: 'a-19', french: 'égal', answer: 'equal' },
   { lessonId: 'a-19', french: 'identique', answer: 'identical' },
   { lessonId: 'a-19', french: 'pareil', answer: 'identical' },
@@ -416,12 +416,14 @@ const objectiveEvidence: Record<string, { page: number; lineRange: string; secti
   'a-20': { page: 4, lineRange: '146-550', section: '20.1-20.2 physical, psychological, and intellectual quality charts' }
 }
 
+const a14OccurrenceTerms = new Set(['se tenir', 'se passer', 'avoir lieu', 'un événement'])
 const a15RequestTerms = new Set(['demander', 'demandé', 'faire une demande', 'à la demande de', 'sur demande', 'dire à ... de', 'une requête', 'un requérant', 'une commande', 'commander', 'solliciter', 'une sollicitation', 'prier de', 'être prié de', 'prière de'])
 const a15ClaimTerms = new Set(['une revendication', 'revendiquer', 'quêter', 'un quêteux', 'une réclamation', 'réclamer', 'postuler'])
 const a15ObtainingTerms = new Set(['l’obtention', 'obtenir', 'la réception', 'recevoir', 'se procurer', 'aller chercher', 'une acquisition', 'acquérir', 'décrocher', 'gagner', 'empocher', 'toucher', 'retirer'])
 const a19ComparisonTerms = new Set(['égal', 'identique', 'pareil', 'même', 'différent', 'la différence', 'différencier', 'inférieur', 'supérieur', 'comparable', 'semblable', 'la comparaison', 'la ressemblance', 'comparer', 'ressembler', 'similaire', 'la similitude', 'comme', 'en comparaison avec', 'par rapport à', 'plus de', 'moins de', 'autant de'])
 
 function evidenceFor(row: SourceSupplementRow) {
+  if (row.lessonId === 'a-14' && a14OccurrenceTerms.has(row.french)) return { page: 8, lineRange: '109-141', section: '14.1 Notions — occurrence indicators' }
   if (row.lessonId === 'a-15') {
     if (a15RequestTerms.has(row.french)) return { page: 10, lineRange: '201-240', section: '15.1 Notions — request indicators' }
     if (a15ClaimTerms.has(row.french)) return { page: 11, lineRange: '246-266', section: '15.1 Notions — claim and application indicators' }
@@ -454,6 +456,7 @@ export const sourceSupplements1120: readonly SourceSupplement[] = sourceSuppleme
       section: evidence.section,
       category: categoryFor(row),
       evidenceType: 'source-table',
+      englishFragments: englishEvidenceFragments(row.answer),
     },
   }
 })

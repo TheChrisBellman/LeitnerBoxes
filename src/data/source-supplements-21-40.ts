@@ -1,4 +1,4 @@
-import type { SourceEvidence, SourceSupplement, SourceSupplementRow } from './source-evidence.ts'
+import { englishEvidenceFragments, type SourceEvidence, type SourceSupplement, type SourceSupplementRow } from './source-evidence.ts'
 
 /** Explicitly mapped entries from SC102-2 objectives 21 through 40. */
 const sourceSupplementRows: readonly SourceSupplementRow[] = [
@@ -176,7 +176,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'a-24', french: 'lorsque', answer: 'when' },
   { lessonId: 'a-24', french: 'pendant que', answer: 'while' },
   { lessonId: 'a-24', french: 'quand', answer: 'when' },
-  { lessonId: 'a-24', french: 'suivant', answer: 'following' },
+  { lessonId: 'a-24', french: 'suivant', answer: 'next' },
   { lessonId: 'a-24', french: 'le lendemain', answer: 'the next day' },
   { lessonId: 'a-24', french: 'plus tard', answer: 'later' },
   { lessonId: 'a-24', french: 'dès que', answer: 'as soon as' },
@@ -208,7 +208,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'a-25', french: 'l’étape finale', answer: 'the final step' },
   { lessonId: 'a-25', french: 'à la fin', answer: 'in the end' },
   { lessonId: 'a-25', french: 'pour finir', answer: 'to end' },
-  { lessonId: 'a-25', french: 'en dernier lieu', answer: 'lastly' },
+  { lessonId: 'a-25', french: 'en dernier lieu', answer: 'finally' },
   { lessonId: 'a-25', french: 'se terminer', answer: 'to end' },
 
   // SC102-2-26 — origin and destination
@@ -241,8 +241,8 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'a-26', french: 'la source', answer: 'source' },
 
   // SC102-2-27 — cohesion and discourse organization
-  { lessonId: 'a-27', french: 'il s’agit de', answer: 'it is about' },
-  { lessonId: 'a-27', french: 'il est question de', answer: 'it is about' },
+  { lessonId: 'a-27', french: 'il s’agit de', answer: 'it’s about' },
+  { lessonId: 'a-27', french: 'il est question de', answer: 'it’s about' },
   { lessonId: 'a-27', french: 'en ce qui concerne', answer: 'as far as ... is concerned' },
   { lessonId: 'a-27', french: 'quant à', answer: 'with regard to' },
   { lessonId: 'a-27', french: 'à propos', answer: 'by the way' },
@@ -307,7 +307,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'a-28', french: 'à quoi ça sert', answer: 'what is it for' },
 
   // SC102-2-29 — ability and negative expressions
-  { lessonId: 'a-29', french: 'apte à', answer: 'capable of, fit to' },
+  { lessonId: 'a-29', french: 'apte à', answer: 'capable of' },
   { lessonId: 'a-29', french: 'être capable de', answer: 'to be capable of' },
   { lessonId: 'a-29', french: 'dans l’incapacité de', answer: 'unable to' },
   { lessonId: 'a-29', french: 'incapable de', answer: 'incapable of, unable to' },
@@ -320,7 +320,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'a-29', french: 'réussir à', answer: 'to succeed in' },
   { lessonId: 'a-29', french: 'permettre de', answer: 'to allow' },
   { lessonId: 'a-29', french: 'empêcher de', answer: 'to prevent from' },
-  { lessonId: 'a-29', french: 'la capacité', answer: 'ability, capacity' },
+  { lessonId: 'a-29', french: 'la capacité', answer: 'the ability' },
   { lessonId: 'a-29', french: 'la compétence', answer: 'competence' },
   { lessonId: 'a-29', french: 'le talent', answer: 'talent' },
   { lessonId: 'a-29', french: 'le potentiel', answer: 'potential' },
@@ -627,6 +627,7 @@ export const sourceSupplements2140: readonly SourceSupplement[] = sourceSuppleme
       section: evidence.section,
       category: categoryFor(row),
       evidenceType: 'source-table',
+      englishFragments: englishEvidenceFragments(row.answer),
     },
   }
 })
