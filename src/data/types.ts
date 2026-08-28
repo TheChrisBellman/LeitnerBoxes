@@ -21,6 +21,12 @@ export type VocabularyCard = CardBase & {
   reverseDistractors: [string, string, string]
 }
 
+export type LearningNote = {
+  exampleFrench: string
+  exampleEnglish: string
+  note?: string
+}
+
 export type ConjugationCard = CardBase & {
   kind: 'conjugation'
   infinitive: string

@@ -1158,6 +1158,89 @@ button:disabled {
   line-height: 1.55;
 }
 
+/* Guided Learn */
+.learn-page {
+  gap: 22px;
+}
+
+.learn-card {
+  display: grid;
+  gap: 18px;
+  padding: 22px;
+}
+
+.learn-progress,
+.learn-example > span {
+  color: var(--cobalt-dark);
+  font-size: var(--font-size-label);
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.learn-term {
+  display: grid;
+  gap: 5px;
+}
+
+.learn-term h2 {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-editorial);
+  font-size: clamp(2.2rem, 11vw, 3.7rem);
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 0.98;
+  overflow-wrap: anywhere;
+}
+
+.learn-term p,
+.learn-example p,
+.learn-note,
+.learn-retrieval-note {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: var(--font-size-body);
+  line-height: 1.55;
+}
+
+.learn-term p {
+  color: var(--ink);
+  font-size: 20px;
+  font-weight: 750;
+}
+
+.learn-example {
+  display: grid;
+  gap: 7px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.learn-example > span:nth-of-type(2) {
+  margin-top: 8px;
+}
+
+.learn-note {
+  padding: 12px 14px;
+  border-left: 3px solid var(--citron-border);
+  background: var(--citron-soft);
+  color: var(--ink);
+}
+
+.learn-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 10px;
+}
+
+.learn-actions .button {
+  min-width: 0;
+  padding: 0 12px;
+  text-align: center;
+}
+
 /* Curriculum */
 .curriculum-page {
   gap: 18px;
