@@ -25,6 +25,7 @@ export type UnitPackSeed = {
   topic: string
   goal: string
   action: string
+  narrativeAction?: string
   imperative: string
   result: string
   decision: string
@@ -122,6 +123,10 @@ function difficultyBand(unitId: string): DifficultyBand {
 
 type AlternativeSeeds = [UnitPackSeed, UnitPackSeed, UnitPackSeed]
 
+function narrativeAction(seed: UnitPackSeed): string {
+  return seed.narrativeAction ?? seed.action
+}
+
 function alternativeSeeds(seed: UnitPackSeed, seeds: readonly UnitPackSeed[]): AlternativeSeeds {
   const tokens = (value: string) => new Set((value.toLocaleLowerCase('fr').match(/\p{L}{4,}/gu) ?? []).map((word) => word.replace(/s$/u, '')))
   const seedTokens = tokens([seed.topic, seed.goal, seed.action, seed.decision].join(' '))
@@ -161,10 +166,11 @@ export function createUnitPack(seed: UnitPackSeed, alternatives: AlternativeSeed
       : band === 'developing'
         ? `au sujet ${withDe(topic)}`
         : `dans le cadre ${withDe(topic)}`
+  const thirdPersonAction = narrativeAction(seed)
   const bestSituation = scaffold?.context ?? (isFoundation
     ? `Au travail, vous devez ${goal}. Une collègue vous demande quoi faire ensuite.`
     : band === 'developing' || band === 'advanced'
-      ? `${sentenceStart(topicFrame)}, la prochaine étape est de ${action}. Une collègue vous demande comment procéder.`
+      ? `${sentenceStart(topicFrame)}, la prochaine étape est de ${thirdPersonAction}. Une collègue vous demande comment procéder.`
       : `${sentenceStart(topicFrame)}, vous devez ${goal}. Une collègue vous demande quelle sera la prochaine étape.`)
   const bestAnswer = `Je vais ${action}.`
   const bestDistractors: ChoiceSet = alternatives.map((alternative) => `Je vais ${alternative.action}.`) as ChoiceSet
@@ -189,7 +195,7 @@ export function createUnitPack(seed: UnitPackSeed, alternatives: AlternativeSeed
       ? `The answer gives one clear action: « ${bestAnswer} ».`
       : isFoundation
         ? `La réponse indique une action claire pour ${goal}.`
-        : `La réponse relie l’objectif « ${goal} » à une action précise et au résultat « ${result} ».`,
+        : `La réponse indique l’action précise nécessaire pour « ${goal} » : « ${action} ».`,
   }
   const cloze: ContextualClozeExercise = {
     id: `${targetIds.cloze}-01`,
@@ -200,7 +206,7 @@ export function createUnitPack(seed: UnitPackSeed, alternatives: AlternativeSeed
     context: clozeContext,
     prompt: scaffold?.clozePrompt ?? '___ avant la réunion.',
     answer: scaffold?.clozeAnswer ?? imperative,
-    distractors: alternatives.map((alternative) => alternative.imperative) as ChoiceSet,
+    distractors: scaffold?.clozeDistractors ?? alternatives.map((alternative) => alternative.imperative) as ChoiceSet,
     feedback: isScaffold
       ? `The missing word is « ${scaffold?.clozeAnswer} ».`
       : `L’impératif « ${imperative} » correspond à l’action attendue pour ${goal}.`,
@@ -223,10 +229,10 @@ export function createUnitPack(seed: UnitPackSeed, alternatives: AlternativeSeed
     genre: isScaffold ? 'Work note' : 'Note de travail',
     title: isScaffold ? 'A workplace task' : `Un dossier ${topicReference}`,
     text: scaffold?.context ?? (isFoundation
-      ? `Au travail, l’équipe doit ${action} avant la réunion. Cela permet d’obtenir ${result}.`
+      ? `Au travail, l’équipe doit ${thirdPersonAction} avant la réunion. Cela permet d’obtenir ${result}.`
       : band === 'developing' || band === 'advanced'
-        ? `${sentenceStart(topicFrame)}, l’équipe doit ${action} avant la réunion. Le résultat attendu est ${result}. Une note de suivi indique ce qui reste à faire et permet de préparer la prochaine discussion.`
-        : `L’équipe travaille ${topicFrame}. Pour ${goal}, elle doit ${action} avant la réunion. Le résultat attendu est ${result}. Une note de suivi indique ce qui reste à faire et permet de préparer la prochaine discussion.`),
+        ? `${sentenceStart(topicFrame)}, l’équipe doit ${thirdPersonAction} avant la réunion. Le résultat attendu est ${result}. Une note de suivi indique ce qui reste à faire et permet de préparer la prochaine discussion.`
+        : `L’équipe travaille ${topicFrame}. Pour ${goal}, elle doit ${thirdPersonAction} avant la réunion. Le résultat attendu est ${result}. Une note de suivi indique ce qui reste à faire et permet de préparer la prochaine discussion.`),
   }
   const reading: AuthoredExercise = {
     id: `${targetIds.reading}-01`,
@@ -236,8 +242,8 @@ export function createUnitPack(seed: UnitPackSeed, alternatives: AlternativeSeed
     ...(isScaffold ? { promptLanguage: 'en' as const, contextLanguage: 'en' as const } : {}),
     passageId,
     prompt: isScaffold ? 'What does the team need to do?' : isFoundation || band === 'developing' || band === 'advanced' ? 'Que doit faire l’équipe?' : `Que doit faire l’équipe pour ${goal}?`,
-    answer: sentenceStart(`Elle doit ${action}.`),
-    distractors: alternatives.map((alternative) => `Elle doit ${alternative.action}.`) as ChoiceSet,
+    answer: sentenceStart(`Elle doit ${thirdPersonAction}.`),
+    distractors: alternatives.map((alternative) => `Elle doit ${narrativeAction(alternative)}.`) as ChoiceSet,
     feedback: isScaffold
       ? `The passage points to this action: « ${action} ».`
       : `Le passage associe l’objectif « ${goal} » à l’action « ${action} ».`,
@@ -269,14 +275,14 @@ export function createUnitPack(seed: UnitPackSeed, alternatives: AlternativeSeed
     setup: scaffold?.context ?? (isFoundation
       ? `Au travail, vous devez ${goal}. Le résultat attendu est ${result}.`
       : band === 'developing' || band === 'advanced'
-        ? `${sentenceStart(topicFrame)}, la prochaine étape est de ${action}. Le résultat attendu est ${result}, mais un collègue propose de passer à l’étape suivante sans vérifier les informations.`
+        ? `${sentenceStart(topicFrame)}, la prochaine étape est de ${thirdPersonAction}. Le résultat attendu est ${result}, mais un collègue propose de passer à l’étape suivante sans vérifier les informations.`
         : `${sentenceStart(topicFrame)}, vous devez ${goal}. Le résultat attendu est ${result}, mais un collègue propose de passer à l’étape suivante sans vérifier les informations.`),
     nodes: [{
       id: 'next-step',
       prompt: isScaffold ? 'What should you do next?' : 'Que faites-vous ensuite?',
       choices: scenarioChoices,
       answer: scenarioAnswer,
-      feedback: isScaffold ? 'Choose the action that helps with the task.' : 'La réponse vérifie la situation avant de poursuivre la démarche.',
+      feedback: isScaffold ? 'Choose the action that helps with the task.' : `La réponse propose l’étape suivante nécessaire pour « ${goal} ».`,
     }],
   }
   const scenarioExercise: AuthoredExercise = {

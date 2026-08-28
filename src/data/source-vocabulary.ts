@@ -146,7 +146,7 @@ export const baselineSourceRows: readonly SourceRow[] = [
   { lessonId: "a-08", french: "jeudi", answer: "Thursday" },
   { lessonId: "a-08", french: "le printemps", answer: "spring" },
   { lessonId: "a-08", french: "l’automne", answer: "fall" },
-  { lessonId: "a-08", french: "près de", answer: "nearly" },
+  { lessonId: "a-08", french: "près de", answer: "near; almost — with a time" },
   { lessonId: "a-08", french: "réunir", answer: "to gather" },
   { lessonId: "a-08", french: "vers", answer: "around" },
   { lessonId: "a-09", french: "après-demain", answer: "the day after tomorrow" },
@@ -243,12 +243,11 @@ export const baselineSourceRows: readonly SourceRow[] = [
   { lessonId: "a-18", french: "penser", answer: "to intend" },
   { lessonId: "a-18", french: "pourvu que", answer: "let’s hope, so long as" },
   { lessonId: "a-18", french: "s’attendre à", answer: "to expect" },
-  { lessonId: "a-18", french: "tenir", answer: "to want very much" },
   { lessonId: "a-18", french: "tenir à", answer: "to want very much" },
   { lessonId: "a-19", french: "acceptable", answer: "acceptable" },
   { lessonId: "a-19", french: "adéquat", answer: "adequate" },
   { lessonId: "a-19", french: "approprié", answer: "appropriate" },
-  { lessonId: "a-19", french: "conforme", answer: "conform" },
+  { lessonId: "a-19", french: "conforme", answer: "appropriate" },
   { lessonId: "a-19", french: "convenir à", answer: "to suit" },
   { lessonId: "a-19", french: "correspondre à", answer: "to correspond to" },
   { lessonId: "a-19", french: "dépassé", answer: "outdated" },
@@ -928,7 +927,7 @@ for (const key of additionalBaselineQuarantineKeys) {
 }
 
 const sourceTier: CardTier = 'expansion'
-export type VocabularyChoiceFamily = 'question' | 'sentence' | 'infinitive' | 'verb-form' | 'determiner' | 'noun' | 'noun-definite' | 'noun-indefinite' | 'pronoun' | 'subject-form' | 'contraction' | 'connector' | 'function' | 'weekday' | 'month' | 'sequence' | 'duration' | 'number-time' | 'adverb' | 'modifier' | 'expression'
+export type VocabularyChoiceFamily = 'question' | 'sentence' | 'infinitive' | 'verb-form' | 'determiner' | 'interrogative-determiner' | 'noun' | 'noun-definite' | 'noun-indefinite' | 'pronoun' | 'subject-form' | 'contraction' | 'connector' | 'function' | 'weekday' | 'month' | 'sequence' | 'duration' | 'number-time' | 'adverb' | 'modifier' | 'expression'
 
 const englishFunction = /^(?:of|to|from|at|in|on|with|without|for|by|before|after|during|between|among|under|over|through|toward|towards|until|since|as|than|thanks to|because of|due to)(?:\s|$)/i
 const frenchFunction = /^(?:de|du|des|à|au|aux|chez|dans|en|sur|sous|avec|sans|pour|par|avant|après|depuis|pendant|entre|vers|jusqu|dès|grâce à|à cause de|en raison de|quant à)(?:\s|\+|$)/iu
@@ -959,6 +958,7 @@ export function vocabularyChoiceFamily(row: { french: string; answer: string }):
   if (/[.!…]$/u.test(english) || /[.!…]$/u.test(french)) return 'sentence'
   if (/^(?:de|à)\s*\+\s*(?:le|les|un|une)\s*=/iu.test(french) || /^(?:of|to|from|at) the$/i.test(english)) return 'contraction'
   if (frenchBareDeterminer.test(french) || englishBareDeterminer.test(english)) return 'determiner'
+  if (/^quel(?:le)?s?$/iu.test(french) || /^what or which\b/i.test(english)) return 'interrogative-determiner'
   if (/^(?:not\s+)?to\s+\S+/i.test(english)) return 'infinitive'
   if (/^(?:would|can|could|must|should|will|is|are|has|have|was|were)\s+\S+/i.test(english) || (!english && frenchVerbForm.test(french))) return 'verb-form'
   if (frenchConnector.test(french)) return 'connector'

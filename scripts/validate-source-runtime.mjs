@@ -2,7 +2,7 @@ import { curriculumUnits } from '../src/data/curriculum.ts'
 import { sourceVocabulary } from '../src/data/source-vocabulary.ts'
 import { allCards, allWords } from '../src/data/words.ts'
 
-const expectedSourceCards = 2034
+const expectedSourceCards = 2033
 const expectedCurriculumUnits = 61
 const expectedUnitsByLevel = { A: 32, B: 8, C: 21 }
 const failures = []

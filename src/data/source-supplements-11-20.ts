@@ -228,7 +228,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'a-19', french: 'adéquate', answer: 'adequate' },
   { lessonId: 'a-19', french: 'approprié', answer: 'appropriate' },
   { lessonId: 'a-19', french: 'appropriée', answer: 'appropriate' },
-  { lessonId: 'a-19', french: 'conforme', answer: 'conform' },
+  { lessonId: 'a-19', french: 'conforme', answer: 'appropriate' },
   { lessonId: 'a-19', french: 'correct', answer: 'accurate' },
   { lessonId: 'a-19', french: 'dépassé', answer: 'outdated' },
   { lessonId: 'a-19', french: 'dépassée', answer: 'outdated' },
