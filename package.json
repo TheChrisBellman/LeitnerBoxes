@@ -9,6 +9,7 @@
     "build": "tsc --noEmit && npm run validate:source-runtime && vite build",
     "validate:source-runtime": "node --experimental-strip-types scripts/validate-source-runtime.mjs",
     "validate:exercises": "node --experimental-strip-types scripts/validate-exercises.mjs",
+    "validate:baseline": "npm run validate:source-runtime && npm run validate:exercises && node --experimental-strip-types --test src/leitner.test.ts src/storage.test.ts",
     "audit:source": "node --experimental-strip-types scripts/build-source-coverage-report.mjs"
   },
   "dependencies": {

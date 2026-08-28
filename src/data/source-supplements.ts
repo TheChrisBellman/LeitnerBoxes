@@ -13,10 +13,10 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'a-01', french: 's’appeler', answer: 'to be called' },
   { lessonId: 'a-01', french: 'se présenter', answer: 'to introduce oneself' },
   { lessonId: 'a-01', french: 'être', answer: 'to be' },
-  { lessonId: 'a-01', french: 'quel', answer: 'what' },
-  { lessonId: 'a-01', french: 'quelle', answer: 'what' },
-  { lessonId: 'a-01', french: 'quels', answer: 'what' },
-  { lessonId: 'a-01', french: 'quelles', answer: 'what' },
+  { lessonId: 'a-01', french: 'quel', answer: 'what or which — masculine singular' },
+  { lessonId: 'a-01', french: 'quelle', answer: 'what or which — feminine singular' },
+  { lessonId: 'a-01', french: 'quels', answer: 'what or which — masculine plural' },
+  { lessonId: 'a-01', french: 'quelles', answer: 'what or which — feminine plural' },
   { lessonId: 'a-01', french: 'de la part de qui', answer: 'who is calling' },
   { lessonId: 'a-01', french: 'qui', answer: 'who' },
   { lessonId: 'a-01', french: 'titre', answer: 'title' },
@@ -51,7 +51,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'a-02', french: 'qu’est-ce que c’est?', answer: 'what is it?' },
   { lessonId: 'a-02', french: 'quoi', answer: 'what' },
   { lessonId: 'a-02', french: 'comment', answer: 'how' },
-  { lessonId: 'a-02', french: 'quel', answer: 'what' },
+  { lessonId: 'a-02', french: 'quel', answer: 'what or which — masculine singular' },
   { lessonId: 'a-02', french: 'c’est', answer: 'it is' },
   { lessonId: 'a-02', french: 'ce sont', answer: 'they are' },
   { lessonId: 'a-02', french: 'ça s’appelle', answer: 'it is called' },
@@ -477,6 +477,11 @@ const a02DefiniteArticles = new Set(['le', 'la', 'l’', 'les'])
 const a02IndefiniteArticles = new Set(['un', 'une'])
 const a02PartitiveArticles = new Set(['des', 'du', 'de la', 'de l’'])
 const englishEvidenceOverrides: Record<string, readonly string[]> = {
+  'a-01|quel': ['what'],
+  'a-01|quelle': ['what'],
+  'a-01|quels': ['what'],
+  'a-01|quelles': ['what'],
+  'a-02|quel': ['what'],
   'a-10|le pirate informatique': ['cracker', 'hacker'],
 }
 

@@ -12,7 +12,10 @@ export const SEMANTIC_EXERCISE_KINDS: ExerciseKind[] = [
   'scenario',
 ]
 
-const unique = (values: readonly string[]) => new Set(values).size === values.length
+const normalizeChoice = (value: string) => value.trim().toLocaleLowerCase('fr').replace(/[‘’]/g, "'").replace(/\s+/g, ' ')
+const unique = (values: readonly string[]) => new Set(values.map(normalizeChoice)).size === values.length
+const legacyGeneratedChoice = /Je vais attendre demain|Je vais oublier la tâche|Je vais partir sans agir|Je vais attendre sans agir|Je vais annuler la tâche|Je ne sais pas quoi faire|Je ne sais pas; nous verrons bien|Le dossier est là, mais personne ne doit le lire|Cette question attendra|Je transmets la réponse immédiatement|Je supprime le dossier|Je demande à chacun de deviner|Elle doit attendre sans agir|Elle doit annuler la tâche|Elle ne sait pas quoi faire/iu
+const invalidNarrativePossessive = /\b(?:l’équipe|elle)\s+doit\b[^.?!]*\b(?:mon|ma|mes)\b/iu
 const invalidContraction = /(?:au sujet|cadre) de (?:le|les|un|une)\b|liées à (?:le|les)\b/iu
 const invalidInfinitiveElision = /\b(?:éviter|demande) de (?=[aeiouyàâéèêëîïôùûüœ])/iu
 const scaffoldAUnits = new Set(['a-01', 'a-02', 'a-03', 'a-04'])
@@ -64,6 +67,7 @@ export function validateAuthoredExercises(): string[] {
     if (invalidContraction.test(text)) failures.push(`invalid contraction: ${exercise.id}`)
     if (exercise.id.includes('-unit-pack-') && invalidInfinitiveElision.test(text)) failures.push(`invalid infinitive elision: ${exercise.id}`)
     if (exercise.id.includes('-unit-pack-') && /\bJe vais [^.?!]*(?:\bson\b|\bses\b)/iu.test(text)) failures.push(`wrong first-person possessive: ${exercise.id}`)
+    if (exercise.id.includes('-unit-pack-') && invalidNarrativePossessive.test(text)) failures.push(`wrong narrative possessive: ${exercise.id}`)
     if (exercise.id.includes('-unit-pack-') && earlyAUnit.test(exercise.unitId) && /dans le cadre/iu.test(text)) failures.push(`too-formal early A context: ${exercise.id}`)
     if (exercise.id.includes('-unit-pack-') && exercise.kind === 'contextual-cloze' && repeatedDocumentFrame.test(text)) failures.push(`repeated topic in cloze context: ${exercise.id}`)
     const topic = topicsByUnit.get(exercise.unitId)
@@ -75,8 +79,14 @@ export function validateAuthoredExercises(): string[] {
       if (exercise.contextLanguage !== expectedContextLanguage) failures.push(`missing scaffold context language: ${exercise.id}`)
     }
     const choices = exerciseChoices(exercise)
-    if (choices.length > 0 && new Set(choices).size !== choices.length) failures.push(`duplicate choices: ${exercise.id}`)
+    if (choices.length > 0 && (!choices.every((choice) => choice.trim()) || !unique(choices))) failures.push(`duplicate or empty choices: ${exercise.id}`)
     if (choices.length > 0 && choices.length !== 4 && exercise.kind !== 'correction') failures.push(`choice count is not four: ${exercise.id}`)
+    if (choices.length > 0 && 'answer' in exercise && choices.filter((choice) => normalizeChoice(choice) === normalizeChoice(exercise.answer)).length !== 1) failures.push(`answer is not unique: ${exercise.id}`)
+    if (exercise.id.includes('-unit-pack-') && legacyGeneratedChoice.test(JSON.stringify(choices))) failures.push(`legacy generated choice: ${exercise.id}`)
+    if (exercise.id.includes('-unit-pack-') && exercise.kind === 'contextual-cloze' && !choices.every((choice) => /^\p{L}+ez\b/iu.test(choice.trim()))) failures.push(`generated cloze choices are not imperatives: ${exercise.id}`)
+    if (exercise.id.includes('-unit-pack-') && scaffoldAUnits.has(exercise.unitId) && exercise.kind === 'contextual-cloze' && !choices.every((choice) => /^\p{L}+ez$/iu.test(choice.trim()))) failures.push(`scaffold cloze choices do not fit one-word blank: ${exercise.id}`)
+    if (exercise.id.includes('-unit-pack-') && exercise.kind === 'best-response' && !choices.every((choice) => /^Je vais\s/iu.test(choice.trim()))) failures.push(`generated best-response choices do not share a frame: ${exercise.id}`)
+    if (exercise.id.includes('-unit-pack-') && exercise.kind === 'reading' && !choices.every((choice) => /^Elle doit\s/iu.test(choice.trim()))) failures.push(`generated reading choices do not share a frame: ${exercise.id}`)
     if (exercise.kind === 'correction') {
       if (!unique(exercise.segments.map((segment) => segment.id))) failures.push(`duplicate correction segment IDs: ${exercise.id}`)
       if (exercise.answerSegmentId === 'none' && !exercise.allowNoCorrection) failures.push(`missing allowNoCorrection: ${exercise.id}`)
@@ -89,7 +99,8 @@ export function validateAuthoredExercises(): string[] {
       const node = scenario?.nodes.find((candidate) => candidate.id === exercise.nodeId)
       if (!scenarioIds.has(exercise.scenarioId) || !node) failures.push(`missing scenario node: ${exercise.id}`)
       else {
-        if (node.choices.length !== 4 || !unique(node.choices) || !node.choices.includes(node.answer)) failures.push(`invalid scenario choices: ${exercise.id}`)
+        if (node.choices.length !== 4 || !node.choices.every((choice) => choice.trim()) || !unique(node.choices) || node.choices.filter((choice) => normalizeChoice(choice) === normalizeChoice(node.answer)).length !== 1) failures.push(`invalid scenario choices: ${exercise.id}`)
+        if (exercise.id.includes('-unit-pack-') && (legacyGeneratedChoice.test(JSON.stringify(node.choices)) || !node.choices.every((choice) => /^Je vais\s/iu.test(choice.trim())))) failures.push(`generated scenario choices do not share a frame: ${exercise.id}`)
         if (!node.prompt.trim() || !node.feedback.trim()) failures.push(`empty scenario text: ${exercise.id}`)
       }
     }
@@ -101,6 +112,7 @@ export function validateAuthoredExercises(): string[] {
     const text = JSON.stringify(passage)
     if (invalidContraction.test(text)) failures.push(`invalid passage contraction: ${passage.id}`)
     if (passage.id.includes('-unit-pack-') && invalidInfinitiveElision.test(text)) failures.push(`invalid passage infinitive elision: ${passage.id}`)
+    if (passage.id.includes('-unit-pack-') && invalidNarrativePossessive.test(text)) failures.push(`wrong narrative possessive: ${passage.id}`)
     if (passage.id.includes('-unit-pack-') && earlyAUnit.test(passage.unitId) && /dans le cadre/iu.test(text)) failures.push(`too-formal early A passage: ${passage.id}`)
     const topic = topicsByUnit.get(passage.unitId)
     if (passage.id.includes('-unit-pack-') && topic && /dans le cadre/iu.test(text) && phraseCount(passage.text, topic) > 1) failures.push(`repeated topic frame: ${passage.id}`)

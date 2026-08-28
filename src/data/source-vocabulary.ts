@@ -146,7 +146,7 @@ export const baselineSourceRows: readonly SourceRow[] = [
   { lessonId: "a-08", french: "jeudi", answer: "Thursday" },
   { lessonId: "a-08", french: "le printemps", answer: "spring" },
   { lessonId: "a-08", french: "l’automne", answer: "fall" },
-  { lessonId: "a-08", french: "près de", answer: "nearly" },
+  { lessonId: "a-08", french: "près de", answer: "near; almost — with a time" },
   { lessonId: "a-08", french: "réunir", answer: "to gather" },
   { lessonId: "a-08", french: "vers", answer: "around" },
   { lessonId: "a-09", french: "après-demain", answer: "the day after tomorrow" },
@@ -243,12 +243,11 @@ export const baselineSourceRows: readonly SourceRow[] = [
   { lessonId: "a-18", french: "penser", answer: "to intend" },
   { lessonId: "a-18", french: "pourvu que", answer: "let’s hope, so long as" },
   { lessonId: "a-18", french: "s’attendre à", answer: "to expect" },
-  { lessonId: "a-18", french: "tenir", answer: "to want very much" },
   { lessonId: "a-18", french: "tenir à", answer: "to want very much" },
   { lessonId: "a-19", french: "acceptable", answer: "acceptable" },
   { lessonId: "a-19", french: "adéquat", answer: "adequate" },
   { lessonId: "a-19", french: "approprié", answer: "appropriate" },
-  { lessonId: "a-19", french: "conforme", answer: "conform" },
+  { lessonId: "a-19", french: "conforme", answer: "appropriate" },
   { lessonId: "a-19", french: "convenir à", answer: "to suit" },
   { lessonId: "a-19", french: "correspondre à", answer: "to correspond to" },
   { lessonId: "a-19", french: "dépassé", answer: "outdated" },
@@ -928,59 +927,143 @@ for (const key of additionalBaselineQuarantineKeys) {
 }
 
 const sourceTier: CardTier = 'expansion'
-type ResponseForm = 'question' | 'full-sentence' | 'infinitive' | 'fragment'
+export type VocabularyChoiceFamily = 'question' | 'sentence' | 'infinitive' | 'verb-form' | 'determiner' | 'interrogative-determiner' | 'noun' | 'noun-definite' | 'noun-indefinite' | 'pronoun' | 'subject-form' | 'contraction' | 'connector' | 'function' | 'weekday' | 'month' | 'sequence' | 'duration' | 'number-time' | 'adverb' | 'modifier' | 'expression'
 
-function responseForm(value: string): ResponseForm {
-  const trimmed = value.trim()
-  if (trimmed.endsWith('?')) return 'question'
-  if (/^to(?:\s|$)/i.test(trimmed)) return 'infinitive'
-  if (/^[A-ZÀ-ÖØ-Þ]/u.test(trimmed) || /[.!…]$/.test(trimmed)) return 'full-sentence'
-  return 'fragment'
+const englishFunction = /^(?:of|to|from|at|in|on|with|without|for|by|before|after|during|between|among|under|over|through|toward|towards|until|since|as|than|thanks to|because of|due to)(?:\s|$)/i
+const frenchFunction = /^(?:de|du|des|à|au|aux|chez|dans|en|sur|sous|avec|sans|pour|par|avant|après|depuis|pendant|entre|vers|jusqu|dès|grâce à|à cause de|en raison de|quant à)(?:\s|\+|$)/iu
+const frenchConnector = /^(?:bien que|quoique|pourvu que|à condition que|même si|si|quand|lorsque|parce que|puisque|afin que|pour que|tandis que|alors que|comme)\b/iu
+const englishPronoun = /^(?:i|you|he|she|it|we|they|this|that|these|those|who|which|what|my|your|his|her|our|their|mine|yours|ours|theirs|one another|each other)(?:\s|$)/i
+const frenchPronoun = /^(?:je|j['’]|tu|il|elle|on|nous|vous|ils|elles|ce|cet|cette|ces|celui|celle|ceux|celles|mon|ma|mes|ton|ta|tes|son|sa|ses|notre|nos|votre|vos|leur|leurs)(?:\s|[-’']|$)/iu
+const englishWeekday = /^(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)$/i
+const frenchWeekday = /^(?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)$/iu
+const englishMonth = /^(?:january|february|march|april|may|june|july|august|september|october|november|december)$/i
+const frenchMonth = /^(?:janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)$/iu
+const englishSequence = /^(?:first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|last)$/i
+const frenchSequence = /^(?:d’abord|en dernier|premi(?:er|ère)|deuxième|troisième|quatrième|cinquième|sixième|septième|huitième|neuvième|dixième|[\p{L}’-]+ièmement)$/iu
+const englishDuration = /^(?:\d|one|two|three|four|five|six|seven|eight|nine|ten)\s+(?:minutes?|hours?|days?|weeks?|months?|years?)\b/i
+const frenchDuration = /\b(?:minutes?|heures?|jours?|semaines?|mois|ans?|années?)\b/iu
+const englishNumberOrTime = /^(?:\d|one|two|three|four|five|six|seven|eight|nine|ten|half|quarter|double|twice|once)\b/i
+const frenchVerbForm = /^(?:[\p{L}’-]+(?:ait|aient)|peut|peuvent|doit|doivent|a|ont|est|sont)\b/iu
+const frenchBareDeterminer = /^(?:un|une|le|la|l['’]|les|des|du|de la|de l['’]|pas de)$/iu
+const englishBareDeterminer = /^(?:a|an|the|some|any)$/i
+const frenchDefiniteNoun = /^(?:(?:le|la|les)\s+|l['’])\S+/iu
+const frenchIndefiniteNoun = /^(?:un|une)\s+\S+/iu
+
+export function vocabularyChoiceFamily(row: { french: string; answer: string }): VocabularyChoiceFamily {
+  const english = row.answer.trim()
+  const englishLower = english.toLocaleLowerCase('en')
+  const french = row.french.trim()
+  const frenchLower = french.toLocaleLowerCase('fr')
+  if (english.endsWith('?') || french.endsWith('?')) return 'question'
+  if (/[.!…]$/u.test(english) || /[.!…]$/u.test(french)) return 'sentence'
+  if (/^(?:de|à)\s*\+\s*(?:le|les|un|une)\s*=/iu.test(french) || /^(?:of|to|from|at) the$/i.test(english)) return 'contraction'
+  if (frenchBareDeterminer.test(french) || englishBareDeterminer.test(english)) return 'determiner'
+  if (/^quel(?:le)?s?$/iu.test(french) || /^what or which\b/i.test(english)) return 'interrogative-determiner'
+  if (/^(?:not\s+)?to\s+\S+/i.test(english)) return 'infinitive'
+  if (/^(?:would|can|could|must|should|will|is|are|has|have|was|were)\s+\S+/i.test(english) || (!english && frenchVerbForm.test(french))) return 'verb-form'
+  if (frenchConnector.test(french)) return 'connector'
+  if (englishFunction.test(english) || frenchFunction.test(french)) return 'function'
+  if (englishDuration.test(english) || (!english && frenchDuration.test(french))) return 'duration'
+  if (frenchDefiniteNoun.test(french)) return 'noun-definite'
+  if (frenchIndefiniteNoun.test(french)) return 'noun-indefinite'
+  if (/^(?:i|you|he|she|it|we|they)\s+\S+/i.test(english) || /^(?:j['’]\p{L}+|(?:je|tu|il|elle|on|nous|vous|ils|elles|ce)\s+\S+)/iu.test(french)) return 'subject-form'
+  if (englishPronoun.test(english) || frenchPronoun.test(french)) return 'pronoun'
+  if (englishWeekday.test(english) || frenchWeekday.test(french)) return 'weekday'
+  if (englishMonth.test(english) || frenchMonth.test(french)) return 'month'
+  if (englishSequence.test(english) || frenchSequence.test(french)) return 'sequence'
+  if (englishNumberOrTime.test(english)) return 'number-time'
+  if (/^(?:a|an|the|some|no)\b/i.test(english) || /^(?:un|une|le|la|l['’]|les)\s*/iu.test(french) || (/^[A-Z]/u.test(english) && !/^I\b/u.test(english))) return 'noun'
+  if (/ly$/i.test(englishLower) || /ment$/iu.test(frenchLower)) return 'adverb'
+  if (!/\s/u.test(french)) return 'modifier'
+  return 'expression'
 }
 
-const fallbackAnswers: Record<ResponseForm, string[]> = {
-  question: ['What is the status?', 'When is the meeting?', 'Who is responsible?'],
-  'full-sentence': ['The file is ready.', 'The team is available.', 'The request is approved.'],
-  infinitive: ['to complete', 'to confirm', 'to review', 'to explain', 'to support'],
-  fragment: ['the department', 'a procedure', 'an objective', 'the schedule', 'a responsibility', 'acceptable'],
+const fallbackAnswers: Partial<Record<VocabularyChoiceFamily, string[]>> = {
+  question: ['who is it?', 'where is it?', 'when is it?'],
+  'verb-form': ['would prefer', 'can continue', 'must stop', 'has finished'],
+  contraction: ['to the', 'from the', 'at the'],
+  sequence: ['first', 'second', 'third', 'fourth', 'last'],
+  duration: ['one hour early', 'two days late', 'three weeks ahead', 'four months later'],
+  'number-time': ['one', 'two', 'three', 'four', 'five'],
+}
+
+const fallbackFrench: Partial<Record<VocabularyChoiceFamily, Array<{ french: string; answer: string }>>> = {
+  question: [{ french: 'qui est-ce?', answer: 'who is it?' }, { french: 'où est-ce?', answer: 'where is it?' }, { french: 'quand est-ce?', answer: 'when is it?' }],
+  'verb-form': [{ french: 'préférerait', answer: 'would prefer' }, { french: 'peut continuer', answer: 'can continue' }, { french: 'doit s’arrêter', answer: 'must stop' }, { french: 'a terminé', answer: 'has finished' }],
+  contraction: [{ french: 'à + le = au', answer: 'to the' }, { french: 'à + les = aux', answer: 'to the' }, { french: 'de + un = d’un', answer: 'of a' }, { french: 'de + une = d’une', answer: 'of a' }],
+  sequence: [{ french: 'd’abord', answer: 'first' }, { french: 'deuxième', answer: 'second' }, { french: 'troisièmement', answer: 'third' }, { french: 'quatrièmement', answer: 'fourth' }, { french: 'en dernier', answer: 'last' }],
+  duration: [{ french: 'une heure d’avance', answer: 'one hour early' }, { french: 'deux jours de retard', answer: 'two days late' }, { french: 'trois semaines d’avance', answer: 'three weeks ahead' }, { french: 'quatre mois plus tard', answer: 'four months later' }],
+  'number-time': [{ french: 'un', answer: 'one' }, { french: 'deux', answer: 'two' }, { french: 'trois', answer: 'three' }, { french: 'quatre', answer: 'four' }, { french: 'cinq', answer: 'five' }],
 }
 
 function normalize(value: string): string {
   return value.trim().toLocaleLowerCase('fr').replace(/[‘’]/g, "'").replace(/\s+/g, ' ')
 }
 
-const activeSourceRows = sourceRows.filter((row) => !baselineQuarantinedSourceKeys.has(`${row.lessonId}|${normalize(row.french)}`))
+const activeSourceRows = completeSourceRows.filter((row) => !isQuarantinedSourceKey(`${row.lessonId}|${normalize(row.french)}`))
+const activeRowsByFamily = new Map<VocabularyChoiceFamily, SourceRow[]>()
+const equivalentFrenchByAnswer = new Map<string, Set<string>>()
+for (const row of activeSourceRows) {
+  const family = vocabularyChoiceFamily(row)
+  const familyRows = activeRowsByFamily.get(family) ?? []
+  familyRows.push(row)
+  activeRowsByFamily.set(family, familyRows)
+  const answer = normalize(row.answer)
+  const equivalentFrench = equivalentFrenchByAnswer.get(answer) ?? new Set<string>()
+  equivalentFrench.add(normalize(row.french))
+  equivalentFrenchByAnswer.set(answer, equivalentFrench)
+}
+
+function rotate<T>(items: T[], start: number): T[] {
+  if (items.length === 0) return items
+  const offset = start % items.length
+  return [...items.slice(offset), ...items.slice(0, offset)]
+}
+
+function familyCandidates(row: SourceRow, index: number): SourceRow[] {
+  const family = vocabularyChoiceFamily(row)
+  const familyRows = activeRowsByFamily.get(family) ?? []
+  const local = familyRows.filter((candidate) => candidate !== row && candidate.lessonId === row.lessonId)
+  const sameLevel = familyRows.filter((candidate) => candidate.lessonId !== row.lessonId && candidate.lessonId[0] === row.lessonId[0])
+  const global = familyRows.filter((candidate) => candidate.lessonId[0] !== row.lessonId[0])
+  return [...rotate(local, index), ...rotate(sameLevel, index), ...rotate(global, index)]
+}
 
 function answerChoices(row: SourceRow, index: number): [string, string, string] {
-  const form = responseForm(row.answer)
-  const localCandidates = activeSourceRows.filter((candidate) => candidate.lessonId === row.lessonId && candidate !== row && responseForm(candidate.answer) === form)
-  const globalCandidates = activeSourceRows.filter((candidate) => candidate.lessonId !== row.lessonId && responseForm(candidate.answer) === form)
-  const localStart = localCandidates.length > 0 ? index % localCandidates.length : 0
-  const candidates = [...localCandidates.slice(localStart), ...localCandidates.slice(0, localStart), ...globalCandidates, ...fallbackAnswers[form]].map((candidate) => typeof candidate === 'string' ? candidate : candidate.answer)
+  const family = vocabularyChoiceFamily(row)
+  const candidates = [...familyCandidates(row, index).map((candidate) => candidate.answer), ...(fallbackAnswers[family] ?? [])]
   const seen = new Set([normalize(row.answer)])
   const choices: string[] = []
-  for (let offset = 0; choices.length < 3 && offset < candidates.length * 2; offset += 1) {
-    const candidate = candidates[offset % candidates.length]
+  for (const candidate of candidates) {
     if (!candidate || seen.has(normalize(candidate))) continue
     seen.add(normalize(candidate))
     choices.push(candidate)
+    if (choices.length === 3) break
   }
-  if (choices.length !== 3) throw new Error(`Source vocabulary needs three ${form} distractors: ${row.lessonId}/${row.french}`)
+  if (choices.length !== 3) throw new Error(`Source vocabulary needs three ${family} distractors: ${row.lessonId}/${row.french}`)
   return choices as [string, string, string]
 }
 
 function reverseChoices(row: SourceRow, index: number): [string, string, string] {
-  const local = activeSourceRows.filter((candidate) => candidate.lessonId === row.lessonId && candidate !== row)
-  const candidates = [...local, ...activeSourceRows.filter((candidate) => candidate.lessonId !== row.lessonId && candidate !== row)]
+  const family = vocabularyChoiceFamily(row)
+  const candidates = familyCandidates(row, index)
   const seen = new Set([normalize(row.french)])
+  const answer = normalize(row.answer)
+  const equivalentFrench = equivalentFrenchByAnswer.get(answer) ?? new Set<string>()
   const choices: string[] = []
-  for (let offset = 0; choices.length < 3 && offset < candidates.length * 2; offset += 1) {
-    const candidate = candidates[(index + offset) % candidates.length]?.french
-    if (!candidate || seen.has(normalize(candidate))) continue
-    seen.add(normalize(candidate))
-    choices.push(candidate)
+  for (const candidate of candidates) {
+    if (equivalentFrench.has(normalize(candidate.french)) || seen.has(normalize(candidate.french))) continue
+    seen.add(normalize(candidate.french))
+    choices.push(candidate.french)
+    if (choices.length === 3) break
   }
-  if (choices.length !== 3) throw new Error(`Source vocabulary needs three French distractors: ${row.lessonId}/${row.french}`)
+  for (const candidate of fallbackFrench[family] ?? []) {
+    if (choices.length === 3) break
+    if (normalize(candidate.answer) === answer || equivalentFrench.has(normalize(candidate.french)) || seen.has(normalize(candidate.french))) continue
+    seen.add(normalize(candidate.french))
+    choices.push(candidate.french)
+  }
+  if (choices.length !== 3) throw new Error(`Source vocabulary needs three French ${family} distractors: ${row.lessonId}/${row.french}`)
   return choices as [string, string, string]
 }
 
