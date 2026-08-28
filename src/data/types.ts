@@ -1,5 +1,6 @@
 export type Level = 'A' | 'B' | 'C'
 export type CardKind = 'vocabulary' | 'conjugation'
+export type ExerciseLanguage = 'fr' | 'en'
 export type CardTier = 'core' | 'expansion' | 'applied'
 export type ConjugationPerson = 'je' | 'tu' | 'il/elle' | 'nous' | 'vous' | 'ils/elles'
 export type ConjugationTense = 'present'
@@ -13,12 +14,26 @@ export type CardBase = {
   order: number
 }
 
+export type VocabularyPractice = {
+  kind: 'recognition'
+  prompt: string
+  promptLanguage: ExerciseLanguage
+  context?: string
+  contextLanguage?: ExerciseLanguage
+  answer: string
+  answerLanguage: ExerciseLanguage
+  distractors: [string, string, string]
+  feedback: string
+  help: string
+}
+
 export type VocabularyCard = CardBase & {
   kind: 'vocabulary'
   french: string
   answer: string
   distractors: [string, string, string]
   reverseDistractors: [string, string, string]
+  practice?: VocabularyPractice
 }
 
 export type LearningNote = {
@@ -38,6 +53,12 @@ export type ConjugationCard = CardBase & {
 
 export type PracticeCard = VocabularyCard | ConjugationCard
 export type Word = VocabularyCard
+
+export type QuestionHelp = {
+  label: string
+  phrase?: string
+  text: string
+}
 
 export type ExerciseKind =
   | 'contextual-cloze'
@@ -63,8 +84,6 @@ export const ACTIVITY_TYPES = [
 ] as const
 
 export type ActivityType = typeof ACTIVITY_TYPES[number]
-export type ExerciseLanguage = 'fr' | 'en'
-
 export type ExerciseBase = {
   id: string
   unitId: string

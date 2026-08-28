@@ -74,7 +74,7 @@ const levelDescriptions: Record<Level, string> = {
 }
 
 const activityOptions: { type: ActivityType; label: string; description: string }[] = [
-  { type: 'vocabulary', label: 'Vocabulary', description: 'French and English meaning recall.' },
+  { type: 'vocabulary', label: 'Vocabulary', description: 'Meaning, grammar, and spelling recognition.' },
   { type: 'conjugation', label: 'Conjugation', description: 'Present-tense form recall.' },
   { type: 'best-response', label: 'Best response', description: 'Choose the most useful workplace reply.' },
   { type: 'contextual-cloze', label: 'Contextual cloze', description: 'Complete a sentence in context.' },
@@ -166,27 +166,40 @@ function choicesFor(question: PracticeQuestion): string[] {
     : []
 }
 
-type SharedAnswerHint = {
-  phrase: string
-  meaning: string
+type AnswerHint = NonNullable<PracticeQuestion['help']> & {
   note?: string
 }
 
-const sharedAnswerHints: SharedAnswerHint[] = [
-  { phrase: 'Je vais', meaning: 'I’m going to / I will', note: 'aller, “to go”' },
-  { phrase: 'Je dois', meaning: 'I have to / I must' },
-  { phrase: 'Je peux', meaning: 'I can' },
-  { phrase: 'Il faut', meaning: 'It is necessary / We need to' },
-  { phrase: 'Nous devons', meaning: 'We must / We have to' },
-  { phrase: 'Vous devez', meaning: 'You must / You have to' },
+const sharedAnswerHints: AnswerHint[] = [
+  { label: 'Phrase help', phrase: 'Je vais', text: 'I’m going to / I will', note: 'aller, “to go”' },
+  { label: 'Phrase help', phrase: 'Je dois', text: 'I have to / I must' },
+  { label: 'Phrase help', phrase: 'Je peux', text: 'I can' },
+  { label: 'Phrase help', phrase: 'Il faut', text: 'It is necessary / We need to' },
+  { label: 'Phrase help', phrase: 'Nous devons', text: 'We must / We have to' },
+  { label: 'Phrase help', phrase: 'Vous devez', text: 'You must / You have to' },
 ]
 
-function sharedAnswerHint(choices: readonly string[], language: 'fr' | 'en'): SharedAnswerHint | undefined {
+function sharedAnswerHint(choices: readonly string[], language: 'fr' | 'en'): AnswerHint | undefined {
   if (language !== 'fr' || choices.length < 2) return undefined
   return sharedAnswerHints.find(({ phrase }) => {
+    if (!phrase) return false
     const prefix = `${phrase.toLocaleLowerCase('fr')} `
     return choices.every((choice) => choice.toLocaleLowerCase('fr').startsWith(prefix))
   })
+}
+
+function AnswerHintPopover({ hint, id, open, onToggle }: { hint: AnswerHint; id: string; open: boolean; onToggle: () => void }) {
+  return (
+    <>
+      <button type="button" className="phrase-help-button" aria-expanded={open} aria-controls={id} aria-describedby={id} onClick={onToggle}>
+        <span>{hint.label}</span>
+        {hint.phrase && <span lang="fr" className="choice-shared-phrase">{hint.phrase}</span>}
+      </button>
+      <p id={id} className={`shared-answer-tooltip ${open ? 'is-open' : ''}`} role="tooltip">
+        {hint.phrase && <><span lang="fr">{hint.phrase}</span> — </>}{hint.text}{hint.note && <> ({hint.note})</>}
+      </p>
+    </>
+  )
 }
 
 function practiceModeLabel(mode: PracticeMode): string {
@@ -783,7 +796,7 @@ function SuccessOverlay({
         <div className="success-copy" role="status" aria-live="polite" aria-labelledby="success-title" aria-atomic="true">
           <strong id="success-title">{title}</strong>
           <span className="success-answer" lang={question.answerLanguage}>{fullAnswer}</span>
-          {question.exercise?.feedback && <span className="success-explanation">{question.exercise.feedback}</span>}
+          {(question.exercise?.feedback ?? question.answerExplanation) && <span className="success-explanation">{question.exercise?.feedback ?? question.answerExplanation}</span>}
           <span className="success-movement">{movement}</span>
           {shouldAutoAdvance && <span className="success-next">Next card…</span>}
         </div>
@@ -816,8 +829,8 @@ function FeedbackPanel({
 
   const fullAnswer = answerDisplayFor(question, feedback.answer)
   const selectedAnswer = answerDisplayFor(question, feedback.selectedChoice)
-  const authoredExplanation = question.exercise?.feedback
-  const explanation = authoredExplanation ?? (question.format === 'typed'
+  const authoredExplanation = question.exercise?.feedback ?? question.answerExplanation
+  const fallbackExplanation = question.format === 'typed'
     ? feedback.correct ? 'You recalled the answer without choices.' : 'Check the spelling, then type the answer again.'
     : question.format === 'arrange'
       ? feedback.correct ? 'You built the French answer in the correct order.' : 'Review the word order, then build it again.'
@@ -829,7 +842,10 @@ function FeedbackPanel({
             ? feedback.correct ? `You matched the ${question.card.person} form.` : `The prompt asks for ${question.card.person}.`
             : question.direction === 'english-to-french'
               ? 'You matched the English meaning to its French form.'
-              : 'You matched the French phrase to its English meaning.')
+              : 'You matched the French phrase to its English meaning.'
+  const explanation = !feedback.correct && feedback.stage === 'first'
+    ? question.exercise ? 'Use the context and try again; the explanation appears after your retry.' : fallbackExplanation
+    : authoredExplanation ?? fallbackExplanation
   const retryNote = question.format === 'typed'
     ? 'Type it again without looking at the correction.'
     : question.format === 'arrange'
@@ -930,17 +946,21 @@ function QuizScreen({
     else if (question.format === 'choice' || question.format === 'cloze' || question.format === 'correction') firstChoiceRef.current?.focus({ preventScroll: true })
   }, [question.card.id, question.format, question.tokens, repairing])
 
-  const questionLabel = exerciseLabel(question) ?? (question.format === 'typed'
-    ? question.kind === 'conjugation' ? 'Conjugation · Typed recall' : 'Vocabulary · Typed recall'
-    : question.format === 'arrange'
-      ? 'Vocabulary · Build the answer'
-      : question.format === 'cloze'
-        ? 'Conjugation · Fill the blank'
-        : question.direction === 'english-to-french'
-          ? 'Vocabulary · English → French'
-          : 'Vocabulary · French → English')
-  const questionInstruction = question.exercise?.kind === 'correction'
-    ? 'Read the full text, then choose the underlined part that contains the error.'
+  const questionLabel = exerciseLabel(question) ?? (question.vocabularyPractice === 'recognition'
+    ? 'Vocabulary · Recognition'
+    : question.format === 'typed'
+      ? question.kind === 'conjugation' ? 'Conjugation · Typed recall' : 'Vocabulary · Typed recall'
+      : question.format === 'arrange'
+        ? 'Vocabulary · Build the answer'
+        : question.format === 'cloze'
+          ? 'Conjugation · Fill the blank'
+          : question.direction === 'english-to-french'
+            ? 'Vocabulary · English → French'
+            : 'Vocabulary · French → English')
+  const questionInstruction = question.vocabularyPractice === 'recognition'
+    ? 'Choose the example or form that matches the term.'
+    : question.exercise?.kind === 'correction'
+      ? 'Read the full text, then choose the underlined part that contains the error.'
     : question.exercise?.kind === 'reading'
       ? 'Read the passage, then choose the best answer.'
       : question.exercise?.kind === 'scenario'
@@ -962,10 +982,12 @@ function QuizScreen({
                       : question.direction === 'english-to-french'
                         ? 'How do you say this in French?'
                         : 'What does it mean in English?'
-  const answerGroupLabel = question.exercise?.kind === 'correction'
-    ? 'Choose the segment to correct'
-    : question.exercise
-      ? 'Choose the best answer'
+  const answerGroupLabel = question.vocabularyPractice === 'recognition'
+    ? 'Choose the matching example'
+    : question.exercise?.kind === 'correction'
+      ? 'Choose the segment to correct'
+      : question.exercise
+        ? 'Choose the best answer'
       : question.kind === 'conjugation'
         ? 'Choose the French conjugation'
         : question.direction === 'english-to-french'
@@ -974,8 +996,8 @@ function QuizScreen({
   const hasLongPrompt = question.prompt.length > 12
   const arrangedAnswer = selectedTokenIndexes.map((tokenIndex) => question.tokens?.[tokenIndex] ?? '').join(' ')
   const remainingTokenIndexes = tokenOrder.filter((tokenIndex) => !selectedTokenIndexes.includes(tokenIndex))
-  const answerHint = sharedAnswerHint(question.choices, question.answerLanguage)
-  const answerHintId = answerHint ? `shared-answer-hint-${question.card.id}` : undefined
+  const answerHint = sharedAnswerHint(question.choices, question.answerLanguage) ?? question.help
+  const answerHintId = answerHint ? `question-help-${question.card.id}` : undefined
 
   useEffect(() => {
     const input = typedInputRef.current
@@ -1108,18 +1130,15 @@ function QuizScreen({
                     ? `Choose the form that matches ${question.card.person}.`
                     : 'Choose the answer again without looking at the correction.'}</span>
           </div>}
-          {(question.format === 'choice' || question.format === 'cloze' || question.format === 'correction') && <div className={`answer-choice-area ${answerHint ? 'has-shared-hint' : ''}`}>
-            {answerHint && <button type="button" className="phrase-help-button" aria-expanded={phraseHelpOpen} aria-controls={answerHintId} aria-describedby={answerHintId} onClick={() => setPhraseHelpOpen((open) => !open)}>
-              <span>Phrase help</span>
-              <span lang="fr" className="choice-shared-phrase">{answerHint.phrase}</span>
-            </button>}
+          {(question.format === 'choice' || question.format === 'cloze' || question.format === 'correction') && <div className={`answer-choice-area ${answerHint ? 'has-shared-hint has-question-help' : ''}`}>
+            {answerHint && answerHintId && <AnswerHintPopover hint={answerHint} id={answerHintId} open={phraseHelpOpen} onToggle={() => setPhraseHelpOpen((open) => !open)} />}
             <div className="choice-list" role="group" aria-label={answerGroupLabel}>
               {question.choices.map((choice, choiceIndex) => {
                 const choiceLabel = question.choiceLabels?.[choice] ?? choice
                 const isCorrect = Boolean(feedback?.correct || feedback?.stage === 'repair') && feedback?.answer === choice
                 const isSelected = feedback?.selectedChoice === choice
-                const hasAnswerHint = Boolean(answerHint && choiceLabel.toLocaleLowerCase('fr').startsWith(`${answerHint.phrase.toLocaleLowerCase('fr')} `))
-                const answerPhraseLength = answerHint?.phrase.length ?? 0
+                const hasAnswerHint = Boolean(answerHint?.phrase && choiceLabel.toLocaleLowerCase('fr').startsWith(`${answerHint.phrase.toLocaleLowerCase('fr')} `))
+                const answerPhraseLength = answerHint?.phrase?.length ?? 0
                 const answerPhrase = hasAnswerHint ? choiceLabel.slice(0, answerPhraseLength) : undefined
                 const answerRemainder = hasAnswerHint ? choiceLabel.slice(answerPhraseLength) : choiceLabel
                 const repairLabel = feedback?.stage === 'repair' && !feedback.correct && choice === feedback.answer
@@ -1127,7 +1146,7 @@ function QuizScreen({
                   : undefined
                 const accessibleLabel = repairLabel ? `${choiceLabel}. ${repairLabel}` : undefined
                 return (
-                  <button ref={choiceIndex === 0 ? firstChoiceRef : undefined} type="button" className={`choice-button ${isCorrect ? 'is-correct' : ''} ${isSelected && !isCorrect ? 'is-incorrect' : ''}`} key={choice} onClick={() => onAnswer(choice)} disabled={Boolean(feedback?.correct || (feedback?.stage === 'repair' && choice !== feedback.answer))} aria-label={accessibleLabel} aria-describedby={hasAnswerHint ? answerHintId : undefined}>
+                  <button ref={choiceIndex === 0 ? firstChoiceRef : undefined} type="button" className={`choice-button ${isCorrect ? 'is-correct' : ''} ${isSelected && !isCorrect ? 'is-incorrect' : ''}`} key={choice} onClick={() => onAnswer(choice)} disabled={Boolean(feedback?.correct || (feedback?.stage === 'repair' && choice !== feedback.answer))} aria-label={accessibleLabel} aria-describedby={answerHintId}>
                     <span className="choice-number">{feedback && isCorrect ? <Icon name="check" size={16} /> : choiceIndex + 1}</span>
                     <span lang={question.answerLanguage}>{answerPhrase ? <><span className="choice-shared-phrase">{answerPhrase}</span>{answerRemainder}</> : choiceLabel}</span>
                     {feedback && isSelected && !isCorrect && <Icon name="close" size={18} />}
@@ -1135,26 +1154,31 @@ function QuizScreen({
                 )
               })}
             </div>
-            {answerHint && <p id={answerHintId} className={`shared-answer-tooltip ${phraseHelpOpen ? 'is-open' : ''}`} role="tooltip"><span lang="fr">{answerHint.phrase} + infinitive</span> — “{answerHint.meaning}”{answerHint.note && <> ({answerHint.note})</>}</p>}
           </div>}
-          {question.format === 'typed' && <form className="typed-answer-form" onSubmit={submitTypedAnswer}>
-            <label htmlFor="typed-answer">Your answer</label>
-            <input ref={typedInputRef} id="typed-answer" className="typed-answer-input" value={typedAnswer} onChange={(event) => setTypedAnswer(event.target.value)} onSelect={captureAccentSelection} onBlur={captureAccentSelection} lang={question.answerLanguage} inputMode="text" enterKeyHint="done" autoComplete="off" autoCapitalize="none" spellCheck={false} disabled={Boolean(feedback)} />
-            <div className="accent-palette" role="group" aria-label="French accented characters">
-              <span className="accent-palette-label">French accents</span>
-              {FRENCH_ACCENTS.map((character) => <button key={character} type="button" className="accent-button" aria-label={`Insert ${character}`} onPointerDown={(event) => handleAccentPointerDown(event, character)} onMouseDown={handleAccentMouseDown} onClick={() => handleAccentClick(character)} disabled={Boolean(feedback)}>{character}</button>)}
+          {question.format === 'typed' && <div className="question-help-area">
+            {answerHint && answerHintId && <AnswerHintPopover hint={answerHint} id={answerHintId} open={phraseHelpOpen} onToggle={() => setPhraseHelpOpen((open) => !open)} />}
+            <form className="typed-answer-form" onSubmit={submitTypedAnswer}>
+              <label htmlFor="typed-answer">Your answer</label>
+              <input ref={typedInputRef} id="typed-answer" className="typed-answer-input" value={typedAnswer} onChange={(event) => setTypedAnswer(event.target.value)} onSelect={captureAccentSelection} onBlur={captureAccentSelection} lang={question.answerLanguage} inputMode="text" enterKeyHint="done" autoComplete="off" autoCapitalize="none" spellCheck={false} disabled={Boolean(feedback)} />
+              <div className="accent-palette" role="group" aria-label="French accented characters">
+                <span className="accent-palette-label">French accents</span>
+                {FRENCH_ACCENTS.map((character) => <button key={character} type="button" className="accent-button" aria-label={`Insert ${character}`} onPointerDown={(event) => handleAccentPointerDown(event, character)} onMouseDown={handleAccentMouseDown} onClick={() => handleAccentClick(character)} disabled={Boolean(feedback)}>{character}</button>)}
+              </div>
+              <button type="submit" className="button button-primary" disabled={!typedAnswer.trim() || Boolean(feedback)}>Check answer</button>
+            </form>
+          </div>}
+          {question.format === 'arrange' && <div className="question-help-area arrange-help-area">
+            {answerHint && answerHintId && <AnswerHintPopover hint={answerHint} id={answerHintId} open={phraseHelpOpen} onToggle={() => setPhraseHelpOpen((open) => !open)} />}
+            <div className="arrange-answer">
+              <div className="arranged-sentence" aria-label="Your arranged answer" lang={question.answerLanguage}>
+                {selectedTokenIndexes.length === 0 && <span>Tap words below to build the answer.</span>}
+                {selectedTokenIndexes.map((tokenIndex) => <button type="button" className="word-token is-selected" key={tokenIndex} onClick={() => setSelectedTokenIndexes((current) => current.filter((indexToKeep) => indexToKeep !== tokenIndex))} disabled={Boolean(feedback)} aria-label={`Remove ${question.tokens?.[tokenIndex]}`}>{question.tokens?.[tokenIndex]}</button>)}
+              </div>
+              <div className="token-bank" aria-label="Available words">
+                {remainingTokenIndexes.map((tokenIndex) => <button type="button" className="word-token" key={tokenIndex} onClick={() => setSelectedTokenIndexes((current) => [...current, tokenIndex])} disabled={Boolean(feedback)}>{question.tokens?.[tokenIndex]}</button>)}
+              </div>
+              <button type="button" className="button button-primary arrange-check" onClick={submitArrangedAnswer} disabled={remainingTokenIndexes.length > 0 || Boolean(feedback)}>Check answer</button>
             </div>
-            <button type="submit" className="button button-primary" disabled={!typedAnswer.trim() || Boolean(feedback)}>Check answer</button>
-          </form>}
-          {question.format === 'arrange' && <div className="arrange-answer">
-            <div className="arranged-sentence" aria-label="Your arranged answer" lang={question.answerLanguage}>
-              {selectedTokenIndexes.length === 0 && <span>Tap words below to build the answer.</span>}
-              {selectedTokenIndexes.map((tokenIndex) => <button type="button" className="word-token is-selected" key={tokenIndex} onClick={() => setSelectedTokenIndexes((current) => current.filter((indexToKeep) => indexToKeep !== tokenIndex))} disabled={Boolean(feedback)} aria-label={`Remove ${question.tokens?.[tokenIndex]}`}>{question.tokens?.[tokenIndex]}</button>)}
-            </div>
-            <div className="token-bank" aria-label="Available words">
-              {remainingTokenIndexes.map((tokenIndex) => <button type="button" className="word-token" key={tokenIndex} onClick={() => setSelectedTokenIndexes((current) => [...current, tokenIndex])} disabled={Boolean(feedback)}>{question.tokens?.[tokenIndex]}</button>)}
-            </div>
-            <button type="button" className="button button-primary arrange-check" onClick={submitArrangedAnswer} disabled={remainingTokenIndexes.length > 0 || Boolean(feedback)}>Check answer</button>
           </div>}
           {!feedback && !repairing && <div className="skip-action">
             <button type="button" className="button button-secondary skip-button" onClick={onSkip}>Skip for now</button>

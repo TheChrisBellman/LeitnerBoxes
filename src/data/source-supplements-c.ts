@@ -180,7 +180,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'c-06', french: 'un choix', answer: 'a choice' },
   { lessonId: 'c-06', french: 'faire un choix', answer: 'to make a choice' },
   { lessonId: 'c-06', french: 'concilier le travail et la famille', answer: 'to find a balance between work and family' },
-  { lessonId: 'c-06', french: 'un déséquilibre', answer: 'unbalance' },
+  { lessonId: 'c-06', french: 'un déséquilibre', answer: 'imbalance' },
   { lessonId: 'c-06', french: 'l’équilibre', answer: 'balance' },
   { lessonId: 'c-06', french: 'trouver un équilibre', answer: 'to find a balance' },
   { lessonId: 'c-06', french: 'des heures supplémentaires', answer: 'overtime' },

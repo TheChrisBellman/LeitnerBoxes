@@ -1,6 +1,8 @@
 import { allExercises, allPassages, allScenarios, exerciseTargets } from './pilot-exercises.ts'
 import { unitPacksA } from './unit-packs-a.ts'
 import { curriculumUnits } from './curriculum.ts'
+import { sourceVocabulary } from './source-vocabulary.ts'
+import { requiresVocabularyPractice, vocabularyPracticeFor, vocabularyPracticeKeys } from './vocabulary-practice.ts'
 import type { AuthoredExercise, ExerciseKind } from './types.ts'
 
 export const SEMANTIC_EXERCISE_KINDS: ExerciseKind[] = [
@@ -13,6 +15,12 @@ export const SEMANTIC_EXERCISE_KINDS: ExerciseKind[] = [
 ]
 
 const normalizeChoice = (value: string) => value.trim().toLocaleLowerCase('fr').replace(/[‘’]/g, "'").replace(/\s+/g, ' ')
+const choiceTokens = (value: string) => normalizeChoice(value).split(/[^\p{L}\p{N}]+/u).filter(Boolean)
+const containsWholeChoice = (text: string, choice: string): boolean => {
+  const textTokens = choiceTokens(text)
+  const choiceTokensValue = choiceTokens(choice)
+  return choiceTokensValue.length > 0 && [...Array(Math.max(0, textTokens.length - choiceTokensValue.length + 1)).keys()].some((index) => choiceTokensValue.every((token, offset) => textTokens[index + offset] === token))
+}
 const unique = (values: readonly string[]) => new Set(values.map(normalizeChoice)).size === values.length
 const legacyGeneratedChoice = /Je vais attendre demain|Je vais oublier la tâche|Je vais partir sans agir|Je vais attendre sans agir|Je vais annuler la tâche|Je ne sais pas quoi faire|Je ne sais pas; nous verrons bien|Le dossier est là, mais personne ne doit le lire|Cette question attendra|Je transmets la réponse immédiatement|Je supprime le dossier|Je demande à chacun de deviner|Elle doit attendre sans agir|Elle doit annuler la tâche|Elle ne sait pas quoi faire/iu
 const invalidNarrativePossessive = /\b(?:l’équipe|elle)\s+doit\b[^.?!]*\b(?:mon|ma|mes)\b/iu
@@ -33,8 +41,30 @@ function exerciseChoices(exercise: AuthoredExercise): string[] {
   return []
 }
 
-export function validateAuthoredExercises(): string[] {
+export function validateSourceVocabulary(): string[] {
   const failures: string[] = []
+  const sourceKeys = new Set(sourceVocabulary.map((card) => `${card.lessonId}|${normalizeChoice(card.french)}`))
+  for (const key of vocabularyPracticeKeys) {
+    if (!sourceKeys.has(key)) failures.push(`vocabulary practice has no source card: ${key}`)
+  }
+  for (const card of sourceVocabulary) {
+    const choices = [card.answer, ...card.distractors]
+    const reverseChoices = [card.french, ...card.reverseDistractors]
+    if (choices.length !== 4 || choices.some((choice) => !choice.trim()) || !unique(choices)) failures.push(`invalid source English choices: ${card.id}`)
+    if (reverseChoices.length !== 4 || reverseChoices.some((choice) => !choice.trim()) || !unique(reverseChoices)) failures.push(`invalid source French choices: ${card.id}`)
+    const practice = vocabularyPracticeFor(card)
+    if (requiresVocabularyPractice(card) && !practice) failures.push(`contextual vocabulary practice missing: ${card.id}`)
+    if (!practice) continue
+    const practiceChoices = [practice.answer, ...practice.distractors]
+    if (practice.kind !== 'recognition' || practiceChoices.length !== 4 || practiceChoices.some((choice) => !choice.trim()) || !unique(practiceChoices)) failures.push(`invalid contextual vocabulary choices: ${card.id}`)
+    if (!practice.prompt.trim() || !practice.feedback.trim() || !practice.help.trim()) failures.push(`incomplete contextual vocabulary practice: ${card.id}`)
+    if (containsWholeChoice(practice.prompt, practice.answer) || containsWholeChoice(practice.help, practice.answer)) failures.push(`contextual vocabulary leaks answer: ${card.id}`)
+  }
+  return failures
+}
+
+export function validateAuthoredExercises(): string[] {
+  const failures: string[] = [...validateSourceVocabulary()]
   const unitIds = new Set(curriculumUnits.map((unit) => unit.id))
   const targetsById = new Map(exerciseTargets.map((target) => [target.id, target]))
   const targetIds = new Set(exerciseTargets.map((target) => target.id))

@@ -140,7 +140,7 @@ function alternativeSeeds(seed: UnitPackSeed, seeds: readonly UnitPackSeed[]): A
       if (level) return level
       const band = Number(difficultyBand(left.unitId) !== difficultyBand(seed.unitId)) - Number(difficultyBand(right.unitId) !== difficultyBand(seed.unitId))
       if (band) return band
-      const related = overlap(right) - overlap(left)
+      const related = overlap(left) - overlap(right)
       if (related) return related
       return distance(left) - distance(right) || left.unitId.localeCompare(right.unitId)
     })
@@ -188,7 +188,7 @@ export function createUnitPack(seed: UnitPackSeed, alternatives: AlternativeSeed
     kind: 'best-response',
     ...(isScaffold ? { promptLanguage: 'en' as const, contextLanguage: 'en' as const } : {}),
     situation: bestSituation,
-    prompt: isScaffold ? 'What should you do next?' : 'Quelle réponse propose une prochaine étape claire?',
+    prompt: isScaffold ? 'What should you do next?' : `Quelle réponse répond à l’objectif « ${goal} »?`,
     answer: bestAnswer,
     distractors: bestDistractors,
     feedback: isScaffold
@@ -204,7 +204,7 @@ export function createUnitPack(seed: UnitPackSeed, alternatives: AlternativeSeed
     kind: 'contextual-cloze',
     ...(isScaffold ? { promptLanguage: 'fr' as const, contextLanguage: 'en' as const } : {}),
     context: clozeContext,
-    prompt: scaffold?.clozePrompt ?? '___ avant la réunion.',
+    prompt: scaffold?.clozePrompt ?? `___ pour obtenir ${result}.`,
     answer: scaffold?.clozeAnswer ?? imperative,
     distractors: scaffold?.clozeDistractors ?? alternatives.map((alternative) => alternative.imperative) as ChoiceSet,
     feedback: isScaffold
@@ -217,7 +217,7 @@ export function createUnitPack(seed: UnitPackSeed, alternatives: AlternativeSeed
     targetId: targetIds.correction,
     kind: 'correction',
     ...(isScaffold ? { promptLanguage: 'en' as const, contextLanguage: 'fr' as const } : {}),
-    prompt: isScaffold ? 'Which part has an error?' : 'Quelle partie contient l’erreur?',
+    prompt: isScaffold ? 'Which part has an error?' : `Quelle partie contient l’erreur dans la consigne « ${goal} »?`,
     segments: correctionSegments(seed),
     answerSegmentId: 'error',
     correction: correctionRight,
@@ -241,7 +241,7 @@ export function createUnitPack(seed: UnitPackSeed, alternatives: AlternativeSeed
     kind: 'reading',
     ...(isScaffold ? { promptLanguage: 'en' as const, contextLanguage: 'en' as const } : {}),
     passageId,
-    prompt: isScaffold ? 'What does the team need to do?' : isFoundation || band === 'developing' || band === 'advanced' ? 'Que doit faire l’équipe?' : `Que doit faire l’équipe pour ${goal}?`,
+    prompt: isScaffold ? 'What does the team need to do?' : `Que doit faire l’équipe pour ${goal}?`,
     answer: sentenceStart(`Elle doit ${thirdPersonAction}.`),
     distractors: alternatives.map((alternative) => `Elle doit ${narrativeAction(alternative)}.`) as ChoiceSet,
     feedback: isScaffold
@@ -256,7 +256,7 @@ export function createUnitPack(seed: UnitPackSeed, alternatives: AlternativeSeed
     kind: 'transformation',
     ...(isScaffold ? { promptLanguage: 'en' as const, contextLanguage: 'fr' as const } : {}),
     source: scaffold?.transformationSource ?? transformationSource,
-    prompt: isScaffold ? 'Choose the sentence with the same meaning.' : 'Choisissez la reformulation qui conserve le même sens.',
+    prompt: isScaffold ? 'Choose the sentence with the same meaning.' : `Quelle reformulation conserve le sens de la tâche « ${goal} »?`,
     answer: scaffold?.transformationAnswer ?? transformationAnswer,
     distractors: transformationDistractors,
     feedback: isScaffold ? 'The second sentence keeps the same meaning.' : 'La reformulation conserve le sens et l’objectif de la phrase de départ.',
@@ -279,7 +279,7 @@ export function createUnitPack(seed: UnitPackSeed, alternatives: AlternativeSeed
         : `${sentenceStart(topicFrame)}, vous devez ${goal}. Le résultat attendu est ${result}, mais un collègue propose de passer à l’étape suivante sans vérifier les informations.`),
     nodes: [{
       id: 'next-step',
-      prompt: isScaffold ? 'What should you do next?' : 'Que faites-vous ensuite?',
+      prompt: isScaffold ? 'What should you do next?' : `Que faites-vous ensuite pour ${goal}?`,
       choices: scenarioChoices,
       answer: scenarioAnswer,
       feedback: isScaffold ? 'Choose the action that helps with the task.' : `La réponse propose l’étape suivante nécessaire pour « ${goal} ».`,

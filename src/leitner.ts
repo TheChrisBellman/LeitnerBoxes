@@ -1,6 +1,6 @@
 import { conjugationCatches } from './data/conjugation-catches.ts'
 import { allExercises, dialoguesById, exercisesByTargetId, passagesById, scenariosById } from './data/pilot-exercises.ts'
-import { ACTIVITY_TYPES, type ActivityType, type AuthoredExercise, type CardKind, type CardTier, type ConjugationCard, type ExerciseLanguage, type ExerciseTarget, type PracticeCard, type PracticeTarget, type VocabularyCard } from './data/types.ts'
+import { ACTIVITY_TYPES, type ActivityType, type AuthoredExercise, type CardKind, type CardTier, type ConjugationCard, type ExerciseLanguage, type ExerciseTarget, type PracticeCard, type PracticeTarget, type QuestionHelp, type VocabularyCard } from './data/types.ts'
 
 export type Box = 1 | 2 | 3 | 4 | 5
 export type PracticeMode = 'mixed' | 'vocabulary' | 'conjugation'
@@ -171,8 +171,11 @@ export type PracticeQuestion = {
   tokens?: string[]
   acceptedAnswers?: string[]
   exercise?: AuthoredExercise
+  vocabularyPractice?: 'recognition'
+  answerExplanation?: string
   answerDisplay?: string
   choiceLabels?: Record<string, string>
+  help?: QuestionHelp
   context?: string
   contextTitle?: string
   contextLabel?: string
@@ -296,11 +299,75 @@ function normalizeResponse(value: string): string {
   return value.trim().toLocaleLowerCase('fr').replace(/’/g, "'").replace(/\s+/g, ' ')
 }
 
+function vocabularyQuestionHelp(card: VocabularyCard, reverse: boolean): QuestionHelp {
+  if (card.practice) {
+    const answer = normalizeResponse(card.practice.answer)
+    const sourceTerm = normalizeResponse(card.french)
+    return {
+      label: 'Term help',
+      ...(answer !== sourceTerm && !sourceTerm.includes(answer) ? { phrase: card.french } : {}),
+      text: card.practice.help,
+    }
+  }
+  const french = card.french.trim()
+  if (/^(?:le|la|l['’]|les|un|une|des|du|de la|de l['’])(?:\s|$)/iu.test(french)) {
+    return { label: 'Grammar help', text: 'Keep the article with the noun; it carries useful gender and number information.' }
+  }
+  if (/^(?:j['’]|je|tu|il|elle|on|nous|vous|ils|elles)\b/iu.test(french)) {
+    return { label: 'Form help', text: 'Keep the subject and the French verb form together.' }
+  }
+  if (/^(?:[a-zà-öø-ÿ]+er|[a-zà-öø-ÿ]+ir|[a-zà-öø-ÿ]+re)\b/iu.test(french)) {
+    return { label: 'Word-form help', text: 'This is an infinitive: the dictionary form of a French verb.' }
+  }
+  return {
+    label: 'Recall help',
+    text: reverse ? 'Recall the complete French form, including any article or preposition.' : 'Connect the complete French term to its meaning; do not drop its small function words.',
+  }
+}
+
+function exerciseQuestionHelp(kind: AuthoredExercise['kind']): QuestionHelp {
+  const text = kind === 'contextual-cloze'
+    ? 'Use the surrounding sentence to choose the form that fits.'
+    : kind === 'best-response'
+      ? 'Choose the response that best fits the situation and moves the conversation forward.'
+      : kind === 'reading'
+        ? 'Use the passage as evidence; do not rely on a single familiar word.'
+        : kind === 'transformation'
+          ? 'Keep the original meaning, even when the French structure changes.'
+          : kind === 'ordered'
+            ? 'Build the complete French phrase in a natural word order.'
+            : kind === 'correction'
+              ? 'Read the whole sentence before choosing the segment that needs attention.'
+              : kind === 'scenario'
+                ? 'Choose the response that is both appropriate and useful in this situation.'
+                : 'Use the context to recall the French answer.'
+  return { label: 'Activity help', text }
+}
+
 export function buildVocabularyQuestion(
   card: VocabularyCard,
   reverse: boolean,
   vocabularyPool: readonly PracticeCard[] = [],
 ): PracticeQuestion {
+  if (card.practice) {
+    return {
+      card,
+      kind: card.kind,
+      direction: 'exercise',
+      format: 'choice',
+      prompt: card.practice.prompt,
+      promptLanguage: card.practice.promptLanguage,
+      answer: card.practice.answer,
+      answerLanguage: card.practice.answerLanguage,
+      distractors: [...card.practice.distractors],
+      context: card.practice.context,
+      contextKind: card.practice.context ? 'situation' : undefined,
+      contextLanguage: card.practice.contextLanguage,
+      vocabularyPractice: card.practice.kind,
+      answerExplanation: card.practice.feedback,
+      help: vocabularyQuestionHelp(card, reverse),
+    }
+  }
   const acceptedAnswers = reverse
     ? [...new Set(vocabularyPool
       .filter((candidate): candidate is VocabularyCard => candidate.kind === 'vocabulary' && candidate.lessonId === card.lessonId && normalizeResponse(candidate.answer) === normalizeResponse(card.answer))
@@ -318,6 +385,7 @@ export function buildVocabularyQuestion(
     answerLanguage: reverse ? 'fr' : 'en',
     distractors: reverse ? [...card.reverseDistractors] : [...card.distractors],
     ...(acceptedAnswers.length > 0 ? { acceptedAnswers } : {}),
+    help: vocabularyQuestionHelp(card, reverse),
   }
 }
 
@@ -357,6 +425,7 @@ function buildExerciseQuestion(
     answerLanguage: 'fr' as const,
     contextLanguage: exercise.contextLanguage ?? 'fr',
     exercise,
+    help: exerciseQuestionHelp(exercise.kind),
   }
 
   if (exercise.kind === 'contextual-cloze') {
@@ -503,6 +572,7 @@ export function buildSessionQuestions(
         answer: '',
         answerLanguage: 'fr',
         distractors: [],
+        help: { label: 'Activity help', text: 'This activity is not available for the current selection.' },
       }
     }
 
@@ -521,6 +591,7 @@ export function buildSessionQuestions(
         answerLanguage: 'fr',
         distractors: conjugationDistractors(card, vocabularyPool),
         acceptedAnswers: conjugationAnswerVariants(card),
+        help: { label: 'Form help', text: `Match the present-tense form to the ${card.person} subject; keep any reflexive pronoun.` },
       }
     }
 
@@ -569,6 +640,7 @@ export function activityTypesForTarget(card: SchedulableCard): ActivityType[] {
     const answer = 'answer' in card && typeof card.answer === 'string' ? card.answer : undefined
     return ['conjugation', ...(answer && isFrenchTypedAnswer(normalizeConjugationForm(answer)) ? ['typed' as const] : [])]
   }
+  if (card.kind === 'vocabulary' && 'practice' in card && card.practice) return ['vocabulary']
   const types: ActivityType[] = ['vocabulary']
   const french = 'french' in card && typeof card.french === 'string' ? card.french : undefined
   if (!french) return types

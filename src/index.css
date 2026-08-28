@@ -1986,7 +1986,8 @@ button:disabled {
   color: var(--question-conjugation-ink);
 }
 
-.answer-choice-area {
+.answer-choice-area,
+.question-help-area {
   position: relative;
   display: grid;
   gap: 8px;
@@ -2086,11 +2087,14 @@ button:disabled {
   white-space: nowrap;
 }
 
-.answer-choice-area.has-shared-hint:has(.phrase-help-button:hover) .shared-answer-tooltip,
-.answer-choice-area.has-shared-hint:has(.phrase-help-button:focus-visible) .shared-answer-tooltip,
-.answer-choice-area.has-shared-hint:has(.choice-button:hover:not(:disabled)) .shared-answer-tooltip,
-.answer-choice-area.has-shared-hint:has(.choice-button:focus-visible) .shared-answer-tooltip,
-.answer-choice-area.has-shared-hint .shared-answer-tooltip.is-open {
+.answer-choice-area.has-question-help:has(.phrase-help-button:hover) .shared-answer-tooltip,
+.answer-choice-area.has-question-help:has(.phrase-help-button:focus-visible) .shared-answer-tooltip,
+.answer-choice-area.has-question-help:has(.choice-button:hover:not(:disabled)) .shared-answer-tooltip,
+.answer-choice-area.has-question-help:has(.choice-button:focus-visible) .shared-answer-tooltip,
+.question-help-area:has(.phrase-help-button:hover) .shared-answer-tooltip,
+.question-help-area:has(.phrase-help-button:focus-visible) .shared-answer-tooltip,
+.answer-choice-area.has-question-help .shared-answer-tooltip.is-open,
+.question-help-area .shared-answer-tooltip.is-open {
   width: max-content;
   max-width: min(320px, calc(100vw - 48px));
   height: auto;

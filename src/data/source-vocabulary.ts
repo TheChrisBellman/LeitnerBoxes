@@ -4,6 +4,7 @@ import { sourceSupplements2140 } from './source-supplements-21-40.ts'
 import { sourceSupplementsC } from './source-supplements-c.ts'
 import { sourceSupplementsFollowup } from './source-supplements-followup.ts'
 import { englishEvidenceFragments, type SourceEvidence, type SourceSupplement } from './source-evidence.ts'
+import { vocabularyPracticeFor } from './vocabulary-practice.ts'
 import type { CardTier, Word } from './types.ts'
 
 /**
@@ -520,47 +521,47 @@ export const baselineSourceRows: readonly SourceRow[] = [
   { lessonId: "c-03", french: "une discussion constructive", answer: "a constructive discussion" },
   { lessonId: "c-04", french: "la mise en œuvre", answer: "implementation" },
   { lessonId: "c-04", french: "remettre en question", answer: "to question" },
-  { lessonId: "c-05", french: "la fatigue", answer: "Fatigue" },
-  { lessonId: "c-05", french: "le stress", answer: "Stress" },
+  { lessonId: "c-05", french: "la fatigue", answer: "fatigue" },
+  { lessonId: "c-05", french: "le stress", answer: "stress" },
   { lessonId: "c-05", french: "une échéance réaliste", answer: "a realistic deadline" },
   { lessonId: "c-06", french: "concilier", answer: "to find a balance" },
-  { lessonId: "c-06", french: "des heures supplémentaires", answer: "Overtime" },
+  { lessonId: "c-06", french: "des heures supplémentaires", answer: "overtime" },
   { lessonId: "c-06", french: "un congé avec étalement du revenu", answer: "income-averaging leave" },
-  { lessonId: "c-06", french: "un déséquilibre", answer: "Unbalance" },
+  { lessonId: "c-06", french: "un déséquilibre", answer: "imbalance" },
   { lessonId: "c-06", french: "un horaire de travail comprimé", answer: "a compressed work schedule" },
   { lessonId: "c-06", french: "un régime de retraite", answer: "a pension plan" },
   { lessonId: "c-07", french: "le porte-parole", answer: "spokesperson" },
   { lessonId: "c-08", french: "les biens immobiliers", answer: "real property" },
-  { lessonId: "c-08", french: "un bruit", answer: "A noise" },
+  { lessonId: "c-08", french: "un bruit", answer: "a noise" },
   // Quarantined: this term was found only in an answer key, not a primary table.
   { lessonId: "c-08", french: "une tâche exigeante", answer: "a demanding task" },
   { lessonId: "c-09", french: "diriger une équipe", answer: "to lead a team" },
   { lessonId: "c-09", french: "déléguer", answer: "to delegate" },
   { lessonId: "c-09", french: "le superviseur", answer: "supervisor" },
-  { lessonId: "c-10", french: "une grève", answer: "A strike" },
+  { lessonId: "c-10", french: "une grève", answer: "a strike" },
   { lessonId: "c-11", french: "coopérer", answer: "to cooperate" },
-  { lessonId: "c-12", french: "l'employeur", answer: "The employer" },
-  { lessonId: "c-12", french: "les avantages sociaux", answer: "Benefits" },
-  { lessonId: "c-13", french: "le commerce équitable", answer: "Fair trade" },
+  { lessonId: "c-12", french: "l’employeur", answer: "the employer" },
+  { lessonId: "c-12", french: "les avantages sociaux", answer: "benefits" },
+  { lessonId: "c-13", french: "le commerce équitable", answer: "fair trade" },
   { lessonId: "c-14", french: "satisfaire", answer: "to satisfy" },
   { lessonId: "c-15", french: "le secrétaire", answer: "secretary" },
   { lessonId: "c-15", french: "respecter les échéances", answer: "to meet deadlines" },
   { lessonId: "c-15", french: "un compte rendu", answer: "minutes" },
   { lessonId: "c-16", french: "le commissaire à l’éthique", answer: "ethics commissioner" },
-  { lessonId: "c-16", french: "le favoritisme", answer: "Favoritism" },
+  { lessonId: "c-16", french: "le favoritisme", answer: "favoritism" },
   { lessonId: "c-17", french: "un cadre de référence", answer: "terms of reference" },
   { lessonId: "c-18", french: "les Autochtones", answer: "Aboriginal people" },
   { lessonId: "c-18", french: "les langues officielles", answer: "official languages" },
-  { lessonId: "c-18", french: "une minorité visible", answer: "A visible minority" },
+  { lessonId: "c-18", french: "une minorité visible", answer: "a visible minority" },
   { lessonId: "c-18", french: "une politique équitable", answer: "an equitable policy" },
   { lessonId: "c-19", french: "la cybersécurité", answer: "cybersecurity" },
-  { lessonId: "c-19", french: "la surveillance électronique", answer: "Electronic surveillance" },
+  { lessonId: "c-19", french: "la surveillance électronique", answer: "electronic surveillance" },
   { lessonId: "c-19", french: "le sous-traitant", answer: "subcontractor" },
   { lessonId: "c-19", french: "les réseaux sociaux", answer: "social networks" },
   { lessonId: "c-19", french: "mettre à jour", answer: "to update" },
   { lessonId: "c-19", french: "mettre à jour une base de données", answer: "to update a database" },
   { lessonId: "c-19", french: "sauvegarder", answer: "to back up" },
-  { lessonId: "c-19", french: "un hyperlien", answer: "A hyperlink" },
+  { lessonId: "c-19", french: "un hyperlien", answer: "a hyperlink" },
   { lessonId: "c-19", french: "un logiciel d’inscription en ligne", answer: "online registration software" },
   { lessonId: "c-19", french: "un mot de passe", answer: "a password" },
   { lessonId: "c-19", french: "une mise à jour de base de données", answer: "a database update" },
@@ -573,10 +574,10 @@ export const baselineSourceRows: readonly SourceRow[] = [
   { lessonId: "c-20", french: "un employé fiable", answer: "a reliable employee" },
   { lessonId: "c-20", french: "un permis de travail", answer: "a work permit" },
   { lessonId: "c-20", french: "un travailleur occasionnel", answer: "a casual employee" },
-  { lessonId: "c-20", french: "une aptitude", answer: "An aptitude" },
-  { lessonId: "c-21", french: "l'effet de serre", answer: "The greenhouse effect" },
-  { lessonId: "c-21", french: "la déforestation", answer: "Deforestation" },
-  { lessonId: "c-21", french: "le recyclage", answer: "Recycling" },
+  { lessonId: "c-20", french: "une aptitude", answer: "an aptitude" },
+  { lessonId: "c-21", french: "l'effet de serre", answer: "the greenhouse effect" },
+  { lessonId: "c-21", french: "la déforestation", answer: "deforestation" },
+  { lessonId: "c-21", french: "le recyclage", answer: "recycling" },
   { lessonId: "c-21", french: "les gaz à effet de serre", answer: "greenhouse gases" },
   { lessonId: "c-21", french: "polluer", answer: "to pollute" },
 ]
@@ -655,9 +656,9 @@ const a04FormGroups: readonly (readonly [string, readonly string[]])[] = [
   ['brief', ['bref']],
   ['beautiful', ['beau']],
   ['intonation', ['l’intonation']],
-  ['stress', ['l’accentuation']],
+  ['word stress', ['l’accentuation']],
   ['rhythm', ['le rythme']],
-  ['mute e', ['la chute du e muet']],
+  ['loss of the silent e', ['la chute du e muet']],
   ['assimilation', ['l’assimilation']],
   ['liaison', ['la liaison']],
 ]
@@ -927,10 +928,10 @@ for (const key of additionalBaselineQuarantineKeys) {
 }
 
 const sourceTier: CardTier = 'expansion'
-export type VocabularyChoiceFamily = 'question' | 'sentence' | 'infinitive' | 'verb-form' | 'determiner' | 'interrogative-determiner' | 'noun' | 'noun-definite' | 'noun-indefinite' | 'pronoun' | 'subject-form' | 'contraction' | 'connector' | 'function' | 'weekday' | 'month' | 'sequence' | 'duration' | 'number-time' | 'adverb' | 'modifier' | 'expression'
+export type VocabularyChoiceFamily = 'question' | 'sentence' | 'infinitive' | 'verb-form' | 'determiner' | 'interrogative-determiner' | 'noun' | 'noun-definite' | 'noun-indefinite' | 'pronoun' | 'subject-form' | 'contraction' | 'connector' | 'function' | 'weekday' | 'month' | 'sequence' | 'duration' | 'number-time' | 'adverb' | 'modifier' | 'expression' | 'math' | 'quantity' | 'time' | 'occupation' | 'proper-noun' | 'grammar-form' | 'material'
 
 const englishFunction = /^(?:of|to|from|at|in|on|with|without|for|by|before|after|during|between|among|under|over|through|toward|towards|until|since|as|than|thanks to|because of|due to)(?:\s|$)/i
-const frenchFunction = /^(?:de|du|des|à|au|aux|chez|dans|en|sur|sous|avec|sans|pour|par|avant|après|depuis|pendant|entre|vers|jusqu|dès|grâce à|à cause de|en raison de|quant à)(?:\s|\+|$)/iu
+const frenchFunction = /^(?:de|du|à|au|aux|chez|dans|en|sur|sous|avec|sans|pour|par|avant|après|depuis|pendant|entre|vers|jusqu|dès|grâce à|à cause de|en raison de|quant à)(?:\s|\+|$)/iu
 const frenchConnector = /^(?:bien que|quoique|pourvu que|à condition que|même si|si|quand|lorsque|parce que|puisque|afin que|pour que|tandis que|alors que|comme)\b/iu
 const englishPronoun = /^(?:i|you|he|she|it|we|they|this|that|these|those|who|which|what|my|your|his|her|our|their|mine|yours|ours|theirs|one another|each other)(?:\s|$)/i
 const frenchPronoun = /^(?:je|j['’]|tu|il|elle|on|nous|vous|ils|elles|ce|cet|cette|ces|celui|celle|ceux|celles|mon|ma|mes|ton|ta|tes|son|sa|ses|notre|nos|votre|vos|leur|leurs)(?:\s|[-’']|$)/iu
@@ -947,7 +948,17 @@ const frenchVerbForm = /^(?:[\p{L}’-]+(?:ait|aient)|peut|peuvent|doit|doivent|
 const frenchBareDeterminer = /^(?:un|une|le|la|l['’]|les|des|du|de la|de l['’]|pas de)$/iu
 const englishBareDeterminer = /^(?:a|an|the|some|any)$/i
 const frenchDefiniteNoun = /^(?:(?:le|la|les)\s+|l['’])\S+/iu
-const frenchIndefiniteNoun = /^(?:un|une)\s+\S+/iu
+const frenchIndefiniteNoun = /^(?:un|une|des)\s+\S+/iu
+const mathFrench = /^(?:plus|moins|fois|multiplié par|divisé par|égal|combien)$/iu
+const mathEnglish = /^(?:plus|minus|times|multiplied by|divided by|equals|how many)$/i
+const timeFrench = /(?:^|\s)(?:hier|demain|après-demain|avant-hier|avenir|moment|matin|soir|semaine|mois|année|veille|lendemain|midi|saison|prochain|précédent|dernier|passé|présent|plus tôt|plus tard|près de)(?=\s|$)/iu
+const timeEnglish = /^(?:yesterday|tomorrow|today|in the future|at the moment|this morning|this afternoon|last night|two hours ago|next|next (?:week|month|year|tuesday)|in \w+ (?:hours?|days?|weeks?|months?)|the day before|the next day|last year|earlier|later|around|almost|close to)\b/i
+const quantityFrench = /^(?:beaucoup de|peu de|un peu(?: de)?|quelques(?:-uns)?|plusieurs|la plupart de|un bon nombre de|un certain nombre de|un grand nombre de|une dizaine|une vingtaine|une trentaine|une cinquantaine|un millier)$/iu
+const quantityEnglish = /^(?:a lot|a little|a few|some|several|the majority|a good number|a number|a great number|about (?:ten|twenty|thirty|fifty|one thousand)|many)\b/i
+const materialFrench = /^(?:en bois|en plastique|en laine|en métal|en carton|en papier|en brique?s?|en cuir)$/iu
+const occupationEnglish = /\b(?:librarian|head|leader|commissionaire|accountant|advisor|co-ordinator|coordinator|director general|member of parliament|manager|minister|receptionist|secretary|specialist|supervisor|technician|translator|auditor|chief|clerk|programmer|assistant|officer|lawyer|teacher|doctor|engineer|economist|analyst)\b/i
+const grammarFrench = /^(?:quel(?:le)?s?|c['’]est|ce sont|passé composé|imparfait|futur simple|futur proche|le conditionnel passé|interrogation indirecte|style indirect|aimer au conditionnel)$/iu
+const grammarEnglish = /\b(?:masculine|feminine|plural|singular|perfect tense|imperfect tense|future tense|immediate future|conditional|indirect question|indirect speech)\b/i
 
 export function vocabularyChoiceFamily(row: { french: string; answer: string }): VocabularyChoiceFamily {
   const english = row.answer.trim()
@@ -957,6 +968,15 @@ export function vocabularyChoiceFamily(row: { french: string; answer: string }):
   if (english.endsWith('?') || french.endsWith('?')) return 'question'
   if (/[.!…]$/u.test(english) || /[.!…]$/u.test(french)) return 'sentence'
   if (/^(?:de|à)\s*\+\s*(?:le|les|un|une)\s*=/iu.test(french) || /^(?:of|to|from|at) the$/i.test(english)) return 'contraction'
+  if (mathFrench.test(french) || mathEnglish.test(english)) return 'math'
+  if (englishWeekday.test(english) || frenchWeekday.test(french)) return 'weekday'
+  if (englishMonth.test(english) || frenchMonth.test(french)) return 'month'
+  if (grammarFrench.test(french) || grammarEnglish.test(english)) return 'grammar-form'
+  if (timeFrench.test(french) || timeEnglish.test(english)) return 'time'
+  if (quantityFrench.test(french) || quantityEnglish.test(english)) return 'quantity'
+  if (occupationEnglish.test(english)) return 'occupation'
+  if (materialFrench.test(french)) return 'material'
+  if (/^[A-ZÀ-ÖØ-Þ][\p{L}'’]*(?:\s|$)/u.test(french)) return 'proper-noun'
   if (frenchBareDeterminer.test(french) || englishBareDeterminer.test(english)) return 'determiner'
   if (/^quel(?:le)?s?$/iu.test(french) || /^what or which\b/i.test(english)) return 'interrogative-determiner'
   if (/^(?:not\s+)?to\s+\S+/i.test(english)) return 'infinitive'
@@ -968,11 +988,9 @@ export function vocabularyChoiceFamily(row: { french: string; answer: string }):
   if (frenchIndefiniteNoun.test(french)) return 'noun-indefinite'
   if (/^(?:i|you|he|she|it|we|they)\s+\S+/i.test(english) || /^(?:j['’]\p{L}+|(?:je|tu|il|elle|on|nous|vous|ils|elles|ce)\s+\S+)/iu.test(french)) return 'subject-form'
   if (englishPronoun.test(english) || frenchPronoun.test(french)) return 'pronoun'
-  if (englishWeekday.test(english) || frenchWeekday.test(french)) return 'weekday'
-  if (englishMonth.test(english) || frenchMonth.test(french)) return 'month'
   if (englishSequence.test(english) || frenchSequence.test(french)) return 'sequence'
   if (englishNumberOrTime.test(english)) return 'number-time'
-  if (/^(?:a|an|the|some|no)\b/i.test(english) || /^(?:un|une|le|la|l['’]|les)\s*/iu.test(french) || (/^[A-Z]/u.test(english) && !/^I\b/u.test(english))) return 'noun'
+  if (/^(?:a|an|the|some|no)\b/i.test(english) || /^(?:un|une|le|la|l['’]|les)(?:\s|$)/iu.test(french) || (/^[A-Z]/u.test(english) && !/^I\b/u.test(english))) return 'noun'
   if (/ly$/i.test(englishLower) || /ment$/iu.test(frenchLower)) return 'adverb'
   if (!/\s/u.test(french)) return 'modifier'
   return 'expression'
@@ -980,20 +998,31 @@ export function vocabularyChoiceFamily(row: { french: string; answer: string }):
 
 const fallbackAnswers: Partial<Record<VocabularyChoiceFamily, string[]>> = {
   question: ['who is it?', 'where is it?', 'when is it?'],
+  determiner: ['the', 'a', 'some', 'any'],
   'verb-form': ['would prefer', 'can continue', 'must stop', 'has finished'],
   contraction: ['to the', 'from the', 'at the'],
   sequence: ['first', 'second', 'third', 'fourth', 'last'],
   duration: ['one hour early', 'two days late', 'three weeks ahead', 'four months later'],
   'number-time': ['one', 'two', 'three', 'four', 'five'],
+  math: ['plus', 'minus', 'times', 'multiplied by', 'divided by', 'equals'],
+  quantity: ['a lot of', 'a little', 'a few', 'several', 'about ten', 'about twenty'],
+  time: ['yesterday', 'tomorrow', 'today', 'in the future', 'next week', 'later'],
+  'grammar-form': ['present tense', 'past tense', 'future tense', 'direct speech'],
+  material: ['wood', 'plastic', 'metal', 'paper', 'cardboard'],
 }
 
 const fallbackFrench: Partial<Record<VocabularyChoiceFamily, Array<{ french: string; answer: string }>>> = {
   question: [{ french: 'qui est-ce?', answer: 'who is it?' }, { french: 'où est-ce?', answer: 'where is it?' }, { french: 'quand est-ce?', answer: 'when is it?' }],
+  determiner: [{ french: 'le', answer: 'the' }, { french: 'un', answer: 'a' }, { french: 'des', answer: 'some' }, { french: 'pas de', answer: 'any' }],
   'verb-form': [{ french: 'préférerait', answer: 'would prefer' }, { french: 'peut continuer', answer: 'can continue' }, { french: 'doit s’arrêter', answer: 'must stop' }, { french: 'a terminé', answer: 'has finished' }],
   contraction: [{ french: 'à + le = au', answer: 'to the' }, { french: 'à + les = aux', answer: 'to the' }, { french: 'de + un = d’un', answer: 'of a' }, { french: 'de + une = d’une', answer: 'of a' }],
   sequence: [{ french: 'd’abord', answer: 'first' }, { french: 'deuxième', answer: 'second' }, { french: 'troisièmement', answer: 'third' }, { french: 'quatrièmement', answer: 'fourth' }, { french: 'en dernier', answer: 'last' }],
   duration: [{ french: 'une heure d’avance', answer: 'one hour early' }, { french: 'deux jours de retard', answer: 'two days late' }, { french: 'trois semaines d’avance', answer: 'three weeks ahead' }, { french: 'quatre mois plus tard', answer: 'four months later' }],
   'number-time': [{ french: 'un', answer: 'one' }, { french: 'deux', answer: 'two' }, { french: 'trois', answer: 'three' }, { french: 'quatre', answer: 'four' }, { french: 'cinq', answer: 'five' }],
+  math: [{ french: 'plus', answer: 'plus' }, { french: 'moins', answer: 'minus' }, { french: 'fois', answer: 'times' }, { french: 'multiplié par', answer: 'multiplied by' }, { french: 'divisé par', answer: 'divided by' }, { french: 'égal', answer: 'equals' }],
+  quantity: [{ french: 'beaucoup de', answer: 'a lot of' }, { french: 'peu de', answer: 'a little' }, { french: 'quelques', answer: 'a few' }, { french: 'plusieurs', answer: 'several' }, { french: 'une dizaine', answer: 'about ten' }, { french: 'une vingtaine', answer: 'about twenty' }],
+  time: [{ french: 'hier', answer: 'yesterday' }, { french: 'demain', answer: 'tomorrow' }, { french: 'aujourd’hui', answer: 'today' }, { french: 'dans l’avenir', answer: 'in the future' }, { french: 'la semaine prochaine', answer: 'next week' }, { french: 'plus tard', answer: 'later' }],
+  'grammar-form': [{ french: 'présent', answer: 'present tense' }, { french: 'passé composé', answer: 'past tense' }, { french: 'futur simple', answer: 'future tense' }, { french: 'style direct', answer: 'direct speech' }],
 }
 
 function normalize(value: string): string {
@@ -1020,13 +1049,38 @@ function rotate<T>(items: T[], start: number): T[] {
   return [...items.slice(offset), ...items.slice(0, offset)]
 }
 
+// ponytail: lexical families are a cheap distractor guardrail; ambiguous grammar terms use authored contextual cards.
+const relatedFamilies: Partial<Record<VocabularyChoiceFamily, readonly VocabularyChoiceFamily[]>> = {
+  function: ['function', 'expression', 'connector', 'time', 'duration'],
+  expression: ['expression', 'function', 'connector', 'time', 'duration'],
+  time: ['time', 'function', 'expression', 'duration', 'weekday', 'month', 'sequence'],
+  quantity: ['quantity', 'determiner', 'number-time', 'noun-indefinite'],
+  math: ['math', 'number-time', 'quantity'],
+  noun: ['noun', 'noun-definite', 'noun-indefinite', 'proper-noun'],
+  'noun-definite': ['noun-definite', 'noun-indefinite', 'noun', 'occupation', 'proper-noun'],
+  'noun-indefinite': ['noun-indefinite', 'noun-definite', 'noun', 'occupation'],
+  occupation: ['occupation', 'noun-definite', 'noun-indefinite'],
+  'proper-noun': ['proper-noun', 'noun-definite', 'noun-indefinite'],
+  'grammar-form': ['grammar-form', 'subject-form', 'interrogative-determiner', 'determiner'],
+  'subject-form': ['subject-form', 'grammar-form', 'pronoun'],
+  pronoun: ['pronoun', 'determiner', 'interrogative-determiner', 'subject-form'],
+  modifier: ['modifier', 'adverb'],
+  adverb: ['adverb', 'modifier'],
+  infinitive: ['infinitive', 'verb-form'],
+  'verb-form': ['verb-form', 'infinitive', 'subject-form'],
+}
+
 function familyCandidates(row: SourceRow, index: number): SourceRow[] {
   const family = vocabularyChoiceFamily(row)
   const familyRows = activeRowsByFamily.get(family) ?? []
   const local = familyRows.filter((candidate) => candidate !== row && candidate.lessonId === row.lessonId)
+  const related = activeSourceRows.filter((candidate) => candidate !== row
+    && candidate.lessonId === row.lessonId
+    && (relatedFamilies[family] ?? [family]).includes(vocabularyChoiceFamily(candidate))
+    && !local.includes(candidate))
   const sameLevel = familyRows.filter((candidate) => candidate.lessonId !== row.lessonId && candidate.lessonId[0] === row.lessonId[0])
   const global = familyRows.filter((candidate) => candidate.lessonId[0] !== row.lessonId[0])
-  return [...rotate(local, index), ...rotate(sameLevel, index), ...rotate(global, index)]
+  return [...rotate(local, index), ...rotate(related, index), ...rotate(sameLevel, index), ...rotate(global, index)]
 }
 
 function answerChoices(row: SourceRow, index: number): [string, string, string] {
@@ -1072,12 +1126,14 @@ const orderByLesson = new Map<string, number>()
 const completeSourceVocabulary: Word[] = completeSourceRows.map((row, index) => {
   const order = (orderByLesson.get(row.lessonId) ?? 24) + 1
   orderByLesson.set(row.lessonId, order)
+  const practice = vocabularyPracticeFor(row)
   return {
     id: `${row.lessonId}-source-${String(order - 24).padStart(3, '0')}`,
     french: row.french,
     answer: row.answer,
     distractors: answerChoices(row, index),
     reverseDistractors: reverseChoices(row, index),
+    ...(practice ? { practice } : {}),
     level: row.lessonId[0].toUpperCase() as 'A' | 'B' | 'C',
     lessonId: row.lessonId,
     kind: 'vocabulary',
