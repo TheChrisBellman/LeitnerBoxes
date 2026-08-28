@@ -1,6 +1,6 @@
 import { conjugationCatches } from './data/conjugation-catches.ts'
 import { allExercises, dialoguesById, exercisesByTargetId, passagesById, scenariosById } from './data/pilot-exercises.ts'
-import { ACTIVITY_TYPES, type ActivityType, type AuthoredExercise, type CardKind, type CardTier, type ExerciseLanguage, type ExerciseTarget, type PracticeCard, type PracticeTarget, type VocabularyCard } from './data/types.ts'
+import { ACTIVITY_TYPES, type ActivityType, type AuthoredExercise, type CardKind, type CardTier, type ConjugationCard, type ExerciseLanguage, type ExerciseTarget, type PracticeCard, type PracticeTarget, type VocabularyCard } from './data/types.ts'
 
 export type Box = 1 | 2 | 3 | 4 | 5
 export type PracticeMode = 'mixed' | 'vocabulary' | 'conjugation'
@@ -194,8 +194,13 @@ function normalizeTypedAnswer(value: string): string {
 
 export function responseIsCorrect(question: PracticeQuestion, value: string): boolean {
   const acceptedAnswers = [question.answer, ...(question.acceptedAnswers ?? [])]
-  return question.format === 'typed'
-    ? acceptedAnswers.some((answer) => normalizeTypedAnswer(value) === normalizeTypedAnswer(answer))
+  const normalize = question.kind === 'conjugation'
+    ? normalizeConjugationResponse
+    : question.format === 'typed'
+      ? normalizeTypedAnswer
+      : undefined
+  return normalize
+    ? acceptedAnswers.some((answer) => normalize(value) === normalize(answer))
     : acceptedAnswers.includes(value)
 }
 
@@ -214,13 +219,10 @@ export function vocabularyResponseForm(value: string): VocabularyResponseForm {
 }
 
 const conjugationSubjectPrefix = /^(?:j['’]\s*|je\s+|tu\s+|il\/elle\s+|ils\/elles\s+|il\s+|elle\s+|nous\s+|vous\s+|ils\s+|elles\s+|on\s+)/iu
-const conjugationReflexivePrefix = /^(?:m['’]\s*|t['’]\s*|s['’]\s*|me\s+|te\s+|se\s+|nous\s+|vous\s+)/iu
 
 function normalizeConjugationPart(value: string): string {
   return value.trim()
     .replace(conjugationSubjectPrefix, '')
-    .trim()
-    .replace(conjugationReflexivePrefix, '')
     .trim()
 }
 
@@ -230,6 +232,36 @@ export function normalizeConjugationForm(value: string): string {
     .split(/\s*\/\s*/)
     .map(normalizeConjugationPart)
     .filter(Boolean))].join(' / ')
+}
+
+function normalizeConjugationResponse(value: string): string {
+  return normalizeTypedAnswer(value).replace(/\b([jmst])'\s+/g, "$1'")
+}
+
+const conjugationSubjectAliases: Record<ConjugationCard['person'], readonly string[]> = {
+  je: ['je'],
+  tu: ['tu'],
+  'il/elle': ['il', 'elle', 'il/elle'],
+  nous: ['nous'],
+  vous: ['vous'],
+  'ils/elles': ['ils', 'elles', 'ils/elles'],
+}
+
+function conjugationAnswerVariants(card: ConjugationCard): string[] {
+  const authoredForms = card.answer.split(/\s*\/\s*/).map((form) => form.trim()).filter(Boolean)
+  const variants = new Set([card.answer, ...authoredForms])
+  authoredForms.forEach((form) => {
+    const subjectless = form.replace(conjugationSubjectPrefix, '').trim()
+    if (!subjectless) return
+    if (card.person === 'je') {
+      const subject = /^[aeiouyàâäéèêëîïôöùûüœh]/iu.test(subjectless) ? "j'" : 'je '
+      variants.add(`${subject}${subjectless}`)
+      return
+    }
+    const subjects = conjugationSubjectAliases[card.person]
+    subjects.forEach((subject) => variants.add(`${subject} ${subjectless}`))
+  })
+  return [...variants]
 }
 
 function conjugationDistractors(
@@ -488,6 +520,7 @@ export function buildSessionQuestions(
         answer,
         answerLanguage: 'fr',
         distractors: conjugationDistractors(card, vocabularyPool),
+        acceptedAnswers: conjugationAnswerVariants(card),
       }
     }
 
