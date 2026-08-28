@@ -67,10 +67,6 @@ function withA(value: string): string {
   return `à ${value}`
 }
 
-function withDeBeforeInfinitive(value: string): string {
-  return /^[aeiouyàâéèêëîïôùûüœ]/iu.test(value) ? `d’${value}` : `de ${value}`
-}
-
 const sentenceStart = (value: string) => value.charAt(0).toLocaleUpperCase('fr') + value.slice(1)
 const asSentence = (value: string) => /[.!?]$/u.test(value.trim()) ? sentenceStart(value.trim()) : `${sentenceStart(value.trim())}.`
 
@@ -124,9 +120,33 @@ function difficultyBand(unitId: string): DifficultyBand {
   return 'advanced'
 }
 
-export function createUnitPack(seed: UnitPackSeed): UnitPack {
+type AlternativeSeeds = [UnitPackSeed, UnitPackSeed, UnitPackSeed]
+
+function alternativeSeeds(seed: UnitPackSeed, seeds: readonly UnitPackSeed[]): AlternativeSeeds {
+  const tokens = (value: string) => new Set((value.toLocaleLowerCase('fr').match(/\p{L}{4,}/gu) ?? []).map((word) => word.replace(/s$/u, '')))
+  const seedTokens = tokens([seed.topic, seed.goal, seed.action, seed.decision].join(' '))
+  const overlap = (candidate: UnitPackSeed) => [...tokens([candidate.topic, candidate.goal, candidate.action, candidate.decision].join(' '))]
+    .filter((word) => seedTokens.has(word)).length
+  const distance = (candidate: UnitPackSeed) => Math.abs(Number(candidate.unitId.slice(2)) - Number(seed.unitId.slice(2)))
+  const choices = seeds
+    .filter((candidate) => candidate.unitId !== seed.unitId)
+    .sort((left, right) => {
+      const level = Number(left.unitId[0] !== seed.unitId[0]) - Number(right.unitId[0] !== seed.unitId[0])
+      if (level) return level
+      const band = Number(difficultyBand(left.unitId) !== difficultyBand(seed.unitId)) - Number(difficultyBand(right.unitId) !== difficultyBand(seed.unitId))
+      if (band) return band
+      const related = overlap(right) - overlap(left)
+      if (related) return related
+      return distance(left) - distance(right) || left.unitId.localeCompare(right.unitId)
+    })
+  if (choices.length < 3) throw new Error(`Unit pack needs three alternative actions: ${seed.unitId}`)
+  return choices.slice(0, 3) as AlternativeSeeds
+}
+
+export function createUnitPack(seed: UnitPackSeed, alternatives: AlternativeSeeds): UnitPack {
   const { unitId, topic, goal, action, imperative, result, decision, correctionWrong, correctionRight, transformationSource, transformationAnswer, scaffold } = seed
   const band = difficultyBand(unitId)
+  const [firstAlternative, secondAlternative, thirdAlternative] = alternatives
   const isScaffold = band === 'scaffold'
   const isFoundation = band === 'foundation'
   const isLaterA = band === 'developing' || band === 'advanced'
@@ -146,16 +166,8 @@ export function createUnitPack(seed: UnitPackSeed): UnitPack {
     : band === 'developing' || band === 'advanced'
       ? `${sentenceStart(topicFrame)}, la prochaine étape est de ${action}. Une collègue vous demande comment procéder.`
       : `${sentenceStart(topicFrame)}, vous devez ${goal}. Une collègue vous demande quelle sera la prochaine étape.`)
-  const bestAnswer = isScaffold || isFoundation ? `Je vais ${action}.` : `Je vais ${action} pour obtenir ${result}.`
-  const bestDistractors: ChoiceSet = isScaffold
-    ? ['Je vais attendre demain.', 'Je vais oublier la tâche.', 'Je vais partir sans agir.']
-    : isFoundation
-      ? ['Je vais attendre sans agir.', 'Je vais annuler la tâche.', 'Je ne sais pas quoi faire.']
-      : [
-        'Je ne sais pas; nous verrons bien un jour.',
-        'Le dossier est là, mais personne ne doit le lire.',
-        'Cette question attendra sans doute la semaine prochaine.',
-      ]
+  const bestAnswer = `Je vais ${action}.`
+  const bestDistractors: ChoiceSet = alternatives.map((alternative) => `Je vais ${alternative.action}.`) as ChoiceSet
   const clozeContext = scaffold?.context ?? (isFoundation
     ? `Pour ${goal},`
     : band === 'developing'
@@ -188,7 +200,7 @@ export function createUnitPack(seed: UnitPackSeed): UnitPack {
     context: clozeContext,
     prompt: scaffold?.clozePrompt ?? '___ avant la réunion.',
     answer: scaffold?.clozeAnswer ?? imperative,
-    distractors: scaffold?.clozeDistractors ?? ['attendez', 'reportez', 'oubliez'],
+    distractors: alternatives.map((alternative) => alternative.imperative) as ChoiceSet,
     feedback: isScaffold
       ? `The missing word is « ${scaffold?.clozeAnswer} ».`
       : `L’impératif « ${imperative} » correspond à l’action attendue pour ${goal}.`,
@@ -225,24 +237,12 @@ export function createUnitPack(seed: UnitPackSeed): UnitPack {
     passageId,
     prompt: isScaffold ? 'What does the team need to do?' : isFoundation || band === 'developing' || band === 'advanced' ? 'Que doit faire l’équipe?' : `Que doit faire l’équipe pour ${goal}?`,
     answer: sentenceStart(`Elle doit ${action}.`),
-    distractors: isScaffold || isFoundation
-      ? ['Elle doit attendre sans agir.', 'Elle doit annuler la tâche.', 'Elle ne sait pas quoi faire.']
-      : [
-        'Elle doit supprimer le dossier avant la réunion.',
-        'Elle reporte la discussion au mois suivant.',
-        'Elle refuse de vérifier les informations du dossier.',
-      ],
+    distractors: alternatives.map((alternative) => `Elle doit ${alternative.action}.`) as ChoiceSet,
     feedback: isScaffold
       ? `The passage points to this action: « ${action} ».`
       : `Le passage associe l’objectif « ${goal} » à l’action « ${action} ».`,
   }
-  const transformationDistractors: ChoiceSet = isScaffold
-    ? ['Je vais attendre demain.', 'Je vais oublier la tâche.', 'Je ne fais rien.']
-    : [
-      `Pour ${goal}, l’équipe peut éviter ${withDeBeforeInfinitive(action)}.`,
-      `Pour ${goal}, l’équipe a déjà terminé sans ${action}.`,
-      `Pour ${goal}, personne ne demande ${withDeBeforeInfinitive(action)}.`,
-    ]
+  const transformationDistractors: ChoiceSet = alternatives.map((alternative) => alternative.transformationAnswer) as ChoiceSet
   const transformation: TransformationExercise = {
     id: `${targetIds.transformation}-01`,
     unitId,
@@ -256,14 +256,12 @@ export function createUnitPack(seed: UnitPackSeed): UnitPack {
     feedback: isScaffold ? 'The second sentence keeps the same meaning.' : 'La reformulation conserve le sens et l’objectif de la phrase de départ.',
   }
   const scenarioAnswer = isScaffold ? `Je vais ${action}.` : `Je vais ${decision}.`
-  const scenarioChoices: [string, string, string, string] = isScaffold
-    ? [scenarioAnswer, 'Je vais attendre demain.', 'Je vais oublier la tâche.', 'Je vais partir sans agir.']
-    : [
-      scenarioAnswer,
-      'Je transmets la réponse immédiatement sans la lire.',
-      'Je supprime le dossier pour éviter toute question.',
-      'Je demande à chacun de deviner la réponse.',
-    ]
+  const scenarioChoices: [string, string, string, string] = [
+    scenarioAnswer,
+    `Je vais ${firstAlternative.decision}.`,
+    `Je vais ${secondAlternative.decision}.`,
+    `Je vais ${thirdAlternative.decision}.`,
+  ]
   const scenario: Scenario = {
     id: scenarioId,
     unitId,
@@ -302,7 +300,7 @@ export function createUnitPack(seed: UnitPackSeed): UnitPack {
 
 export function createUnitPacks(seeds: readonly UnitPackSeed[]): UnitPack {
   return seeds.reduce<UnitPack>((result, seed) => {
-    const pack = createUnitPack(seed)
+    const pack = createUnitPack(seed, alternativeSeeds(seed, seeds))
     result.exercises.push(...pack.exercises)
     result.passages.push(...pack.passages)
     result.scenarios.push(...pack.scenarios)

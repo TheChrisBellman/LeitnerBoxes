@@ -928,7 +928,7 @@ for (const key of additionalBaselineQuarantineKeys) {
 }
 
 const sourceTier: CardTier = 'expansion'
-export type VocabularyChoiceFamily = 'question' | 'sentence' | 'infinitive' | 'verb-form' | 'noun' | 'pronoun' | 'subject-form' | 'contraction' | 'connector' | 'function' | 'weekday' | 'month' | 'sequence' | 'duration' | 'number-time' | 'adverb' | 'modifier' | 'expression'
+export type VocabularyChoiceFamily = 'question' | 'sentence' | 'infinitive' | 'verb-form' | 'determiner' | 'noun' | 'noun-definite' | 'noun-indefinite' | 'pronoun' | 'subject-form' | 'contraction' | 'connector' | 'function' | 'weekday' | 'month' | 'sequence' | 'duration' | 'number-time' | 'adverb' | 'modifier' | 'expression'
 
 const englishFunction = /^(?:of|to|from|at|in|on|with|without|for|by|before|after|during|between|among|under|over|through|toward|towards|until|since|as|than|thanks to|because of|due to)(?:\s|$)/i
 const frenchFunction = /^(?:de|du|des|à|au|aux|chez|dans|en|sur|sous|avec|sans|pour|par|avant|après|depuis|pendant|entre|vers|jusqu|dès|grâce à|à cause de|en raison de|quant à)(?:\s|\+|$)/iu
@@ -945,6 +945,10 @@ const englishDuration = /^(?:\d|one|two|three|four|five|six|seven|eight|nine|ten
 const frenchDuration = /\b(?:minutes?|heures?|jours?|semaines?|mois|ans?|années?)\b/iu
 const englishNumberOrTime = /^(?:\d|one|two|three|four|five|six|seven|eight|nine|ten|half|quarter|double|twice|once)\b/i
 const frenchVerbForm = /^(?:[\p{L}’-]+(?:ait|aient)|peut|peuvent|doit|doivent|a|ont|est|sont)\b/iu
+const frenchBareDeterminer = /^(?:un|une|le|la|l['’]|les|des|du|de la|de l['’]|pas de)$/iu
+const englishBareDeterminer = /^(?:a|an|the|some|any)$/i
+const frenchDefiniteNoun = /^(?:(?:le|la|les)\s+|l['’])\S+/iu
+const frenchIndefiniteNoun = /^(?:un|une)\s+\S+/iu
 
 export function vocabularyChoiceFamily(row: { french: string; answer: string }): VocabularyChoiceFamily {
   const english = row.answer.trim()
@@ -954,16 +958,19 @@ export function vocabularyChoiceFamily(row: { french: string; answer: string }):
   if (english.endsWith('?') || french.endsWith('?')) return 'question'
   if (/[.!…]$/u.test(english) || /[.!…]$/u.test(french)) return 'sentence'
   if (/^(?:de|à)\s*\+\s*(?:le|les|un|une)\s*=/iu.test(french) || /^(?:of|to|from|at) the$/i.test(english)) return 'contraction'
+  if (frenchBareDeterminer.test(french) || englishBareDeterminer.test(english)) return 'determiner'
   if (/^(?:not\s+)?to\s+\S+/i.test(english)) return 'infinitive'
   if (/^(?:would|can|could|must|should|will|is|are|has|have|was|were)\s+\S+/i.test(english) || (!english && frenchVerbForm.test(french))) return 'verb-form'
   if (frenchConnector.test(french)) return 'connector'
   if (englishFunction.test(english) || frenchFunction.test(french)) return 'function'
+  if (englishDuration.test(english) || (!english && frenchDuration.test(french))) return 'duration'
+  if (frenchDefiniteNoun.test(french)) return 'noun-definite'
+  if (frenchIndefiniteNoun.test(french)) return 'noun-indefinite'
   if (/^(?:i|you|he|she|it|we|they)\s+\S+/i.test(english) || /^(?:j['’]\p{L}+|(?:je|tu|il|elle|on|nous|vous|ils|elles|ce)\s+\S+)/iu.test(french)) return 'subject-form'
   if (englishPronoun.test(english) || frenchPronoun.test(french)) return 'pronoun'
   if (englishWeekday.test(english) || frenchWeekday.test(french)) return 'weekday'
   if (englishMonth.test(english) || frenchMonth.test(french)) return 'month'
   if (englishSequence.test(english) || frenchSequence.test(french)) return 'sequence'
-  if (englishDuration.test(english) || (!english && frenchDuration.test(french))) return 'duration'
   if (englishNumberOrTime.test(english)) return 'number-time'
   if (/^(?:a|an|the|some|no)\b/i.test(english) || /^(?:un|une|le|la|l['’]|les)\s*/iu.test(french) || (/^[A-Z]/u.test(english) && !/^I\b/u.test(english))) return 'noun'
   if (/ly$/i.test(englishLower) || /ment$/iu.test(frenchLower)) return 'adverb'
