@@ -10,7 +10,16 @@ import type {
 
 export type UnitPackSeed = {
   unitId: string
-  focus: string
+  topic: string
+  goal: string
+  action: string
+  imperative: string
+  result: string
+  decision: string
+  correctionWrong: string
+  correctionRight: string
+  transformationSource: string
+  transformationAnswer: string
 }
 
 export type UnitPack = {
@@ -31,36 +40,54 @@ function ids(unitId: string) {
   }
 }
 
-export function createUnitPack({ unitId, focus }: UnitPackSeed): UnitPack {
-  const topic = focus.charAt(0).toLocaleLowerCase('fr') + focus.slice(1)
+function withDe(value: string): string {
+  if (/^le\s/iu.test(value)) return `du ${value.slice(3)}`
+  if (/^les\s/iu.test(value)) return `des ${value.slice(4)}`
+  if (/^un\s/iu.test(value)) return `d’un ${value.slice(3)}`
+  if (/^une\s/iu.test(value)) return `d’une ${value.slice(4)}`
+  return `de ${value}`
+}
+
+function withA(value: string): string {
+  if (/^le\s/iu.test(value)) return `au ${value.slice(3)}`
+  if (/^les\s/iu.test(value)) return `aux ${value.slice(4)}`
+  return `à ${value}`
+}
+
+const sentenceStart = (value: string) => value.charAt(0).toLocaleUpperCase('fr') + value.slice(1)
+
+export function createUnitPack(seed: UnitPackSeed): UnitPack {
+  const { unitId, topic, goal, action, imperative, result, decision, correctionWrong, correctionRight, transformationSource, transformationAnswer } = seed
   const targetIds = ids(unitId)
   const passageId = `${unitId}-unit-pack-passage`
   const scenarioId = `${unitId}-unit-pack-scenario-context`
+  const topicReference = `au sujet ${withDe(topic)}`
+  const topicFrame = `dans le cadre ${withDe(topic)}`
   const best: BestResponseExercise = {
     id: `${targetIds.best}-01`,
     unitId,
     targetId: targetIds.best,
     kind: 'best-response',
-    situation: `Votre équipe prépare un dossier sur ${topic}. Une collègue vous demande quelle sera la prochaine étape.`,
+    situation: `${sentenceStart(topicFrame)}, vous devez ${goal}. Une collègue vous demande quelle sera la prochaine étape.`,
     prompt: 'Quelle réponse propose une prochaine étape claire?',
-    answer: `Je vais vérifier les informations sur ${topic} avant la réunion.`,
+    answer: `Je vais ${action} pour obtenir ${result}.`,
     distractors: [
       'Je ne sais pas; nous verrons bien un jour.',
       'Le dossier est là, mais personne ne doit le lire.',
       'Cette question attendra sans doute la semaine prochaine.',
     ],
-    feedback: 'La bonne réponse annonce une action précise et un moment clair.',
+    feedback: `La réponse relie l’objectif « ${goal} » à une action précise et au résultat « ${result} ».`,
   }
   const cloze: ContextualClozeExercise = {
     id: `${targetIds.cloze}-01`,
     unitId,
     targetId: targetIds.cloze,
     kind: 'contextual-cloze',
-    context: `Pour préparer le dossier sur ${topic},`,
-    prompt: '___ les informations essentielles avant de répondre.',
-    answer: 'vérifiez',
-    distractors: ['vérifier', 'vérifions', 'vérifié'],
-    feedback: 'La consigne emploie l’impératif « vérifiez » pour s’adresser directement à une équipe.',
+    context: `Pour ${goal} ${topicFrame},`,
+    prompt: '___ avant la réunion.',
+    answer: imperative,
+    distractors: ['attendez', 'reportez', 'oubliez'],
+    feedback: `L’impératif « ${imperative} » correspond à l’action attendue pour ${goal}.`,
   }
   const correction: CorrectionExercise = {
     id: `${targetIds.correction}-01`,
@@ -69,21 +96,21 @@ export function createUnitPack({ unitId, focus }: UnitPackSeed): UnitPack {
     kind: 'correction',
     prompt: 'Quel segment contient l’erreur?',
     segments: [
-      { id: 'a', text: `Les informations sur ${topic}` },
-      { id: 'b', text: 'doit être vérifiées' },
-      { id: 'c', text: 'avant la réunion' },
-      { id: 'd', text: 'par toute l’équipe.' },
+      { id: 'a', text: `Pour ${goal},` },
+      { id: 'b', text: correctionWrong },
+      { id: 'c', text: `l’équipe vise ${result}` },
+      { id: 'd', text: 'avant la réunion.' },
     ],
     answerSegmentId: 'b',
-    correction: 'doivent être vérifiées',
-    feedback: 'Le sujet « les informations » est pluriel: le verbe doit être « doivent ».',
+    correction: correctionRight,
+    feedback: `La correction « ${correctionRight} » rend la phrase grammaticalement correcte.`,
   }
   const passage: Passage = {
     id: passageId,
     unitId,
     genre: 'Note de travail',
-    title: `Préparer un dossier sur ${topic}`,
-    text: `L’équipe prépare un dossier sur ${topic}. Chaque personne vérifie les informations qui relèvent de sa partie et signale rapidement les points incertains. Avant la réunion, la responsable rassemble les remarques dans une courte note. Le groupe peut ainsi discuter des prochaines étapes avec des éléments vérifiés.`,
+    title: `Un dossier ${topicReference}`,
+    text: `L’équipe travaille ${topicFrame}. Pour ${goal}, elle doit ${action} avant la réunion. Le résultat attendu est ${result}. Une note de suivi indique ce qui reste à faire et permet de préparer la prochaine discussion.`,
   }
   const reading: AuthoredExercise = {
     id: `${targetIds.reading}-01`,
@@ -91,46 +118,46 @@ export function createUnitPack({ unitId, focus }: UnitPackSeed): UnitPack {
     targetId: targetIds.reading,
     kind: 'reading',
     passageId,
-    prompt: 'Quelle action est faite avant la réunion?',
-    answer: 'La responsable rassemble les remarques dans une note.',
+    prompt: `Que doit faire l’équipe pour ${goal}?`,
+    answer: sentenceStart(`Elle doit ${action}.`),
     distractors: [
-      'Chaque personne annule sa partie du dossier.',
-      'Le groupe transmet la note sans la vérifier.',
-      'La responsable reporte la discussion au mois suivant.',
+      'Elle doit supprimer le dossier avant la réunion.',
+      'Elle reporte la discussion au mois suivant.',
+      'Elle refuse de vérifier les informations du dossier.',
     ],
-    feedback: 'Le texte indique que la responsable rassemble les remarques avant la réunion.',
+    feedback: `Le passage associe l’objectif « ${goal} » à l’action « ${action} ».`,
   }
   const transformation: TransformationExercise = {
     id: `${targetIds.transformation}-01`,
     unitId,
     targetId: targetIds.transformation,
     kind: 'transformation',
-    source: `Nous devons vérifier les informations sur ${topic}.`,
+    source: transformationSource,
     prompt: 'Choisissez la reformulation qui conserve le même sens.',
-    answer: `Il faut vérifier les informations sur ${topic}.`,
+    answer: transformationAnswer,
     distractors: [
-      `Nous pouvons ignorer les informations sur ${topic}.`,
-      `Nous avons déjà supprimé les informations sur ${topic}.`,
-      `Les informations sur ${topic} vérifieront notre équipe.`,
+      `Pour ${goal}, l’équipe peut éviter de ${action}.`,
+      `Pour ${goal}, l’équipe a déjà terminé sans ${action}.`,
+      `Pour ${goal}, personne ne demande de ${action}.`,
     ],
-    feedback: '« Il faut » conserve l’idée de nécessité exprimée par « nous devons ».',
+    feedback: '« Il faut » conserve l’idée de nécessité exprimée par « doit ».',
   }
   const scenario: Scenario = {
     id: scenarioId,
     unitId,
-    title: `Une question sur ${topic}`,
-    setup: `Vous coordonnez un dossier sur ${topic}. Un collègue vous demande de transmettre une information qui n’a pas encore été vérifiée.`,
+    title: `Une décision ${topicReference}`,
+    setup: `${sentenceStart(topicFrame)}, vous devez ${goal}. Le résultat attendu est ${result}, mais un collègue propose de passer à l’étape suivante sans vérifier les informations.`,
     nodes: [{
       id: 'next-step',
       prompt: 'Que faites-vous ensuite?',
       choices: [
-        'Je vérifie l’information avant de la transmettre.',
-        'Je la transmets immédiatement sans la lire.',
-        'Je la supprime pour éviter toute question.',
+        `Je vais ${decision}.`,
+        'Je transmets la réponse immédiatement sans la lire.',
+        'Je supprime le dossier pour éviter toute question.',
         'Je demande à chacun de deviner la réponse.',
       ],
-      answer: 'Je vérifie l’information avant de la transmettre.',
-      feedback: 'Vérifier l’information avant de la transmettre protège la qualité du dossier.',
+      answer: `Je vais ${decision}.`,
+      feedback: 'La réponse vérifie la situation avant de poursuivre la démarche.',
     }],
   }
   const scenarioExercise: AuthoredExercise = {
@@ -140,7 +167,7 @@ export function createUnitPack({ unitId, focus }: UnitPackSeed): UnitPack {
     kind: 'scenario',
     scenarioId,
     nodeId: 'next-step',
-    feedback: 'La réponse propose une vérification concrète avant la transmission.',
+    feedback: `La décision proposée soutient l’objectif « ${goal} ».`,
   }
   return {
     exercises: [best, cloze, correction, reading, transformation, scenarioExercise],
