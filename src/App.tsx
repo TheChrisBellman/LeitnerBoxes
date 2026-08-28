@@ -160,6 +160,29 @@ function choicesFor(question: PracticeQuestion): string[] {
     : []
 }
 
+type SharedAnswerHint = {
+  phrase: string
+  meaning: string
+  note?: string
+}
+
+const sharedAnswerHints: SharedAnswerHint[] = [
+  { phrase: 'Je vais', meaning: 'I’m going to / I will', note: 'aller, “to go”' },
+  { phrase: 'Je dois', meaning: 'I have to / I must' },
+  { phrase: 'Je peux', meaning: 'I can' },
+  { phrase: 'Il faut', meaning: 'It is necessary / We need to' },
+  { phrase: 'Nous devons', meaning: 'We must / We have to' },
+  { phrase: 'Vous devez', meaning: 'You must / You have to' },
+]
+
+function sharedAnswerHint(choices: readonly string[], language: 'fr' | 'en'): SharedAnswerHint | undefined {
+  if (language !== 'fr' || choices.length < 2) return undefined
+  return sharedAnswerHints.find(({ phrase }) => {
+    const prefix = `${phrase.toLocaleLowerCase('fr')} `
+    return choices.every((choice) => choice.toLocaleLowerCase('fr').startsWith(prefix))
+  })
+}
+
 function practiceModeLabel(mode: PracticeMode): string {
   return mode === 'vocabulary' ? 'Vocabulary only' : mode === 'conjugation' ? 'Conjugation only' : 'Mixed practice'
 }
@@ -868,6 +891,7 @@ function QuizScreen({
   const accentPointerHandledRef = useRef(false)
   const [selectedTokenIndexes, setSelectedTokenIndexes] = useState<number[]>([])
   const [tokenOrder, setTokenOrder] = useState<number[]>([])
+  const [phraseHelpOpen, setPhraseHelpOpen] = useState(false)
 
   useEffect(() => {
     questionHeadingRef.current?.focus({ preventScroll: true })
@@ -878,6 +902,7 @@ function QuizScreen({
     accentSelectionRef.current = null
     accentPointerHandledRef.current = false
     setSelectedTokenIndexes([])
+    setPhraseHelpOpen(false)
     const indexes = (question.tokens ?? []).map((_, tokenIndex) => tokenIndex)
     setTokenOrder(indexes.length > 1 ? [...indexes.slice(1), indexes[0]] : indexes)
     if (!repairing) return
@@ -929,6 +954,8 @@ function QuizScreen({
   const hasLongPrompt = question.prompt.length > 12
   const arrangedAnswer = selectedTokenIndexes.map((tokenIndex) => question.tokens?.[tokenIndex] ?? '').join(' ')
   const remainingTokenIndexes = tokenOrder.filter((tokenIndex) => !selectedTokenIndexes.includes(tokenIndex))
+  const answerHint = sharedAnswerHint(question.choices, question.answerLanguage)
+  const answerHintId = answerHint ? `shared-answer-hint-${question.card.id}` : undefined
 
   useEffect(() => {
     const input = typedInputRef.current
@@ -1061,19 +1088,34 @@ function QuizScreen({
                     ? `Choose the form that matches ${question.card.person}.`
                     : 'Choose the answer again without looking at the correction.'}</span>
           </div>}
-          {(question.format === 'choice' || question.format === 'cloze' || question.format === 'correction') && <div className="choice-list" role="group" aria-label={answerGroupLabel}>
-            {question.choices.map((choice, choiceIndex) => {
-              const choiceLabel = question.choiceLabels?.[choice] ?? choice
-              const isCorrect = Boolean(feedback?.correct || feedback?.stage === 'repair') && feedback?.answer === choice
-              const isSelected = feedback?.selectedChoice === choice
-              return (
-                <button ref={choiceIndex === 0 ? firstChoiceRef : undefined} type="button" className={`choice-button ${isCorrect ? 'is-correct' : ''} ${isSelected && !isCorrect ? 'is-incorrect' : ''}`} key={choice} onClick={() => onAnswer(choice)} disabled={Boolean(feedback?.correct || (feedback?.stage === 'repair' && choice !== feedback.answer))} aria-label={feedback?.stage === 'repair' && !feedback.correct && choice === feedback.answer ? `${choiceLabel}. ${index + 1 === total ? 'Show results' : 'Continue to the next card'}` : undefined}>
-                  <span className="choice-number">{feedback && isCorrect ? <Icon name="check" size={16} /> : choiceIndex + 1}</span>
-                  <span lang={question.answerLanguage}>{choiceLabel}</span>
-                  {feedback && isSelected && !isCorrect && <Icon name="close" size={18} />}
-                </button>
-              )
-            })}
+          {(question.format === 'choice' || question.format === 'cloze' || question.format === 'correction') && <div className={`answer-choice-area ${answerHint ? 'has-shared-hint' : ''}`}>
+            {answerHint && <button type="button" className="phrase-help-button" aria-expanded={phraseHelpOpen} aria-controls={answerHintId} aria-describedby={answerHintId} onClick={() => setPhraseHelpOpen((open) => !open)}>
+              <span>Phrase help</span>
+              <span lang="fr" className="choice-shared-phrase">{answerHint.phrase}</span>
+            </button>}
+            <div className="choice-list" role="group" aria-label={answerGroupLabel}>
+              {question.choices.map((choice, choiceIndex) => {
+                const choiceLabel = question.choiceLabels?.[choice] ?? choice
+                const isCorrect = Boolean(feedback?.correct || feedback?.stage === 'repair') && feedback?.answer === choice
+                const isSelected = feedback?.selectedChoice === choice
+                const hasAnswerHint = Boolean(answerHint && choiceLabel.toLocaleLowerCase('fr').startsWith(`${answerHint.phrase.toLocaleLowerCase('fr')} `))
+                const answerPhraseLength = answerHint?.phrase.length ?? 0
+                const answerPhrase = hasAnswerHint ? choiceLabel.slice(0, answerPhraseLength) : undefined
+                const answerRemainder = hasAnswerHint ? choiceLabel.slice(answerPhraseLength) : choiceLabel
+                const repairLabel = feedback?.stage === 'repair' && !feedback.correct && choice === feedback.answer
+                  ? `${index + 1 === total ? 'Show results' : 'Continue to the next card'}`
+                  : undefined
+                const accessibleLabel = repairLabel ? `${choiceLabel}. ${repairLabel}` : undefined
+                return (
+                  <button ref={choiceIndex === 0 ? firstChoiceRef : undefined} type="button" className={`choice-button ${isCorrect ? 'is-correct' : ''} ${isSelected && !isCorrect ? 'is-incorrect' : ''}`} key={choice} onClick={() => onAnswer(choice)} disabled={Boolean(feedback?.correct || (feedback?.stage === 'repair' && choice !== feedback.answer))} aria-label={accessibleLabel} aria-describedby={hasAnswerHint ? answerHintId : undefined}>
+                    <span className="choice-number">{feedback && isCorrect ? <Icon name="check" size={16} /> : choiceIndex + 1}</span>
+                    <span lang={question.answerLanguage}>{answerPhrase ? <><span className="choice-shared-phrase">{answerPhrase}</span>{answerRemainder}</> : choiceLabel}</span>
+                    {feedback && isSelected && !isCorrect && <Icon name="close" size={18} />}
+                  </button>
+                )
+              })}
+            </div>
+            {answerHint && <p id={answerHintId} className={`shared-answer-tooltip ${phraseHelpOpen ? 'is-open' : ''}`} role="tooltip"><span lang="fr">{answerHint.phrase} + infinitive</span> — “{answerHint.meaning}”{answerHint.note && <> ({answerHint.note})</>}</p>}
           </div>}
           {question.format === 'typed' && <form className="typed-answer-form" onSubmit={submitTypedAnswer}>
             <label htmlFor="typed-answer">Your answer</label>

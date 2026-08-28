@@ -1873,6 +1873,37 @@ button:disabled {
   color: var(--question-conjugation-ink);
 }
 
+.answer-choice-area {
+  position: relative;
+  display: grid;
+  gap: 8px;
+}
+
+.phrase-help-button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-self: start;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--small-radius);
+  background: var(--paper);
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-size: var(--font-size-ui);
+  font-weight: 700;
+  text-align: left;
+  transition: border-color var(--motion-quick) ease, color var(--motion-quick) ease, background-color var(--motion-quick) ease;
+}
+
+.phrase-help-button:hover:not(:disabled),
+.phrase-help-button[aria-expanded='true'] {
+  border-color: var(--cobalt);
+  background: var(--cobalt-soft);
+  color: var(--cobalt-dark);
+}
+
 .choice-list {
   display: grid;
   overflow: hidden;
@@ -1909,6 +1940,55 @@ button:disabled {
 .choice-button > span:nth-child(2) {
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.choice-shared-phrase {
+  text-decoration: underline dotted currentColor;
+  text-underline-offset: 3px;
+}
+
+.shared-answer-tooltip {
+  position: absolute;
+  z-index: 4;
+  bottom: calc(100% + 8px);
+  left: 0;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  background: var(--ink);
+  box-shadow: var(--shadow-soft);
+  color: var(--paper);
+  font-size: var(--font-size-ui);
+  font-weight: 650;
+  line-height: 1.35;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(4px);
+  transition: opacity var(--motion-quick) ease, transform var(--motion-quick) var(--ease-standard);
+  white-space: nowrap;
+}
+
+.answer-choice-area.has-shared-hint:has(.phrase-help-button:hover) .shared-answer-tooltip,
+.answer-choice-area.has-shared-hint:has(.phrase-help-button:focus-visible) .shared-answer-tooltip,
+.answer-choice-area.has-shared-hint:has(.choice-button:hover:not(:disabled)) .shared-answer-tooltip,
+.answer-choice-area.has-shared-hint:has(.choice-button:focus-visible) .shared-answer-tooltip,
+.answer-choice-area.has-shared-hint .shared-answer-tooltip.is-open {
+  width: max-content;
+  max-width: min(320px, calc(100vw - 48px));
+  height: auto;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--line-strong);
+  clip: auto;
+  clip-path: none;
+  opacity: 1;
+  transform: translateY(0);
+  white-space: normal;
 }
 
 .choice-button:hover:not(:disabled) {
@@ -2796,7 +2876,9 @@ button:disabled {
 
   .context-disclosure summary .icon,
   .switch-track,
-  .switch-thumb {
+  .switch-thumb,
+  .phrase-help-button,
+  .shared-answer-tooltip {
     transition: none !important;
   }
 
