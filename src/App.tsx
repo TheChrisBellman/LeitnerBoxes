@@ -207,8 +207,8 @@ function ExerciseContext({ question }: { question: PracticeQuestion }) {
         <p lang={question.contextLanguage ?? 'fr'} className="correction-sentence">
           {question.exercise.segments.map((segment, index) => (
             <span className="correction-segment" key={segment.id}>
-              <strong aria-hidden="true">{String.fromCharCode(65 + index)}</strong>
-              <span>{segment.text}</span>
+              <strong aria-label={`Segment ${String.fromCharCode(65 + index)}`}>{String.fromCharCode(65 + index)}</strong>
+              <span className="correction-segment-text">{segment.text}</span>
             </span>
           ))}
         </p>

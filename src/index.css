@@ -28,6 +28,10 @@
   --red-soft: #fbefec;
   --red-strong: #b6433c;
   --accent-yellow: #806b00;
+  --segment-a: #2459a9;
+  --segment-b: #8a5700;
+  --segment-c: #6b4aa5;
+  --segment-d: #246b62;
   --prompt-surface: #1e2b25;
   --prompt-text: #ffffff;
   --prompt-muted: #e2e9e4;
@@ -103,6 +107,10 @@
   --red-soft: #3e2025;
   --red-strong: #9f343b;
   --accent-yellow: #d0d1ce;
+  --segment-a: #8bb8ff;
+  --segment-b: #ffc56d;
+  --segment-c: #c4a7ff;
+  --segment-d: #79d6c8;
   --scrim: rgba(0, 0, 0, 0.64);
   --success-scrim: rgba(0, 0, 0, 0.68);
   --success-panel-shadow: rgba(0, 0, 0, 0.42);
@@ -1806,34 +1814,49 @@ button:disabled {
 }
 
 .correction-sentence {
-  display: flex;
+  display: block;
   min-width: 0;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 7px;
+  font-size: var(--font-size-body-large);
+  line-height: 2.15;
 }
 
 .correction-segment {
-  display: inline-flex;
-  min-width: 0;
-  align-items: baseline;
-  gap: 5px;
-  padding: 4px 6px;
-  border: 1px dashed currentColor;
-  border-radius: 5px;
+  --segment-accent: var(--ink);
+  --segment-decoration: solid;
+  display: inline;
+  margin-inline-end: 0.35em;
+  padding: 0;
+  border: 0;
   overflow-wrap: anywhere;
 }
 
+.correction-segment:nth-child(1) { --segment-accent: var(--segment-a); --segment-decoration: solid; }
+.correction-segment:nth-child(2) { --segment-accent: var(--segment-b); --segment-decoration: double; }
+.correction-segment:nth-child(3) { --segment-accent: var(--segment-c); --segment-decoration: dashed; }
+.correction-segment:nth-child(4) { --segment-accent: var(--segment-d); --segment-decoration: dotted; }
+
 .correction-segment strong {
-  display: inline-grid;
-  width: 19px;
-  height: 19px;
-  flex: 0 0 auto;
-  place-items: center;
-  border: 1px solid currentColor;
-  border-radius: 4px;
-  font-size: 11px;
+  margin-inline-end: 0.25em;
+  border: 0;
+  color: var(--segment-accent);
+  font-size: 0.75em;
+  letter-spacing: 0.05em;
   line-height: 1;
+  vertical-align: 0.08em;
+}
+
+.correction-segment-text {
+  color: currentColor;
+  text-decoration-line: underline;
+  text-decoration-color: var(--segment-accent);
+  text-decoration-style: var(--segment-decoration);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.28em;
+  text-decoration-skip-ink: auto;
+}
+
+@media (forced-colors: active) {
+  .correction-segment { --segment-accent: CanvasText !important; }
 }
 
 .question-meta {
