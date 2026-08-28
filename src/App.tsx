@@ -157,7 +157,10 @@ function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
 }
 
 function choicesFor(question: PracticeQuestion): string[] {
-  return question.format === 'choice' || question.format === 'cloze' || question.format === 'correction'
+  if (question.exercise?.kind === 'correction') {
+    return [...question.exercise.segments.map((segment) => segment.id), ...(question.exercise.allowNoCorrection ? ['none'] : [])]
+  }
+  return question.format === 'choice' || question.format === 'cloze'
     ? shuffle([question.answer, ...question.distractors])
     : []
 }
@@ -913,7 +916,7 @@ function QuizScreen({
           ? 'Vocabulary · English → French'
           : 'Vocabulary · French → English')
   const questionInstruction = question.exercise?.kind === 'correction'
-    ? 'Choose the marked segment that needs correction.'
+    ? 'Read segments A through D as one sentence. Choose the segment that contains the error.'
     : question.exercise?.kind === 'reading'
       ? 'Read the passage, then choose the best answer.'
       : question.exercise?.kind === 'scenario'
@@ -1074,7 +1077,7 @@ function QuizScreen({
               : question.format === 'arrange'
                 ? 'Build the answer again without looking at the correction.'
                 : question.exercise?.kind === 'correction'
-                  ? 'Choose the marked segment again without looking at the correction.'
+                  ? 'Read segments A through D again, then choose the segment with the error.'
                   : question.card.kind === 'conjugation'
                     ? `Choose the form that matches ${question.card.person}.`
                     : 'Choose the answer again without looking at the correction.'}</span>
