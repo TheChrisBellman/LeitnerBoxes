@@ -13,6 +13,7 @@ export const SEMANTIC_EXERCISE_KINDS: ExerciseKind[] = [
 
 const unique = (values: readonly string[]) => new Set(values).size === values.length
 const invalidContraction = /(?:au sujet|cadre) de (?:le|les|un|une)\b|liées à (?:le|les)\b/iu
+const invalidInfinitiveElision = /\b(?:éviter|demande) de (?=[aeiouyàâéèêëîïôùûüœ])/iu
 
 function exerciseChoices(exercise: AuthoredExercise): string[] {
   if ('distractors' in exercise) return [exercise.answer, ...exercise.distractors]
@@ -33,6 +34,7 @@ export function validateAuthoredExercises(): string[] {
   if (new Set(allPassages.map((passage) => passage.id)).size !== allPassages.length) failures.push('duplicate passage IDs')
   if (new Set(allScenarios.map((scenario) => scenario.id)).size !== allScenarios.length) failures.push('duplicate scenario IDs')
 
+  const generatedExercises = allExercises.filter((exercise) => exercise.id.includes('-unit-pack-'))
   const targetIdsByExercise = new Set(allExercises.map((exercise) => exercise.targetId))
   for (const targetId of targetIdsByExercise) {
     if (!targetIds.has(targetId)) failures.push(`missing target for ${targetId}`)
@@ -49,7 +51,10 @@ export function validateAuthoredExercises(): string[] {
     if (unit && target?.level !== unit.level) failures.push(`target/level mismatch: ${exercise.id}`)
     if ('prompt' in exercise && !exercise.prompt) failures.push(`empty prompt: ${exercise.id}`)
     if (!exercise.feedback.trim()) failures.push(`empty feedback: ${exercise.id}`)
-    if (invalidContraction.test(JSON.stringify(exercise))) failures.push(`invalid contraction: ${exercise.id}`)
+    const text = JSON.stringify(exercise)
+    if (invalidContraction.test(text)) failures.push(`invalid contraction: ${exercise.id}`)
+    if (exercise.id.includes('-unit-pack-') && invalidInfinitiveElision.test(text)) failures.push(`invalid infinitive elision: ${exercise.id}`)
+    if (exercise.id.includes('-unit-pack-') && /\bJe vais [^.?!]*(?:\bson\b|\bses\b)/iu.test(text)) failures.push(`wrong first-person possessive: ${exercise.id}`)
     const choices = exerciseChoices(exercise)
     if (choices.length > 0 && new Set(choices).size !== choices.length) failures.push(`duplicate choices: ${exercise.id}`)
     if (choices.length > 0 && choices.length !== 4 && exercise.kind !== 'correction') failures.push(`choice count is not four: ${exercise.id}`)
@@ -74,7 +79,9 @@ export function validateAuthoredExercises(): string[] {
   for (const passage of allPassages) {
     if (!unitIds.has(passage.unitId)) failures.push(`unknown passage unit: ${passage.id}`)
     if (!passage.title.trim() || !passage.text.trim()) failures.push(`empty passage: ${passage.id}`)
-    if (invalidContraction.test(JSON.stringify(passage))) failures.push(`invalid passage contraction: ${passage.id}`)
+    const text = JSON.stringify(passage)
+    if (invalidContraction.test(text)) failures.push(`invalid passage contraction: ${passage.id}`)
+    if (passage.id.includes('-unit-pack-') && invalidInfinitiveElision.test(text)) failures.push(`invalid passage infinitive elision: ${passage.id}`)
   }
   for (const scenario of allScenarios) {
     if (!unitIds.has(scenario.unitId)) failures.push(`unknown scenario unit: ${scenario.id}`)
@@ -83,7 +90,8 @@ export function validateAuthoredExercises(): string[] {
 
   for (const unitId of unitIds) {
     for (const kind of SEMANTIC_EXERCISE_KINDS) {
-      if (!allExercises.some((exercise) => exercise.unitId === unitId && exercise.kind === kind)) failures.push(`missing ${kind} for ${unitId}`)
+      const generatedCount = generatedExercises.filter((exercise) => exercise.unitId === unitId && exercise.kind === kind).length
+      if (generatedCount !== 1) failures.push(`expected one generated ${kind} for ${unitId}, found ${generatedCount}`)
     }
   }
   return failures

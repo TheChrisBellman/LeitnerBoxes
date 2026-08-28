@@ -54,6 +54,10 @@ function withA(value: string): string {
   return `à ${value}`
 }
 
+function withDeBeforeInfinitive(value: string): string {
+  return /^[aeiouyàâéèêëîïôùûüœ]/iu.test(value) ? `d’${value}` : `de ${value}`
+}
+
 const sentenceStart = (value: string) => value.charAt(0).toLocaleUpperCase('fr') + value.slice(1)
 
 export function createUnitPack(seed: UnitPackSeed): UnitPack {
@@ -96,10 +100,10 @@ export function createUnitPack(seed: UnitPackSeed): UnitPack {
     kind: 'correction',
     prompt: 'Quel segment contient l’erreur?',
     segments: [
-      { id: 'a', text: `Pour ${goal},` },
+      { id: 'a', text: `Pour ${goal}, la note indique que` },
       { id: 'b', text: correctionWrong },
-      { id: 'c', text: `l’équipe vise ${result}` },
-      { id: 'd', text: 'avant la réunion.' },
+      { id: 'c', text: 'afin d’obtenir' },
+      { id: 'd', text: `${result}.` },
     ],
     answerSegmentId: 'b',
     correction: correctionRight,
@@ -136,11 +140,11 @@ export function createUnitPack(seed: UnitPackSeed): UnitPack {
     prompt: 'Choisissez la reformulation qui conserve le même sens.',
     answer: transformationAnswer,
     distractors: [
-      `Pour ${goal}, l’équipe peut éviter de ${action}.`,
+      `Pour ${goal}, l’équipe peut éviter ${withDeBeforeInfinitive(action)}.`,
       `Pour ${goal}, l’équipe a déjà terminé sans ${action}.`,
-      `Pour ${goal}, personne ne demande de ${action}.`,
+      `Pour ${goal}, personne ne demande ${withDeBeforeInfinitive(action)}.`,
     ],
-    feedback: '« Il faut » conserve l’idée de nécessité exprimée par « doit ».',
+    feedback: 'La reformulation conserve le sens et l’objectif de la phrase de départ.',
   }
   const scenario: Scenario = {
     id: scenarioId,
