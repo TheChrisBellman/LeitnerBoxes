@@ -7,6 +7,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc --noEmit && vite build",
+    "validate:exercises": "node --experimental-strip-types scripts/validate-exercises.mjs",
     "audit:source": "node --experimental-strip-types scripts/build-source-coverage-report.mjs"
   },
   "dependencies": {

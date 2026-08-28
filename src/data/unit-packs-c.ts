@@ -1,0 +1,25 @@
+import type { UnitPackSeed } from './unit-pack-factory.ts'
+
+export const unitPacksC: UnitPackSeed[] = [
+  { unitId: 'c-01', focus: 'Portée du mandat ministériel' },
+  { unitId: 'c-02', focus: 'Forces et zones d’amélioration' },
+  { unitId: 'c-03', focus: 'Responsabilités partagées de l’équipe' },
+  { unitId: 'c-04', focus: 'Transition vers de nouvelles pratiques' },
+  { unitId: 'c-05', focus: 'Prévention de la surcharge mentale' },
+  { unitId: 'c-06', focus: 'Limites entre travail et vie privée' },
+  { unitId: 'c-07', focus: 'Clarté des messages professionnels' },
+  { unitId: 'c-08', focus: 'Climat du milieu de travail' },
+  { unitId: 'c-09', focus: 'Mobilisation autour d’une vision' },
+  { unitId: 'c-10', focus: 'Points d’accord en négociation' },
+  { unitId: 'c-11', focus: 'Intérêts communs et rivalité' },
+  { unitId: 'c-12', focus: 'Interprétation d’une clause collective' },
+  { unitId: 'c-13', focus: 'Marchés interdépendants et échanges mondiaux' },
+  { unitId: 'c-14', focus: 'Réponse aux attentes des clients' },
+  { unitId: 'c-15', focus: 'Suivi des décisions de réunion' },
+  { unitId: 'c-16', focus: 'Repères éthiques en contexte professionnel' },
+  { unitId: 'c-17', focus: 'Priorités et objectifs ministériels' },
+  { unitId: 'c-18', focus: 'Inclusion et accès équitable à l’emploi' },
+  { unitId: 'c-19', focus: 'Usage responsable des outils numériques' },
+  { unitId: 'c-20', focus: 'Transfert des compétences en équipe' },
+  { unitId: 'c-21', focus: 'Gestion durable des ressources naturelles' },
+]

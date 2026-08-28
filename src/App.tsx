@@ -5,7 +5,7 @@ import { allCards, allTargets } from './data/words'
 import { ACTIVITY_TYPES, type ActivityType, type PracticeTarget } from './data/types'
 import {
   BOXES,
-  activityTypesForTarget,
+  activityAvailability,
   buildSessionQuestions,
   dateKey,
   getMasteredLessonIds,
@@ -276,6 +276,7 @@ function MenuSheet({
   missMode,
   correctAdvanceMode,
   enabledActivityTypes,
+  activityCounts,
   theme,
   onDailyGoalChange,
   onPracticeModeChange,
@@ -293,6 +294,7 @@ function MenuSheet({
   missMode: MissMode
   correctAdvanceMode: CorrectAdvanceMode
   enabledActivityTypes: readonly ActivityType[]
+  activityCounts: Record<ActivityType, number>
   theme: Theme
   onDailyGoalChange: (value: number) => void
   onPracticeModeChange: (value: PracticeMode) => void
@@ -353,11 +355,14 @@ function MenuSheet({
             <div className="activity-options">
               {activityOptions.map(({ type, label, description }) => {
                 const checked = enabledActivityTypes.includes(type)
+                const available = activityCounts[type]
+                const unavailable = available === 0
                 return (
-                  <label className={`activity-option ${checked ? 'is-selected' : ''}`} key={type}>
-                    <input type="checkbox" aria-label={label} checked={checked} disabled={checked && enabledActivityTypes.length === 1} onChange={() => onActivityTypesChange(checked ? enabledActivityTypes.filter((item) => item !== type) : [...enabledActivityTypes, type])} />
+                  <label className={`activity-option ${checked ? 'is-selected' : ''} ${unavailable ? 'is-unavailable' : ''}`} aria-disabled={unavailable && !checked} key={type}>
+                    <input type="checkbox" aria-label={label} checked={checked} disabled={(unavailable && !checked) || (checked && enabledActivityTypes.length === 1)} onChange={() => onActivityTypesChange(checked ? enabledActivityTypes.filter((item) => item !== type) : [...enabledActivityTypes, type])} />
                     <span className="custom-check" aria-hidden="true"><Icon name="check" size={13} /></span>
                     <span className="activity-option-copy"><strong>{label}</strong><small>{description}</small></span>
+                    <span className="activity-option-count" aria-label={`${available} available`}>{available}</span>
                   </label>
                 )
               })}
@@ -542,7 +547,7 @@ function TodayScreen({
           {!hasCards && !notice && activeUnits.length > 0 && <p className="quiet-note today-message">{selectedCardCount === 0 ? `No ${modeDescription} are authored for the selected units yet. Switch practice mode or choose A-01–A-03.` : hasFutureCards ? 'No cards are due right now. Come back when the next review is ready.' : 'No cards are available right now.'}</p>}
           {!hasCards && !notice && masteredOnly && <p className="quiet-note today-message">Mastered objectives return for occasional refreshes. {hasFutureCards ? 'The next refresh is scheduled.' : 'No refresh is due right now.'}</p>}
           {activeUnits.length === 0 && !masteredOnly && <p className="empty-guidance today-message">Open Menu → Curriculum to choose a starting area.</p>}
-          {activeUnits.length > 0 && selectedCardCount === 0 && <p className="empty-guidance today-message">Switch practice mode or choose starter units A-01–A-03 for conjugation cards.</p>}
+          {activeUnits.length > 0 && selectedCardCount === 0 && <p className="empty-guidance today-message">Open Menu to choose an available activity or another curriculum unit.</p>}
         </div>
         <section ref={actionPanelRef} className="next-card-panel">
           <div className="next-card-copy">
@@ -1220,6 +1225,7 @@ export default function App() {
   const activeLessonIds = useMemo(() => state.selectedLessonIds.filter((id) => !masteredLessonIds.has(id)), [masteredLessonIds, state.selectedLessonIds])
   const queueCounts = useMemo(() => getQueueCounts(allTargets, state.progress, activeLessonIds, today, state.practiceMode, state.enabledActivityTypes, masteredSelectedLessonIds), [activeLessonIds, masteredSelectedLessonIds, state.enabledActivityTypes, state.progress, state.practiceMode, today])
   const readyCardCount = useMemo(() => queueCards(allTargets, state.progress, activeLessonIds, today, state.dailyGoal, { mode: state.practiceMode, maxNewCards: state.dailyGoal, activityTypes: state.enabledActivityTypes, masteredLessonIds: masteredSelectedLessonIds }).length, [activeLessonIds, masteredSelectedLessonIds, state.dailyGoal, state.enabledActivityTypes, state.practiceMode, state.progress, today])
+  const activityCounts = useMemo(() => activityAvailability(allTargets, state.selectedLessonIds, state.practiceMode), [state.practiceMode, state.selectedLessonIds])
   const activeUnits = useMemo(() => activeLessonIds.map((id) => curriculumById.get(id)).filter((unit): unit is CurriculumUnit => Boolean(unit)), [activeLessonIds])
   const unitCardCounts = useMemo(() => allTargets.reduce<Record<string, number>>((counts, card) => {
     if (cardMatchesMode(card, state.practiceMode, state.enabledActivityTypes)) counts[card.lessonId] = (counts[card.lessonId] ?? 0) + 1
@@ -1290,8 +1296,8 @@ export default function App() {
     const requestedLessonIds = [...new Set(lessonIds ?? [...activeLessonIds, ...masteredSelectedLessonIds])]
     const focusedMasteredLessonIds = new Set(requestedLessonIds.filter((id) => masteredLessonIds.has(id)))
     const focusedActiveLessonIds = requestedLessonIds.filter((id) => !focusedMasteredLessonIds.has(id))
-    const sessionPracticeMode = lessonIds === undefined ? state.practiceMode : 'vocabulary'
-    const sessionTypes = lessonIds === undefined ? state.enabledActivityTypes : ['vocabulary', 'ordered', 'typed'] as ActivityType[]
+    const sessionPracticeMode = state.practiceMode
+    const sessionTypes = state.enabledActivityTypes
     const focusedQueueCounts = getQueueCounts(allTargets, state.progress, focusedActiveLessonIds, today, sessionPracticeMode, sessionTypes, focusedMasteredLessonIds)
     const focusedCardCount = allTargets.filter((card) => focusedActiveLessonIds.includes(card.lessonId) && cardMatchesMode(card, sessionPracticeMode, sessionTypes)).length
     const nextQueue = queueCards(allTargets, state.progress, focusedActiveLessonIds, today, state.dailyGoal, { mode: sessionPracticeMode, maxNewCards: state.dailyGoal, activityTypes: sessionTypes, masteredLessonIds: focusedMasteredLessonIds })
@@ -1542,7 +1548,7 @@ export default function App() {
         {screen !== 'quiz' && <MobileHeader onMenu={() => setMenuOpen(true)} menuOpen={menuOpen} triggerRef={menuTriggerRef} screen={screen} onNavigate={navigate} />}
         <main id="main-content" className={`app-content ${screen === 'quiz' ? 'is-quiz' : ''}`} tabIndex={-1}>{renderScreen()}</main>
       </div>
-      {menuOpen && <MenuSheet screen={screen} dailyGoal={state.dailyGoal} practiceMode={state.practiceMode} missMode={state.missMode} correctAdvanceMode={state.correctAdvanceMode} enabledActivityTypes={state.enabledActivityTypes} theme={state.theme} onDailyGoalChange={updateDailyGoal} onPracticeModeChange={updatePracticeMode} onMissModeChange={updateMissMode} onCorrectAdvanceModeChange={updateCorrectAdvanceMode} onActivityTypesChange={updateActivityTypes} onThemeChange={updateTheme} onResetLocalData={resetLocalData} onNavigate={navigate} onClose={closeMenu} />}
+      {menuOpen && <MenuSheet screen={screen} dailyGoal={state.dailyGoal} practiceMode={state.practiceMode} missMode={state.missMode} correctAdvanceMode={state.correctAdvanceMode} enabledActivityTypes={state.enabledActivityTypes} activityCounts={activityCounts} theme={state.theme} onDailyGoalChange={updateDailyGoal} onPracticeModeChange={updatePracticeMode} onMissModeChange={updateMissMode} onCorrectAdvanceModeChange={updateCorrectAdvanceMode} onActivityTypesChange={updateActivityTypes} onThemeChange={updateTheme} onResetLocalData={resetLocalData} onNavigate={navigate} onClose={closeMenu} />}
       {screen === 'quiz' && currentQuestion && feedback?.correct && <SuccessOverlay question={currentQuestion} feedback={feedback} index={sessionIndex} total={session.length} advanceMode={state.correctAdvanceMode} onContinue={continueSession} />}
     </div>
   )

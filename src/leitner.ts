@@ -453,6 +453,8 @@ export function buildSessionQuestions(
 ): PracticeQuestion[] {
   let vocabularyOrdinal = 0
 
+  let activityOrdinal = 0
+
   return cards.map((card) => {
     if (card.kind === 'exercise') {
       const variants = exerciseVariants(card.id, exercises).filter((exercise) => enabledActivityTypes.includes(exercise.kind))
@@ -472,15 +474,15 @@ export function buildSessionQuestions(
     }
 
     const box = progress[card.id]?.box ?? 1
+    const selectedActivity = chooseActivityType(card, enabledActivityTypes, box, activityOrdinal++)
     if (card.kind === 'conjugation') {
       const answer = normalizeConjugationForm(card.answer)
-      const typed = enabledActivityTypes.includes('typed') && box >= 3 && isFrenchTypedAnswer(answer)
       return {
         card,
         kind: card.kind,
         direction: 'conjugation',
-        format: typed ? 'typed' : 'cloze',
-        prompt: typed ? card.infinitive : conjugationClozePrompt(card.answer, answer),
+        format: selectedActivity === 'typed' ? 'typed' : 'cloze',
+        prompt: selectedActivity === 'typed' ? card.infinitive : conjugationClozePrompt(card.answer, answer),
         promptLanguage: 'fr',
         answer,
         answerLanguage: 'fr',
@@ -489,11 +491,16 @@ export function buildSessionQuestions(
     }
 
     const reverse = vocabularyOrdinal++ % 2 === 1 || box >= 3
-    const question = buildVocabularyQuestion(card, reverse, vocabularyPool)
-    if (!reverse) return question
-    if (enabledActivityTypes.includes('typed') && box >= 3 && isFrenchTypedAnswer(question.answer)) return { ...question, format: 'typed' }
-    const tokens = enabledActivityTypes.includes('ordered') && box >= 2 ? arrangementTokens(question.answer) : undefined
-    return tokens ? { ...question, format: 'arrange', tokens } : question
+    if (selectedActivity === 'typed') {
+      const question = buildVocabularyQuestion(card, true, vocabularyPool)
+      return { ...question, format: 'typed' }
+    }
+    if (selectedActivity === 'ordered') {
+      const question = buildVocabularyQuestion(card, true, vocabularyPool)
+      const tokens = arrangementTokens(question.answer)
+      return tokens ? { ...question, format: 'arrange', tokens } : question
+    }
+    return buildVocabularyQuestion(card, reverse, vocabularyPool)
   })
 }
 
@@ -503,11 +510,51 @@ function matchesMode(card: SchedulableCard, mode: PracticeMode): boolean {
   return mode === 'vocabulary' ? card.kind !== 'conjugation' : card.kind === 'conjugation'
 }
 
+function chooseActivityType(
+  card: PracticeCard,
+  enabledActivityTypes: readonly ActivityType[],
+  box: Box,
+  ordinal: number,
+): ActivityType | undefined {
+  const supported = enabledActivityTypes.filter((type) => activityTypesForTarget(card).includes(type))
+  if (supported.length === 0) return undefined
+  if (supported.length === 1) return supported[0]
+  if (card.kind === 'vocabulary' && supported.includes('vocabulary')) {
+    if (box >= 3 && supported.includes('typed')) return 'typed'
+    if (box >= 2 && supported.includes('ordered')) return 'ordered'
+    return 'vocabulary'
+  }
+  return supported[ordinal % supported.length]
+}
+
 export function activityTypesForTarget(card: SchedulableCard): ActivityType[] {
   if (card.kind === 'exercise' || card.targetType === 'exercise') {
     return [...new Set((exercisesByTargetId.get(card.id) ?? []).map((exercise) => exercise.kind))]
   }
-  return [card.kind === 'conjugation' ? 'conjugation' : 'vocabulary']
+  if (card.kind === 'conjugation') {
+    const answer = 'answer' in card && typeof card.answer === 'string' ? card.answer : undefined
+    return ['conjugation', ...(answer && isFrenchTypedAnswer(normalizeConjugationForm(answer)) ? ['typed' as const] : [])]
+  }
+  const types: ActivityType[] = ['vocabulary']
+  const french = 'french' in card && typeof card.french === 'string' ? card.french : undefined
+  if (!french) return types
+  if (isFrenchTypedAnswer(french)) types.push('typed')
+  if (arrangementTokens(french)) types.push('ordered')
+  return types
+}
+
+export type ActivityAvailability = Record<ActivityType, number>
+
+export function activityAvailability(
+  cards: readonly SchedulableCard[],
+  selectedLessonIds: readonly string[],
+  mode: PracticeMode = 'mixed',
+): ActivityAvailability {
+  const selected = new Set(selectedLessonIds)
+  return ACTIVITY_TYPES.reduce((counts, type) => {
+    counts[type] = cards.filter((card) => selected.has(card.lessonId) && matchesMode(card, mode) && activityTypesForTarget(card).includes(type)).length
+    return counts
+  }, {} as ActivityAvailability)
 }
 
 export function matchesActivityTypes(card: SchedulableCard, activityTypes?: readonly ActivityType[]): boolean {

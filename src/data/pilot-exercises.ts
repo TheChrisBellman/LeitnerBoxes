@@ -13,6 +13,11 @@ import type {
   TransformationExercise,
   TypedExercise,
 } from './types.ts'
+import { curriculumById } from './curriculum.ts'
+import { createUnitPacks } from './unit-pack-factory.ts'
+import { unitPacksA } from './unit-packs-a.ts'
+import { unitPacksB } from './unit-packs-b.ts'
+import { unitPacksC } from './unit-packs-c.ts'
 
 export const earlyLevelExamples: BestResponseExercise[] = [
   {
@@ -576,9 +581,11 @@ export const pilotExercises: AuthoredExercise[] = [
   c16Scenario,
 ]
 
-const levelForUnit = (unitId: string): Level => unitId.startsWith('c-') ? 'C' : 'A'
+const generatedUnitPacks = createUnitPacks([...unitPacksA, ...unitPacksB, ...unitPacksC])
+
+const levelForUnit = (unitId: string): Level => curriculumById.get(unitId)?.level ?? (unitId.startsWith('c-') ? 'C' : 'A')
 const nextTargetOrder = new Map<string, number>()
-export const allExercises: AuthoredExercise[] = [...earlyLevelExamples, ...earlyTypedExamples, ...pilotExercises]
+export const allExercises: AuthoredExercise[] = [...earlyLevelExamples, ...earlyTypedExamples, ...pilotExercises, ...generatedUnitPacks.exercises]
 
 const targetDefinitions = new Map<string, { unitId: string; order: number }>()
 for (const exercise of allExercises) {
@@ -607,10 +614,9 @@ for (const exercise of allExercises) {
 }
 
 export const exerciseTargetsById = new Map(exerciseTargets.map((target) => [target.id, target]))
-export const passagesById = new Map(pilotPassages.map((passage) => [passage.id, passage]))
-export const dialoguesById = new Map(pilotDialogues.map((dialogue) => [dialogue.id, dialogue]))
-export const scenariosById = new Map(pilotScenarios.map((scenario) => [scenario.id, scenario]))
-
-export const allPassages = pilotPassages
+export const allPassages = [...pilotPassages, ...generatedUnitPacks.passages]
 export const allDialogues = pilotDialogues
-export const allScenarios = pilotScenarios
+export const allScenarios = [...pilotScenarios, ...generatedUnitPacks.scenarios]
+export const passagesById = new Map(allPassages.map((passage) => [passage.id, passage]))
+export const dialoguesById = new Map(allDialogues.map((dialogue) => [dialogue.id, dialogue]))
+export const scenariosById = new Map(allScenarios.map((scenario) => [scenario.id, scenario]))

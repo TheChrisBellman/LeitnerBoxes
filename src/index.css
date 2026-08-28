@@ -973,7 +973,7 @@ button:disabled {
   position: relative;
   display: grid;
   min-height: 54px;
-  grid-template-columns: 22px minmax(0, 1fr);
+  grid-template-columns: 22px minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
   padding: 8px;
@@ -988,6 +988,14 @@ button:disabled {
 .activity-option.is-selected {
   border-color: var(--selection-border);
   background: var(--cobalt-soft);
+}
+
+.activity-option.is-unavailable:not(.is-selected),
+.activity-option.is-unavailable:not(.is-selected):hover {
+  border-color: var(--line);
+  background: var(--paper);
+  cursor: not-allowed;
+  opacity: 0.62;
 }
 
 .activity-option:focus-within {
@@ -1018,6 +1026,28 @@ button:disabled {
   color: var(--ink-soft);
   font-size: 12px;
   line-height: 1.35;
+}
+
+.activity-option-count {
+  min-width: 28px;
+  padding: 3px 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 750;
+  line-height: 1.1;
+  text-align: center;
+}
+
+.activity-option.is-selected .activity-option-count {
+  border-color: var(--selection-border);
+  color: var(--cobalt-dark);
+}
+
+.activity-option.is-unavailable:not(.is-selected) .activity-option-count {
+  color: var(--ink-soft);
 }
 
 .menu-setting-label {
