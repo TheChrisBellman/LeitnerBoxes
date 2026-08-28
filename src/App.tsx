@@ -58,6 +58,7 @@ type ShelfMotion = {
 }
 
 const CORRECT_AUTO_ADVANCE_MS = 1600
+const CORRECTION_AUTO_ADVANCE_MS = 4800
 const FRENCH_ACCENTS = ['à', 'â', 'ç', 'é', 'è', 'ê', 'ë', 'î', 'ï', 'ô', 'ù', 'û', 'ü', 'œ'] as const
 
 const levelNames: Record<Level, string> = {
@@ -731,6 +732,7 @@ function SuccessOverlay({
   const actionRef = useRef<HTMLButtonElement>(null)
   const continueRef = useRef(onContinue)
   const shouldAutoAdvance = feedback.stage === 'first' && advanceMode === 'automatic'
+  const autoAdvanceDelay = question.exercise?.kind === 'correction' ? CORRECTION_AUTO_ADVANCE_MS : CORRECT_AUTO_ADVANCE_MS
   const fullAnswer = answerDisplayFor(question, feedback.answer)
   const movement = feedback.stage === 'repair'
     ? 'This retry is practice; the shelf changes only on the original answer.'
@@ -746,9 +748,9 @@ function SuccessOverlay({
       actionRef.current?.focus()
       return undefined
     }
-    const timer = window.setTimeout(() => continueRef.current(), CORRECT_AUTO_ADVANCE_MS)
+    const timer = window.setTimeout(() => continueRef.current(), autoAdvanceDelay)
     return () => window.clearTimeout(timer)
-  }, [question.card.id, shouldAutoAdvance])
+  }, [autoAdvanceDelay, question.card.id, shouldAutoAdvance])
 
   return (
     <div className="success-overlay">
@@ -913,7 +915,7 @@ function QuizScreen({
           ? 'Vocabulary · English → French'
           : 'Vocabulary · French → English')
   const questionInstruction = question.exercise?.kind === 'correction'
-    ? 'Read the full sentence, then choose the underlined part that contains the error.'
+    ? 'Read the full text, then choose the underlined part that contains the error.'
     : question.exercise?.kind === 'reading'
       ? 'Read the passage, then choose the best answer.'
       : question.exercise?.kind === 'scenario'
@@ -1074,7 +1076,7 @@ function QuizScreen({
               : question.format === 'arrange'
                 ? 'Build the answer again without looking at the correction.'
                 : question.exercise?.kind === 'correction'
-                  ? 'Read the full sentence again, then choose the underlined part with the error.'
+                  ? 'Read the full text again, then choose the underlined part with the error.'
                   : question.card.kind === 'conjugation'
                     ? `Choose the form that matches ${question.card.person}.`
                     : 'Choose the answer again without looking at the correction.'}</span>

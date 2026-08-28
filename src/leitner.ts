@@ -412,7 +412,7 @@ function buildExerciseQuestion(
       distractors: choices.filter((choice) => choice !== exercise.answerSegmentId),
       choiceLabels,
       context: exercise.segments.map((segment) => segment.text).join(' '),
-      contextLabel: 'Phrase à relire',
+      contextLabel: 'Texte à relire',
       contextKind: 'situation',
     }
   }

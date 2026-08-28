@@ -3,6 +3,7 @@ import type {
   BestResponseExercise,
   ContextualClozeExercise,
   CorrectionExercise,
+  CorrectionSegment,
   Passage,
   Scenario,
   TransformationExercise,
@@ -71,6 +72,40 @@ function withDeBeforeInfinitive(value: string): string {
 }
 
 const sentenceStart = (value: string) => value.charAt(0).toLocaleUpperCase('fr') + value.slice(1)
+const asSentence = (value: string) => /[.!?]$/u.test(value.trim()) ? sentenceStart(value.trim()) : `${sentenceStart(value.trim())}.`
+
+function correctionPosition(unitId: string): number {
+  const objective = Number(unitId.slice(2))
+  const sequence = unitId.startsWith('c-') ? objective + 39 : objective - 1
+  return sequence % 4
+}
+
+function agreementFeedback(wrong: string, right: string): string {
+  const wrongWords = wrong.split(/\s+/u)
+  const rightWords = right.split(/\s+/u)
+  const changedIndexes = rightWords.flatMap((word, index) => word === wrongWords[index] ? [] : [index])
+  const finiteVerbIndex = wrongWords.findIndex((word, index) => index > 0 && /^(?:est|sont|doit|doivent)$/iu.test(word))
+  const subjectEnd = finiteVerbIndex > 0 ? finiteVerbIndex : changedIndexes[0] ?? 1
+  const subject = wrongWords.slice(0, Math.max(1, subjectEnd)).join(' ')
+  const subjectKey = subject.toLocaleLowerCase('fr')
+  const plural = /^(?:les|des|ces|mes|tes|ses|nos|vos|leurs|plusieurs|nous|vous|ils|elles)\b/u.test(subjectKey)
+  const correctedForms = changedIndexes.map((index) => `« ${rightWords[index]} »`).join(changedIndexes.length > 1 ? ' and ' : '')
+  const wrongForms = changedIndexes.map((index) => `« ${wrongWords[index]} »`).join(changedIndexes.length > 1 ? ' and ' : '')
+  if (/^(?:nous|vous)$/u.test(subjectKey)) {
+    return `The subject « ${subject} » takes its matching verb form, so use ${correctedForms} rather than ${wrongForms}.`
+  }
+  return `The subject « ${subject} » is ${plural ? 'plural' : 'singular'}, so use ${correctedForms} rather than ${wrongForms}.`
+}
+
+function correctionSegments(seed: UnitPackSeed): CorrectionSegment[] {
+  const supporting = [
+    { id: 'source', text: asSentence(seed.transformationSource) },
+    { id: 'rewrite', text: asSentence(seed.transformationAnswer) },
+    { id: 'instruction', text: asSentence(seed.imperative) },
+  ]
+  supporting.splice(correctionPosition(seed.unitId), 0, { id: 'error', text: asSentence(seed.correctionWrong) })
+  return supporting
+}
 
 function sharesContentWord(left: string, right: string): boolean {
   const words = (value: string) => value.toLocaleLowerCase('fr').match(/\p{L}{6,}/gu) ?? []
@@ -164,18 +199,11 @@ export function createUnitPack(seed: UnitPackSeed): UnitPack {
     targetId: targetIds.correction,
     kind: 'correction',
     ...(isScaffold ? { promptLanguage: 'en' as const, contextLanguage: 'fr' as const } : {}),
-    prompt: isScaffold ? 'Which segment has an error?' : 'Quel segment contient l’erreur?',
-    segments: [
-      { id: 'a', text: isScaffold ? 'La phrase :' : `Pour ${goal}, la note indique que` },
-      { id: 'b', text: correctionWrong },
-      { id: 'c', text: isScaffold || isFoundation ? 'avant la réunion.' : 'afin d’obtenir' },
-      { id: 'd', text: isScaffold ? 'Merci.' : `${result}.` },
-    ],
-    answerSegmentId: 'b',
+    prompt: isScaffold ? 'Which part has an error?' : 'Quelle partie contient l’erreur?',
+    segments: correctionSegments(seed),
+    answerSegmentId: 'error',
     correction: correctionRight,
-    feedback: isScaffold
-      ? `Choose the segment with the incorrect French form: « ${correctionWrong} ».`
-      : `La correction « ${correctionRight} » rend la phrase grammaticalement correcte.`,
+    feedback: agreementFeedback(correctionWrong, correctionRight),
   }
   const passage: Passage = {
     id: passageId,
