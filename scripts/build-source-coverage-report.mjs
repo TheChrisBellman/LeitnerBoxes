@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import { execFileSync } from 'node:child_process'
-import { a04SourceSupplements, isQuarantinedSourceKey, quarantinedSourceKeys, sourceVocabulary } from '../src/data/source-vocabulary.ts'
+import { a04SourceSupplements, baselineSourceRows, isQuarantinedSourceKey, quarantinedSourceKeys, sourceVocabulary } from '../src/data/source-vocabulary.ts'
+import { englishEvidenceFragments } from '../src/data/source-evidence.ts'
 import { sourceSupplements } from '../src/data/source-supplements.ts'
 import { sourceSupplements1120 } from '../src/data/source-supplements-11-20.ts'
 import { sourceSupplements2140 } from '../src/data/source-supplements-21-40.ts'
@@ -146,6 +147,7 @@ const findLineEvidence = (pdf, query, section, category, evidenceType = 'source-
   }
   return undefined
 }
+const englishMatches = (answer, text) => englishEvidenceFragments(answer).length > 0 && englishEvidenceFragments(answer).every((fragment) => sequenceIncludes(fragment, text))
 const findPrimaryEvidence = (row) => {
   const override = baselineEvidenceOverrides.get(`${row.lessonId}|${norm(row.french)}`)
   if (override) return findLineEvidence(override.pdf, override.query, override.section, override.category)
@@ -158,6 +160,16 @@ const findPrimaryEvidence = (row) => {
     if (!records.length) continue
     const keyStart = data.keyStart
     const primaryEnd = keyStart >= 0 ? keyStart : records.length
+    for (let index = 0; index < primaryEnd; index += 1) {
+      const frenchWindow = data.normalizedLines.slice(index, Math.min(primaryEnd, index + 4)).join(' ')
+      if (!sequenceIncludes(row.french, frenchWindow)) continue
+      const start = Math.max(0, index - 20)
+      const end = Math.min(primaryEnd, index + 24)
+      const evidenceWindow = data.normalizedLines.slice(start, end).join(' ')
+      if (englishMatches(row.answer, evidenceWindow)) {
+        return { pdf: pdf.replace(/\.txt$/i, '.pdf'), page: records[index].page, lineRange: `${records[start].line}-${records[end - 1].line}`, section: 'previously reviewed source candidate', category: 'vocabulary', evidenceType: 'source-table' }
+      }
+    }
     for (let index = 0; index < primaryEnd; index += 1) {
       const window = data.normalizedLines.slice(index, Math.min(primaryEnd, index + 4)).join(' ')
       if (sequenceIncludes(row.french, window)) {
@@ -177,12 +189,42 @@ const findPrimaryEvidence = (row) => {
   }
   return undefined
 }
-const baselineEvidence = beforeRows.map((row) => ({ ...row, evidence: findPrimaryEvidence(row) }))
-const baselineWithoutEvidence = baselineEvidence.filter((row) => !row.evidence)
-const baselineAnswerKeyOnly = baselineEvidence.filter((row) => row.evidence?.evidenceType === 'answer-key-confirmation')
 const allSupplementRows = [...a04SourceSupplements, ...sourceSupplements, ...sourceSupplements1120, ...sourceSupplements2140, ...sourceSupplementsC, ...sourceSupplementsFollowup]
 const supplementRowsQuarantined = allSupplementRows.filter((row) => quarantinedSourceKeys.has(sourceKey(row.lessonId, row.french)))
 const supplementRows = allSupplementRows.filter((row) => !quarantinedSourceKeys.has(sourceKey(row.lessonId, row.french)))
+const supplementEvidenceByKey = new Map(supplementRows.map((row) => [sourceKey(row.lessonId, row.french), row.evidence]))
+const baselineEvidence = baselineSourceRows.map((row) => ({ ...row, evidence: supplementEvidenceByKey.get(sourceKey(row.lessonId, row.french)) ?? findPrimaryEvidence(row) }))
+const baselineWithoutEvidence = baselineEvidence.filter((row) => !row.evidence)
+const baselineAnswerKeyOnly = baselineEvidence.filter((row) => row.evidence?.evidenceType === 'answer-key-confirmation')
+const baselineBilingualEvidence = baselineEvidence.map((row) => {
+  if (!row.evidence) return { ...row, frenchPrimaryMatch: false, englishPrimaryMatch: false, primaryEvidenceMatch: false, primaryRangeMatch: false }
+  const data = pdfData(row.evidence.pdf.replace(/\.pdf$/i, '.txt'))
+  const [rangeStart, rangeEnd] = row.evidence.lineRange.split('-').map((value) => Number(value))
+  const primaryText = data.normalizedLines.slice(Math.max(0, (rangeStart || 1) - 1), rangeEnd || data.normalizedLines.length).join(' ')
+  const frenchPrimaryMatch = sequenceIncludes(row.french, data.primaryText)
+  const frenchRangeMatch = sequenceIncludes(row.french, primaryText)
+  const englishFragments = englishEvidenceFragments(row.answer)
+  const englishPrimaryMatch = englishFragments.length > 0 && englishFragments.every((fragment) => sequenceIncludes(fragment, data.primaryText))
+  const englishRangeMatch = englishFragments.length > 0 && englishFragments.every((fragment) => sequenceIncludes(fragment, primaryText))
+  return { ...row, frenchPrimaryMatch, frenchRangeMatch, englishPrimaryMatch, englishRangeMatch, primaryEvidenceMatch: frenchPrimaryMatch && englishPrimaryMatch, primaryRangeMatch: frenchRangeMatch && englishRangeMatch }
+})
+const baselineBilingualMismatchesAll = baselineBilingualEvidence.filter((row) => !row.primaryEvidenceMatch)
+const baselineBilingualRangeMismatchesAll = baselineBilingualEvidence.filter((row) => !row.primaryRangeMatch)
+const activeBaselineBilingualEvidence = baselineBilingualEvidence.filter((row) => !isQuarantinedSourceKey(sourceKey(row.lessonId, row.french)))
+const baselineBilingualMismatches = activeBaselineBilingualEvidence.filter((row) => !row.primaryEvidenceMatch)
+const baselineBilingualRangeMismatches = activeBaselineBilingualEvidence.filter((row) => !row.primaryRangeMatch)
+const baselineFailureKeys = new Set([...baselineBilingualMismatchesAll, ...baselineBilingualRangeMismatchesAll].map((row) => sourceKey(row.lessonId, row.french)))
+const baselineAnswerKeyOnlyKeys = new Set(baselineAnswerKeyOnly.map((row) => sourceKey(row.lessonId, row.french)))
+const unquarantinedBaselineFailures = [...baselineFailureKeys].filter((key) => !isQuarantinedSourceKey(key))
+const unexpectedBaselineQuarantine = baselineQuarantined.filter((key) => !baselineFailureKeys.has(key) && !baselineAnswerKeyOnlyKeys.has(key))
+const answerKey = (value) => String(value ?? '').trim().toLocaleLowerCase('en').replace(/[‘’]/g, "'").replace(/\s+/g, ' ')
+const baselineByKey = new Map(baselineSourceRows.map((row) => [sourceKey(row.lessonId, row.french), row]))
+const activeSupplementAnswerConflicts = supplementRows.filter((row) => {
+  const baseline = baselineByKey.get(sourceKey(row.lessonId, row.french))
+  return baseline && answerKey(baseline.answer) !== answerKey(row.answer)
+}).map((row) => ({ key: sourceKey(row.lessonId, row.french), baseline: baselineByKey.get(sourceKey(row.lessonId, row.french)).answer, supplement: row.answer }))
+const evidenceRowsByKey = Object.groupBy([...baselineSourceRows, ...supplementRows], (row) => sourceKey(row.lessonId, row.french))
+const runtimeAnswerConflicts = sourceVocabulary.flatMap((card) => (evidenceRowsByKey[sourceKey(card.lessonId, card.french)] ?? []).filter((row) => answerKey(row.answer) !== answerKey(card.answer)).map((row) => ({ id: card.id, key: sourceKey(card.lessonId, card.french), card: card.answer, evidence: row.answer })))
 const evidenceKeys = new Set([...baselineEvidence, ...supplementRows].map((row) => sourceKey(row.lessonId, row.french)))
 const sourceCardsWithoutEvidence = sourceVocabulary.filter((row) => !evidenceKeys.has(sourceKey(row.lessonId, row.french)))
 const baselineAligned = baselineEvidence.filter((row) => sourceKeys.has(sourceKey(row.lessonId, row.french)))
@@ -294,6 +336,7 @@ const report = {
   a04: { before: beforeByUnit['a-04']?.length ?? 0, after: afterByUnit['a-04']?.length ?? 0, sourceTerms: afterByUnit['a-04']?.map((row) => row.french) ?? [] },
   unitChanges,
   baselineQuarantined,
+  supplementQuarantined: supplementRowsQuarantined.map((row) => ({ lessonId: row.lessonId, french: row.french, answer: row.answer, evidence: row.evidence })),
   checks: {
     duplicatePrompts,
     duplicateSourceIds,
@@ -317,13 +360,30 @@ const report = {
     primaryEvidenceRangeMismatches: primaryEvidenceRangeMismatches.length,
     primaryEnglishEvidenceMismatches: sourceSupplementEvidence.filter((row) => !row.englishPrimaryMatch).length,
     primaryEnglishRangeMismatches: sourceSupplementEvidence.filter((row) => !row.englishRangeMatch).length,
+    baselineBilingualFailures: baselineBilingualMismatchesAll.length,
+    baselineBilingualRangeFailures: baselineBilingualRangeMismatchesAll.length,
+    baselineBilingualMismatches: baselineBilingualMismatches.length,
+    baselineBilingualRangeMismatches: baselineBilingualRangeMismatches.length,
+    unquarantinedBaselineFailures: unquarantinedBaselineFailures.length,
+    unexpectedBaselineQuarantine: unexpectedBaselineQuarantine.length,
+    activeSupplementAnswerConflicts: activeSupplementAnswerConflicts.length,
+    runtimeAnswerConflicts: runtimeAnswerConflicts.length,
     combinedCards: allCards.length,
     combinedTargets: allTargets.length,
   },
   files,
   sourceSupplementEvidence,
   baselineEvidence,
+  baselineBilingualEvidence,
+  baselineBilingualMismatchesAll,
+  baselineBilingualRangeMismatchesAll,
+  baselineBilingualMismatches,
+  baselineBilingualRangeMismatches,
+  unquarantinedBaselineFailures,
+  unexpectedBaselineQuarantine,
+  activeSupplementAnswerConflicts,
+  runtimeAnswerConflicts,
 }
 fs.writeFileSync('.tmp/source-coverage-report.json', JSON.stringify(report, null, 2))
-console.log(JSON.stringify({ pdfCount: report.pdfCount, dispositions: report.dispositions, answerKeyBearingPdfs: report.answerKeyBearingPdfs, answerKeyMarkerCount: report.answerKeyMarkerCount, sourceCards: report.sourceCards, sourceUnits: report.sourceUnits, emptySourceUnits: report.emptySourceUnits, a04: report.a04, supplementRows: report.checks.supplementRows, supplementCategories: report.checks.supplementCategories, answerKeyConfirmedSupplements: report.checks.supplementRowsWithAnswerKeyConfirmation, supplementRowsQuarantined: report.checks.supplementRowsQuarantined, baselineRows: report.checks.baselineRows, baselineRowsQuarantined: report.checks.baselineRowsQuarantined, baselineWithoutEvidence: report.checks.baselineWithoutEvidence, baselineAnswerKeyOnly: report.checks.baselineAnswerKeyOnly, baselineAnswerKeyOnlyAligned: report.checks.baselineAnswerKeyOnlyAligned, sourceCardsWithoutEvidence: report.checks.sourceCardsWithoutEvidence, baselineIdsChanged: report.checks.baselineIdsChanged, checks: report.checks }))
-if (report.pdfCount !== 76 || report.sourceUnits !== 61 || report.emptySourceUnits.length || report.checks.duplicatePrompts || report.checks.duplicateSourceIds || report.checks.malformedForms || report.checks.choiceFailures || report.checks.supplementMissingEvidence || report.checks.baselineWithoutEvidence || report.checks.baselineRowsQuarantined !== report.checks.baselineAnswerKeyOnly || report.checks.baselineAnswerKeyOnlyAligned || report.checks.sourceCardsWithoutEvidence || report.checks.baselineIdsChanged || report.checks.primaryEvidenceMismatches || report.checks.primaryEvidenceRangeMismatches || !report.checks.allTargetIdsUnique) process.exitCode = 1
+console.log(JSON.stringify({ pdfCount: report.pdfCount, dispositions: report.dispositions, answerKeyBearingPdfs: report.answerKeyBearingPdfs, answerKeyMarkerCount: report.answerKeyMarkerCount, sourceCards: report.sourceCards, sourceUnits: report.sourceUnits, emptySourceUnits: report.emptySourceUnits, a04: report.a04, supplementRows: report.checks.supplementRows, supplementRowsQuarantined: report.checks.supplementRowsQuarantined, baselineRows: report.checks.baselineRows, baselineRowsQuarantined: report.checks.baselineRowsQuarantined, checks: report.checks }))
+if (report.pdfCount !== 76 || report.sourceUnits !== 61 || report.emptySourceUnits.length || report.checks.duplicatePrompts || report.checks.duplicateSourceIds || report.checks.malformedForms || report.checks.choiceFailures || report.checks.supplementMissingEvidence || report.checks.baselineWithoutEvidence || report.checks.baselineAnswerKeyOnlyAligned || report.checks.sourceCardsWithoutEvidence || report.checks.baselineIdsChanged || report.checks.primaryEvidenceMismatches || report.checks.primaryEvidenceRangeMismatches || report.checks.baselineBilingualMismatches || report.checks.baselineBilingualRangeMismatches || report.checks.unquarantinedBaselineFailures || report.checks.unexpectedBaselineQuarantine || report.checks.activeSupplementAnswerConflicts || report.checks.runtimeAnswerConflicts || !report.checks.allTargetIdsUnique) process.exitCode = 1
