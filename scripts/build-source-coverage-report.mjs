@@ -217,6 +217,15 @@ const baselineFailureKeys = new Set([...baselineBilingualMismatchesAll, ...basel
 const baselineAnswerKeyOnlyKeys = new Set(baselineAnswerKeyOnly.map((row) => sourceKey(row.lessonId, row.french)))
 const unquarantinedBaselineFailures = [...baselineFailureKeys].filter((key) => !isQuarantinedSourceKey(key))
 const unexpectedBaselineQuarantine = baselineQuarantined.filter((key) => !baselineFailureKeys.has(key) && !baselineAnswerKeyOnlyKeys.has(key))
+const baselineQuarantineDetails = baselineBilingualEvidence.filter((row) => baselineQuarantined.includes(sourceKey(row.lessonId, row.french))).map((row) => ({
+  key: sourceKey(row.lessonId, row.french),
+  lessonId: row.lessonId,
+  french: row.french,
+  answer: row.answer,
+  reason: row.evidence?.evidenceType === 'answer-key-confirmation' ? 'answer-key-only' : !row.englishPrimaryMatch ? 'no-primary-English' : 'no-same-table-mapping',
+  evidence: row.evidence,
+}))
+const baselineQuarantineReasons = Object.fromEntries(Object.entries(Object.groupBy(baselineQuarantineDetails, (row) => row.reason)).map(([key, rows]) => [key, rows.length]))
 const answerKey = (value) => String(value ?? '').trim().toLocaleLowerCase('en').replace(/[‘’]/g, "'").replace(/\s+/g, ' ')
 const baselineByKey = new Map(baselineSourceRows.map((row) => [sourceKey(row.lessonId, row.french), row]))
 const activeSupplementAnswerConflicts = supplementRows.filter((row) => {
@@ -336,6 +345,7 @@ const report = {
   a04: { before: beforeByUnit['a-04']?.length ?? 0, after: afterByUnit['a-04']?.length ?? 0, sourceTerms: afterByUnit['a-04']?.map((row) => row.french) ?? [] },
   unitChanges,
   baselineQuarantined,
+  baselineQuarantineDetails,
   supplementQuarantined: supplementRowsQuarantined.map((row) => ({ lessonId: row.lessonId, french: row.french, answer: row.answer, evidence: row.evidence })),
   checks: {
     duplicatePrompts,
@@ -348,6 +358,7 @@ const report = {
     supplementMissingEvidence: supplementMissingEvidence.length,
     baselineRows: baselineEvidence.length,
     baselineRowsQuarantined: baselineQuarantined.length,
+    baselineQuarantineReasons,
     baselineWithoutEvidence: baselineWithoutEvidence.length,
     baselineAnswerKeyOnly: baselineAnswerKeyOnly.length,
     baselineAnswerKeyOnlyAligned: baselineAnswerKeyOnlyAligned.length,
@@ -386,4 +397,4 @@ const report = {
 }
 fs.writeFileSync('.tmp/source-coverage-report.json', JSON.stringify(report, null, 2))
 console.log(JSON.stringify({ pdfCount: report.pdfCount, dispositions: report.dispositions, answerKeyBearingPdfs: report.answerKeyBearingPdfs, answerKeyMarkerCount: report.answerKeyMarkerCount, sourceCards: report.sourceCards, sourceUnits: report.sourceUnits, emptySourceUnits: report.emptySourceUnits, a04: report.a04, supplementRows: report.checks.supplementRows, supplementRowsQuarantined: report.checks.supplementRowsQuarantined, baselineRows: report.checks.baselineRows, baselineRowsQuarantined: report.checks.baselineRowsQuarantined, checks: report.checks }))
-if (report.pdfCount !== 76 || report.sourceUnits !== 61 || report.emptySourceUnits.length || report.checks.duplicatePrompts || report.checks.duplicateSourceIds || report.checks.malformedForms || report.checks.choiceFailures || report.checks.supplementMissingEvidence || report.checks.baselineWithoutEvidence || report.checks.baselineAnswerKeyOnlyAligned || report.checks.sourceCardsWithoutEvidence || report.checks.baselineIdsChanged || report.checks.primaryEvidenceMismatches || report.checks.primaryEvidenceRangeMismatches || report.checks.baselineBilingualMismatches || report.checks.baselineBilingualRangeMismatches || report.checks.unquarantinedBaselineFailures || report.checks.unexpectedBaselineQuarantine || report.checks.activeSupplementAnswerConflicts || report.checks.runtimeAnswerConflicts || !report.checks.allTargetIdsUnique) process.exitCode = 1
+if (report.pdfCount !== 76 || report.sourceUnits !== 61 || report.emptySourceUnits.length || report.checks.duplicatePrompts || report.checks.duplicateSourceIds || report.checks.malformedForms || report.checks.choiceFailures || report.checks.supplementMissingEvidence || report.checks.baselineWithoutEvidence || report.checks.baselineQuarantineReasons['answer-key-only'] !== report.checks.baselineAnswerKeyOnly || report.checks.baselineAnswerKeyOnlyAligned || report.checks.sourceCardsWithoutEvidence || report.checks.baselineIdsChanged || report.checks.primaryEvidenceMismatches || report.checks.primaryEvidenceRangeMismatches || report.checks.baselineBilingualMismatches || report.checks.baselineBilingualRangeMismatches || report.checks.unquarantinedBaselineFailures || report.checks.unexpectedBaselineQuarantine || report.checks.activeSupplementAnswerConflicts || report.checks.runtimeAnswerConflicts || !report.checks.allTargetIdsUnique) process.exitCode = 1
