@@ -928,9 +928,8 @@ for (const key of additionalBaselineQuarantineKeys) {
 }
 
 const sourceTier: CardTier = 'expansion'
-export type VocabularyChoiceFamily = 'question' | 'sentence' | 'infinitive' | 'noun' | 'pronoun' | 'subject-form' | 'contraction' | 'connector' | 'function' | 'weekday' | 'month' | 'sequence' | 'duration' | 'number-time' | 'adverb' | 'modifier' | 'expression'
+export type VocabularyChoiceFamily = 'question' | 'sentence' | 'infinitive' | 'verb-form' | 'noun' | 'pronoun' | 'subject-form' | 'contraction' | 'connector' | 'function' | 'weekday' | 'month' | 'sequence' | 'duration' | 'number-time' | 'adverb' | 'modifier' | 'expression'
 
-const frenchInfinitive = /^(?:(?:se|s['’])\s*)?(?:[\p{L}’-]+(?:er|ir|re|oir)|être|avoir|aller|faire|pouvoir|devoir|savoir|vouloir|venir|tenir|prendre|mettre|dire|lire|écrire|voir|recevoir|falloir)(?:\s|$)/iu
 const englishFunction = /^(?:of|to|from|at|in|on|with|without|for|by|before|after|during|between|among|under|over|through|toward|towards|until|since|as|than|thanks to|because of|due to)(?:\s|$)/i
 const frenchFunction = /^(?:de|du|des|à|au|aux|chez|dans|en|sur|sous|avec|sans|pour|par|avant|après|depuis|pendant|entre|vers|jusqu|dès|grâce à|à cause de|en raison de|quant à)(?:\s|\+|$)/iu
 const frenchConnector = /^(?:bien que|quoique|pourvu que|à condition que|même si|si|quand|lorsque|parce que|puisque|afin que|pour que|tandis que|alors que|comme)\b/iu
@@ -945,6 +944,7 @@ const frenchSequence = /^(?:d’abord|en dernier|premi(?:er|ère)|deuxième|troi
 const englishDuration = /^(?:\d|one|two|three|four|five|six|seven|eight|nine|ten)\s+(?:minutes?|hours?|days?|weeks?|months?|years?)\b/i
 const frenchDuration = /\b(?:minutes?|heures?|jours?|semaines?|mois|ans?|années?)\b/iu
 const englishNumberOrTime = /^(?:\d|one|two|three|four|five|six|seven|eight|nine|ten|half|quarter|double|twice|once)\b/i
+const frenchVerbForm = /^(?:[\p{L}’-]+(?:ait|aient)|peut|peuvent|doit|doivent|a|ont|est|sont)\b/iu
 
 export function vocabularyChoiceFamily(row: { french: string; answer: string }): VocabularyChoiceFamily {
   const english = row.answer.trim()
@@ -954,7 +954,8 @@ export function vocabularyChoiceFamily(row: { french: string; answer: string }):
   if (english.endsWith('?') || french.endsWith('?')) return 'question'
   if (/[.!…]$/u.test(english) || /[.!…]$/u.test(french)) return 'sentence'
   if (/^(?:de|à)\s*\+\s*(?:le|les|un|une)\s*=/iu.test(french) || /^(?:of|to|from|at) the$/i.test(english)) return 'contraction'
-  if (/^(?:not\s+)?to\b/i.test(english) && frenchInfinitive.test(french)) return 'infinitive'
+  if (/^(?:not\s+)?to\s+\S+/i.test(english)) return 'infinitive'
+  if (/^(?:would|can|could|must|should|will|is|are|has|have|was|were)\s+\S+/i.test(english) || (!english && frenchVerbForm.test(french))) return 'verb-form'
   if (frenchConnector.test(french)) return 'connector'
   if (englishFunction.test(english) || frenchFunction.test(french)) return 'function'
   if (/^(?:i|you|he|she|it|we|they)\s+\S+/i.test(english) || /^(?:j['’]\p{L}+|(?:je|tu|il|elle|on|nous|vous|ils|elles|ce)\s+\S+)/iu.test(french)) return 'subject-form'
@@ -962,7 +963,7 @@ export function vocabularyChoiceFamily(row: { french: string; answer: string }):
   if (englishWeekday.test(english) || frenchWeekday.test(french)) return 'weekday'
   if (englishMonth.test(english) || frenchMonth.test(french)) return 'month'
   if (englishSequence.test(english) || frenchSequence.test(french)) return 'sequence'
-  if (englishDuration.test(english) || frenchDuration.test(french)) return 'duration'
+  if (englishDuration.test(english) || (!english && frenchDuration.test(french))) return 'duration'
   if (englishNumberOrTime.test(english)) return 'number-time'
   if (/^(?:a|an|the|some|no)\b/i.test(english) || /^(?:un|une|le|la|l['’]|les)\s*/iu.test(french) || (/^[A-Z]/u.test(english) && !/^I\b/u.test(english))) return 'noun'
   if (/ly$/i.test(englishLower) || /ment$/iu.test(frenchLower)) return 'adverb'
@@ -972,6 +973,7 @@ export function vocabularyChoiceFamily(row: { french: string; answer: string }):
 
 const fallbackAnswers: Partial<Record<VocabularyChoiceFamily, string[]>> = {
   question: ['who is it?', 'where is it?', 'when is it?'],
+  'verb-form': ['would prefer', 'can continue', 'must stop', 'has finished'],
   contraction: ['to the', 'from the', 'at the'],
   sequence: ['first', 'second', 'third', 'fourth', 'last'],
   duration: ['one hour early', 'two days late', 'three weeks ahead', 'four months later'],
@@ -980,6 +982,7 @@ const fallbackAnswers: Partial<Record<VocabularyChoiceFamily, string[]>> = {
 
 const fallbackFrench: Partial<Record<VocabularyChoiceFamily, Array<{ french: string; answer: string }>>> = {
   question: [{ french: 'qui est-ce?', answer: 'who is it?' }, { french: 'où est-ce?', answer: 'where is it?' }, { french: 'quand est-ce?', answer: 'when is it?' }],
+  'verb-form': [{ french: 'préférerait', answer: 'would prefer' }, { french: 'peut continuer', answer: 'can continue' }, { french: 'doit s’arrêter', answer: 'must stop' }, { french: 'a terminé', answer: 'has finished' }],
   contraction: [{ french: 'à + le = au', answer: 'to the' }, { french: 'à + les = aux', answer: 'to the' }, { french: 'de + un = d’un', answer: 'of a' }, { french: 'de + une = d’une', answer: 'of a' }],
   sequence: [{ french: 'd’abord', answer: 'first' }, { french: 'deuxième', answer: 'second' }, { french: 'troisièmement', answer: 'third' }, { french: 'quatrièmement', answer: 'fourth' }, { french: 'en dernier', answer: 'last' }],
   duration: [{ french: 'une heure d’avance', answer: 'one hour early' }, { french: 'deux jours de retard', answer: 'two days late' }, { french: 'trois semaines d’avance', answer: 'three weeks ahead' }, { french: 'quatre mois plus tard', answer: 'four months later' }],
