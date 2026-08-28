@@ -2103,6 +2103,22 @@ button:disabled {
   width: 100%;
 }
 
+.skip-action {
+  display: grid;
+  justify-items: start;
+  gap: 5px;
+}
+
+.skip-button {
+  min-height: 44px;
+}
+
+.skip-action > span {
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .box-journey {
   --journey-accent: var(--green);
   --journey-hop: -34px;
@@ -2989,37 +3005,39 @@ button:disabled {
   }
 
   .quiz-workspace {
-    min-height: clamp(420px, 55dvh, 560px);
+    min-height: 0;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr);
+    grid-template-rows: auto;
     gap: 32px;
-    align-items: stretch;
+    align-items: start;
   }
 
   .quiz-prompt-column,
   .quiz-answer-column {
     min-height: 0;
-    align-content: stretch;
+    align-content: start;
   }
 
   .quiz-prompt-column {
     position: static;
-    grid-template-rows: minmax(0, 1fr);
+    grid-template-rows: auto;
   }
 
   .quiz-answer-column {
-    grid-template-rows: auto auto;
-    align-content: center;
+    grid-template-rows: auto auto auto;
+    align-content: start;
   }
 
   .quiz-prompt-column .prompt-card {
-    height: 100%;
+    height: auto;
     min-height: 0;
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    align-content: start;
+    gap: 24px;
   }
 
   .quiz-prompt-column .prompt-copy {
-    align-self: center;
+    align-self: start;
   }
 
   .quiz-answer-column .feedback-panel {
@@ -3117,6 +3135,15 @@ button:disabled {
     height: 100%;
     min-height: 0;
     padding: clamp(28px, 4vw, 64px);
+  }
+
+  .app-shell.is-presentation .quiz-prompt-column .prompt-card {
+    grid-template-rows: auto minmax(0, 1fr);
+    align-content: space-between;
+  }
+
+  .app-shell.is-presentation .quiz-prompt-column .prompt-copy {
+    align-self: center;
   }
 
   .app-shell.is-presentation .prompt-copy {

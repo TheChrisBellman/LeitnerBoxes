@@ -46,6 +46,7 @@ type SessionStats = {
   promotions: number
   misses: number
   repairs: number
+  skipped: number
 }
 
 type ShelfMotion = {
@@ -833,6 +834,7 @@ function QuizScreen({
   onAnswer,
   onStartRepair,
   onContinue,
+  onSkip,
   onExit,
   onMenu,
   menuOpen,
@@ -850,6 +852,7 @@ function QuizScreen({
   onAnswer: (choice: string) => void
   onStartRepair: () => void
   onContinue: () => void
+  onSkip: () => void
   onExit: () => void
   onMenu: () => void
   menuOpen: boolean
@@ -1091,6 +1094,10 @@ function QuizScreen({
             </div>
             <button type="button" className="button button-primary arrange-check" onClick={submitArrangedAnswer} disabled={remainingTokenIndexes.length > 0 || Boolean(feedback)}>Check answer</button>
           </div>}
+          {!feedback && !repairing && <div className="skip-action">
+            <button type="button" className="button button-secondary skip-button" onClick={onSkip}>Skip for now</button>
+            <span>No penalty. This item stays in your pile.</span>
+          </div>}
           {feedback && !feedback.correct && <FeedbackPanel question={question} feedback={feedback} index={index} total={total} onStartRepair={onStartRepair} onContinue={onContinue} />}
         </div>
       </div>
@@ -1124,11 +1131,11 @@ function ResultsScreen({ results, shelf, hasMoreCards, onDone, onKeepGoing }: { 
   const accuracy = results.total === 0 ? 0 : Math.round((results.correct / results.total) * 100)
   return (
     <section className="page results-page session-results-page">
-      <ScreenHeader title="Session complete" description="First-try accuracy, repairs, and shelf movement." />
+      <ScreenHeader title="Session complete" description="First-try accuracy, repairs, skips, and shelf movement." />
       <div className="results-score surface-panel">
         <span className="screen-kicker">First-try accuracy</span>
         <strong>{accuracy}%</strong>
-        <p>{results.correct} correct answer{results.correct === 1 ? '' : 's'} out of {results.total} learning items. Repairs are practice, not first-try answers.</p>
+        <p>{results.correct} correct answer{results.correct === 1 ? '' : 's'} out of {results.total} answered item{results.total === 1 ? '' : 's'}. {results.skipped > 0 && `${results.skipped} skipped item${results.skipped === 1 ? '' : 's'} remain in your queue. `}Repairs are practice, not first-try answers.</p>
         <div className="results-actions"><button type="button" className="button button-primary" onClick={onDone}>Done <Icon name="check" size={16} /></button><button type="button" className="button button-secondary" onClick={onKeepGoing} disabled={!hasMoreCards}>{hasMoreCards ? 'Keep going' : 'All caught up'}{hasMoreCards && <Icon name="arrow" size={16} />}</button></div>
       </div>
       <div className="results-grid">
@@ -1156,7 +1163,7 @@ export default function App() {
   const [feedback, setFeedback] = useState<Feedback | null>(null)
   const [repairing, setRepairing] = useState(false)
   const [repairContext, setRepairContext] = useState<Feedback | null>(null)
-  const [sessionStats, setSessionStats] = useState<SessionStats>({ total: 0, correct: 0, promotions: 0, misses: 0, repairs: 0 })
+  const [sessionStats, setSessionStats] = useState<SessionStats>({ total: 0, correct: 0, promotions: 0, misses: 0, repairs: 0, skipped: 0 })
   const [results, setResults] = useState<SessionStats & { box5Count: number } | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [shelfMotion, setShelfMotion] = useState<ShelfMotion | null>(null)
@@ -1331,7 +1338,7 @@ export default function App() {
     setFeedback(null)
     setRepairing(false)
     setRepairContext(null)
-    setSessionStats({ total: nextQueue.length, correct: 0, promotions: 0, misses: 0, repairs: 0 })
+    setSessionStats({ total: nextQueue.length, correct: 0, promotions: 0, misses: 0, repairs: 0, skipped: 0 })
     setViewMode('normal')
     setNotice(null)
     setShelfMotion(null)
@@ -1374,6 +1381,21 @@ export default function App() {
     else answer(choice)
   }
 
+  function finishSession(stats: SessionStats) {
+    const completedStreak = completeStreak(state.streak, today)
+    const nextState = { ...state, streak: completedStreak }
+    commitState(nextState)
+    const nextMasteredLessonIds = getMasteredLessonIds(allTargets, nextState.progress)
+    const nextActiveLessonIds = focusedSession
+      ? sessionLessonIds
+      : nextState.selectedLessonIds.filter((id) => !nextMasteredLessonIds.has(id))
+    setResults({ ...stats, box5Count: shelfCounts(nextState.progress, nextActiveLessonIds, allTargets, sessionMode, nextState.enabledActivityTypes)[5] })
+    setScreen('results')
+    setFeedback(null)
+    setRepairing(false)
+    setRepairContext(null)
+  }
+
   function continueSession() {
     if (!feedback || repairing) return
     if (sessionIndex + 1 < session.length) {
@@ -1384,18 +1406,29 @@ export default function App() {
       setShelfMotion(null)
       return
     }
-    const completedStreak = completeStreak(state.streak, today)
-    const nextState = { ...state, streak: completedStreak }
-    commitState(nextState)
-    const nextMasteredLessonIds = getMasteredLessonIds(allTargets, nextState.progress)
-    const nextActiveLessonIds = focusedSession
-      ? sessionLessonIds
-      : nextState.selectedLessonIds.filter((id) => !nextMasteredLessonIds.has(id))
-    setResults({ ...sessionStats, box5Count: shelfCounts(nextState.progress, nextActiveLessonIds, allTargets, sessionMode, nextState.enabledActivityTypes)[5] })
-    setScreen('results')
+    finishSession(sessionStats)
+  }
+
+  function skipCurrentCard() {
+    if (!currentQuestion || feedback || repairing) return
+    const nextStats = { ...sessionStats, total: Math.max(0, sessionStats.total - 1), skipped: sessionStats.skipped + 1 }
+    setSessionStats(nextStats)
     setFeedback(null)
     setRepairing(false)
     setRepairContext(null)
+    setShelfMotion(null)
+    if (sessionIndex + 1 < session.length) {
+      setSession((current) => current.filter((_, index) => index !== sessionIndex))
+      return
+    }
+    if (nextStats.total === 0) {
+      setSession([])
+      setSessionIndex(0)
+      setNotice('Skipped cards stay in your queue for later. No progress was changed.')
+      setScreen('today')
+      return
+    }
+    finishSession(nextStats)
   }
 
   function exitSession() {
@@ -1457,7 +1490,7 @@ export default function App() {
     setFeedback(null)
     setRepairing(false)
     setRepairContext(null)
-    setSessionStats({ total: 0, correct: 0, promotions: 0, misses: 0, repairs: 0 })
+    setSessionStats({ total: 0, correct: 0, promotions: 0, misses: 0, repairs: 0, skipped: 0 })
     setResults(null)
     setNotice(null)
     setShelfMotion(null)
@@ -1536,7 +1569,7 @@ export default function App() {
   function renderScreen() {
     const hasMoreCards = sessionQueueCounts.overdue + sessionQueueCounts.due + sessionQueueCounts.newCards > 0
     if (screen === 'curriculum') return <CurriculumScreen selectedIds={activeLessonIds} masteredIds={masteredLessonIds} masteredSelectedCount={masteredSelectedLessonIds.size} selectedCardCount={selectedCardCount} practiceMode={state.practiceMode} unitCardCounts={unitCardCounts} onToggleLesson={toggleLesson} onToggleGroup={toggleGroup} onToggleLevel={toggleLevel} onPracticeUnit={(lessonId) => startSession([lessonId])} onBack={() => setScreen('today')} />
-    if (screen === 'quiz' && currentQuestion) return <QuizScreen question={currentQuestion} unit={currentUnit} currentBox={state.progress[currentQuestion.card.id]?.box ?? 1} index={sessionIndex} total={session.length} feedback={feedback} repairing={repairing} onAnswer={handleAnswer} onStartRepair={beginRepair} onContinue={continueSession} onExit={exitSession} onMenu={() => setMenuOpen(true)} menuOpen={menuOpen} menuTriggerRef={menuTriggerRef} viewMode={viewMode} onTogglePresentation={togglePresentationMode} />
+    if (screen === 'quiz' && currentQuestion) return <QuizScreen question={currentQuestion} unit={currentUnit} currentBox={state.progress[currentQuestion.card.id]?.box ?? 1} index={sessionIndex} total={session.length} feedback={feedback} repairing={repairing} onAnswer={handleAnswer} onStartRepair={beginRepair} onContinue={continueSession} onSkip={skipCurrentCard} onExit={exitSession} onMenu={() => setMenuOpen(true)} menuOpen={menuOpen} menuTriggerRef={menuTriggerRef} viewMode={viewMode} onTogglePresentation={togglePresentationMode} />
     if (screen === 'results') return results ? <ResultsScreen results={results} shelf={sessionShelf} hasMoreCards={hasMoreCards} onDone={() => setScreen('today')} onKeepGoing={() => startSession(sessionLessonIds)} /> : <ProgressionOverviewScreen state={state} shelf={shelf} activeUnits={activeUnits} onToday={() => setScreen('today')} onCurriculum={() => setScreen('curriculum')} />
     return <TodayScreen counts={shelf} queueCounts={queueCounts} activeUnits={activeUnits} masteredSelectedCount={masteredSelectedLessonIds.size} dailyGoal={state.dailyGoal} practiceMode={state.practiceMode} missMode={state.missMode} selectedCardCount={selectedCardCount} readyCardCount={readyCardCount} onStart={() => startSession()} notice={notice} motion={shelfMotion} />
   }

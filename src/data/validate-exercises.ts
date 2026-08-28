@@ -1,4 +1,5 @@
 import { allExercises, allPassages, allScenarios, exerciseTargets } from './pilot-exercises.ts'
+import { unitPacksA } from './unit-packs-a.ts'
 import { curriculumUnits } from './curriculum.ts'
 import type { AuthoredExercise, ExerciseKind } from './types.ts'
 
@@ -14,6 +15,14 @@ export const SEMANTIC_EXERCISE_KINDS: ExerciseKind[] = [
 const unique = (values: readonly string[]) => new Set(values).size === values.length
 const invalidContraction = /(?:au sujet|cadre) de (?:le|les|un|une)\b|liées à (?:le|les)\b/iu
 const invalidInfinitiveElision = /\b(?:éviter|demande) de (?=[aeiouyàâéèêëîïôùûüœ])/iu
+const scaffoldAUnits = new Set(['a-01', 'a-02', 'a-03', 'a-04'])
+const earlyAUnit = /^a-(?:0[1-9]|1[0-2])$/
+const repeatedDocumentFrame = /documents(?: de référence)?[^.?!]*dans le cadre[^.?!]*documents(?: de référence)?/iu
+const topicsByUnit = new Map(unitPacksA.map((seed) => [seed.unitId, seed.topic]))
+
+function phraseCount(text: string, phrase: string): number {
+  return phrase ? text.split(phrase).length - 1 : 0
+}
 
 function exerciseChoices(exercise: AuthoredExercise): string[] {
   if ('distractors' in exercise) return [exercise.answer, ...exercise.distractors]
@@ -55,6 +64,16 @@ export function validateAuthoredExercises(): string[] {
     if (invalidContraction.test(text)) failures.push(`invalid contraction: ${exercise.id}`)
     if (exercise.id.includes('-unit-pack-') && invalidInfinitiveElision.test(text)) failures.push(`invalid infinitive elision: ${exercise.id}`)
     if (exercise.id.includes('-unit-pack-') && /\bJe vais [^.?!]*(?:\bson\b|\bses\b)/iu.test(text)) failures.push(`wrong first-person possessive: ${exercise.id}`)
+    if (exercise.id.includes('-unit-pack-') && earlyAUnit.test(exercise.unitId) && /dans le cadre/iu.test(text)) failures.push(`too-formal early A context: ${exercise.id}`)
+    if (exercise.id.includes('-unit-pack-') && exercise.kind === 'contextual-cloze' && repeatedDocumentFrame.test(text)) failures.push(`repeated topic in cloze context: ${exercise.id}`)
+    const topic = topicsByUnit.get(exercise.unitId)
+    if (exercise.id.includes('-unit-pack-') && topic && /dans le cadre/iu.test(text) && phraseCount(text, topic) > 1) failures.push(`repeated topic frame: ${exercise.id}`)
+    if (exercise.id.includes('-unit-pack-') && scaffoldAUnits.has(exercise.unitId)) {
+      const expectedPromptLanguage = exercise.kind === 'contextual-cloze' ? 'fr' : 'en'
+      const expectedContextLanguage = exercise.kind === 'correction' || exercise.kind === 'transformation' ? 'fr' : 'en'
+      if (exercise.promptLanguage !== expectedPromptLanguage) failures.push(`missing scaffold prompt language: ${exercise.id}`)
+      if (exercise.contextLanguage !== expectedContextLanguage) failures.push(`missing scaffold context language: ${exercise.id}`)
+    }
     const choices = exerciseChoices(exercise)
     if (choices.length > 0 && new Set(choices).size !== choices.length) failures.push(`duplicate choices: ${exercise.id}`)
     if (choices.length > 0 && choices.length !== 4 && exercise.kind !== 'correction') failures.push(`choice count is not four: ${exercise.id}`)
@@ -82,10 +101,16 @@ export function validateAuthoredExercises(): string[] {
     const text = JSON.stringify(passage)
     if (invalidContraction.test(text)) failures.push(`invalid passage contraction: ${passage.id}`)
     if (passage.id.includes('-unit-pack-') && invalidInfinitiveElision.test(text)) failures.push(`invalid passage infinitive elision: ${passage.id}`)
+    if (passage.id.includes('-unit-pack-') && earlyAUnit.test(passage.unitId) && /dans le cadre/iu.test(text)) failures.push(`too-formal early A passage: ${passage.id}`)
+    const topic = topicsByUnit.get(passage.unitId)
+    if (passage.id.includes('-unit-pack-') && topic && /dans le cadre/iu.test(text) && phraseCount(passage.text, topic) > 1) failures.push(`repeated topic frame: ${passage.id}`)
   }
   for (const scenario of allScenarios) {
     if (!unitIds.has(scenario.unitId)) failures.push(`unknown scenario unit: ${scenario.id}`)
     if (!scenario.title.trim() || !scenario.setup.trim() || scenario.nodes.length === 0) failures.push(`empty scenario: ${scenario.id}`)
+    if (scenario.id.includes('-unit-pack-') && earlyAUnit.test(scenario.unitId) && /dans le cadre/iu.test(JSON.stringify(scenario))) failures.push(`too-formal early A scenario: ${scenario.id}`)
+    const topic = topicsByUnit.get(scenario.unitId)
+    if (scenario.id.includes('-unit-pack-') && topic && /dans le cadre/iu.test(scenario.setup) && phraseCount(scenario.setup, topic) > 1) failures.push(`repeated topic frame: ${scenario.id}`)
   }
 
   for (const unitId of unitIds) {
