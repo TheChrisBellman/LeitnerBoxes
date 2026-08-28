@@ -1403,13 +1403,18 @@ button:disabled {
   cursor: pointer;
 }
 
+.unit-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.unit-start-button,
 .unit-practice-button {
   display: inline-flex;
-  width: 44px;
   min-height: 44px;
   align-items: center;
   justify-content: center;
-  padding: 0;
   border: 1px solid var(--line-strong);
   border-radius: 6px;
   background: var(--surface);
@@ -1418,21 +1423,37 @@ button:disabled {
   transition: border-color var(--motion-quick) ease, background-color var(--motion-quick) ease, color var(--motion-quick) ease, transform var(--motion-quick) var(--ease-standard);
 }
 
+.unit-start-button {
+  padding: 0 10px;
+  font-size: var(--font-size-meta);
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.unit-practice-button {
+  width: 44px;
+  padding: 0;
+}
+
+.unit-start-button:hover,
 .unit-practice-button:hover {
   border-color: var(--cobalt);
   background: var(--cobalt-soft);
   color: var(--cobalt-dark);
 }
 
+.unit-start-button:active:not(:disabled),
 .unit-practice-button:active:not(:disabled) {
   transform: translateY(1px) scale(0.97);
 }
 
+.unit-option.is-mastered .unit-start-button,
 .unit-option.is-mastered .unit-practice-button {
   border-color: var(--line);
   color: var(--green);
 }
 
+.unit-option.is-mastered .unit-start-button:hover,
 .unit-option.is-mastered .unit-practice-button:hover {
   border-color: var(--green);
   background: var(--green-soft);

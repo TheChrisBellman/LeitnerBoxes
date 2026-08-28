@@ -96,8 +96,13 @@ export const learningPilotLessons: readonly LearningPilotLesson[] = [
   { lessonId: 'a-03', cardIds: ['a-03-source-001', 'a-03-source-002', 'a-03-source-005', 'a-03-source-010', 'a-03-source-011', 'a-03-source-012'] },
 ]
 
-export function recommendedLearningPilotLesson(progress: Record<string, CardProgress>): LearningPilotLesson | undefined {
+export function recommendedLearningPilotLesson(
+  progress: Record<string, CardProgress>,
+  selectedLessonIds: readonly string[] = learningPilotLessons.map((lesson) => lesson.lessonId),
+): LearningPilotLesson | undefined {
+  const selected = new Set(selectedLessonIds)
   for (const lesson of learningPilotLessons) {
+    if (!selected.has(lesson.lessonId)) continue
     const started = lesson.cardIds.filter((cardId) => Boolean(progress[cardId])).length
     if (started === 0) return lesson
     if (started < lesson.cardIds.length) return undefined

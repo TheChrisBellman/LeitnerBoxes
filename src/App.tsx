@@ -483,6 +483,7 @@ function TodayScreen({
   motion,
   learningLesson,
   onStartLearn,
+  onChooseUnit,
 }: {
   counts: Record<Box, number>
   queueCounts: ReturnType<typeof getQueueCounts>
@@ -498,6 +499,7 @@ function TodayScreen({
   motion: ShelfMotion | null
   learningLesson?: LearningPilotLesson
   onStartLearn: () => void
+  onChooseUnit: () => void
 }) {
   const actionPanelRef = useRef<HTMLElement>(null)
 
@@ -564,7 +566,7 @@ function TodayScreen({
             {canStartLearn && <p>Preview six useful workplace terms before retrieving them.</p>}
           </div>
           {canStartLearn
-            ? <><button type="button" className="button button-primary button-large" onClick={onStartLearn}>Learn {learningLesson!.lessonId.toUpperCase()} <Icon name="arrow" size={17} /></button><button type="button" className="button button-secondary button-large" onClick={onStart} disabled={!hasCards}>{hasCards ? `Start ${sessionSize}-card practice` : 'No practice ready'}</button></>
+            ? <><button type="button" className="button button-primary button-large" onClick={onStartLearn}>Learn {learningLesson!.lessonId.toUpperCase()} <Icon name="arrow" size={17} /></button><button type="button" className="button button-secondary button-large" onClick={onChooseUnit}>Already studying? Choose your unit</button><button type="button" className="button button-secondary button-large" onClick={onStart} disabled={!hasCards}>{hasCards ? `Start ${sessionSize}-card practice` : 'No practice ready'}</button></>
             : <button type="button" className="button button-primary button-large" onClick={onStart} disabled={!hasCards}>
               {hasCards ? dueCount > 0 ? 'Review due cards' : `Start ${sessionSize}-card practice` : masteredOnly ? 'All caught up' : activeUnits.length === 0 ? 'Choose a curriculum first' : 'All caught up'}
               {hasCards && <Icon name="arrow" size={17} />}
@@ -585,6 +587,7 @@ function CurriculumScreen({
   onToggleLesson,
   onToggleGroup,
   onToggleLevel,
+  onStartUnit,
   onPracticeUnit,
   onBack,
 }: {
@@ -597,6 +600,7 @@ function CurriculumScreen({
   onToggleLesson: (lessonId: string) => void
   onToggleGroup: (group: string) => void
   onToggleLevel: (level: Level) => void
+  onStartUnit: (lessonId: string) => void
   onPracticeUnit: (lessonId: string) => void
   onBack: () => void
 }) {
@@ -611,6 +615,7 @@ function CurriculumScreen({
         <strong className="selection-total">{selectedCardCount}</strong>
         <span className="selection-label">learning items available</span>
         <p>{practiceModeLabel(practiceMode)} · {selectedIds.length > 0 ? `${selectedIds.length} active unit${selectedIds.length === 1 ? '' : 's'}.` : masteredSelectedCount > 0 ? `${masteredSelectedCount} mastered unit${masteredSelectedCount === 1 ? '' : 's'} will return for occasional refreshes.` : 'Choose at least one unit to start.'}</p>
+        <p>Choose <strong>Start here</strong> on any unit to make it your practice scope. Earlier units are not marked mastered.</p>
         <button type="button" className="button button-primary button-full" onClick={onBack} disabled={selectedIds.length === 0 && masteredSelectedCount === 0}>Practice selected units <Icon name="arrow" size={16} /></button>
       </div>
       <div className="curriculum-list">
@@ -657,7 +662,10 @@ function CurriculumScreen({
                                   <span className="unit-copy"><strong lang="fr">{unit.title}</strong><small>{unit.id.toUpperCase()}{mastered ? ' · Mastered · occasional refresh' : ''}</small></span>
                                 </label>
                                 <span className="unit-count">{mastered ? 'Mastered' : unitCardCounts[unit.id] ?? 0}</span>
-                                <button type="button" className="unit-practice-button" onClick={() => onPracticeUnit(unit.id)} aria-label={`Practice only ${unit.id.toUpperCase()}: ${unit.title}`} title={`Practice only ${unit.id.toUpperCase()}`}><Icon name="practice" size={16} /></button>
+                                <span className="unit-actions">
+                                  <button type="button" className="unit-start-button" onClick={() => onStartUnit(unit.id)} aria-label={`Start with ${unit.id.toUpperCase()}: ${unit.title}`}>Start here</button>
+                                  <button type="button" className="unit-practice-button" onClick={() => onPracticeUnit(unit.id)} aria-label={`Practice only ${unit.id.toUpperCase()}: ${unit.title}`} title={`Practice only ${unit.id.toUpperCase()}`}><Icon name="practice" size={16} /></button>
+                                </span>
                               </div>
                             )
                           })}
@@ -1242,7 +1250,7 @@ export default function App() {
   const masteredSelectedLessonIds = useMemo(() => new Set(state.selectedLessonIds.filter((id) => masteredLessonIds.has(id))), [masteredLessonIds, state.selectedLessonIds])
   const activeLessonIds = useMemo(() => state.selectedLessonIds.filter((id) => !masteredLessonIds.has(id)), [masteredLessonIds, state.selectedLessonIds])
   const queueCounts = useMemo(() => getQueueCounts(allTargets, state.progress, activeLessonIds, today, state.practiceMode, state.enabledActivityTypes, masteredSelectedLessonIds), [activeLessonIds, masteredSelectedLessonIds, state.enabledActivityTypes, state.progress, state.practiceMode, today])
-  const recommendedLesson = useMemo(() => recommendedLearningPilotLesson(state.progress), [state.progress])
+  const recommendedLesson = useMemo(() => recommendedLearningPilotLesson(state.progress, activeLessonIds), [activeLessonIds, state.progress])
   const recommendedLessonTerms = useMemo(() => recommendedLesson ? learningPilotTerms(recommendedLesson) : [], [recommendedLesson])
   const readyCardCount = useMemo(() => queueCards(allTargets, state.progress, activeLessonIds, today, state.dailyGoal, { mode: state.practiceMode, maxNewCards: state.dailyGoal, activityTypes: state.enabledActivityTypes, masteredLessonIds: masteredSelectedLessonIds }).length, [activeLessonIds, masteredSelectedLessonIds, state.dailyGoal, state.enabledActivityTypes, state.practiceMode, state.progress, today])
   const activityCounts = useMemo(() => activityAvailability(allTargets, state.selectedLessonIds, state.practiceMode), [state.practiceMode, state.selectedLessonIds])
@@ -1526,6 +1534,12 @@ export default function App() {
     setShelfMotion(null)
   }
 
+  function startWithUnit(lessonId: string) {
+    updateState((previous) => ({ ...previous, selectedLessonIds: [lessonId] }))
+    setNotice(`${lessonId.toUpperCase()} is now your practice scope. Earlier units were not marked mastered.`)
+    setScreen('today')
+  }
+
   function toggleLesson(lessonId: string) {
     if (masteredLessonIds.has(lessonId)) return
     setNotice(null)
@@ -1598,11 +1612,11 @@ export default function App() {
 
   function renderScreen() {
     const hasMoreCards = sessionQueueCounts.overdue + sessionQueueCounts.due + sessionQueueCounts.newCards > 0
-    if (screen === 'curriculum') return <CurriculumScreen selectedIds={activeLessonIds} masteredIds={masteredLessonIds} masteredSelectedCount={masteredSelectedLessonIds.size} selectedCardCount={selectedCardCount} practiceMode={state.practiceMode} unitCardCounts={unitCardCounts} onToggleLesson={toggleLesson} onToggleGroup={toggleGroup} onToggleLevel={toggleLevel} onPracticeUnit={(lessonId) => startSession([lessonId])} onBack={() => setScreen('today')} />
+    if (screen === 'curriculum') return <CurriculumScreen selectedIds={activeLessonIds} masteredIds={masteredLessonIds} masteredSelectedCount={masteredSelectedLessonIds.size} selectedCardCount={selectedCardCount} practiceMode={state.practiceMode} unitCardCounts={unitCardCounts} onToggleLesson={toggleLesson} onToggleGroup={toggleGroup} onToggleLevel={toggleLevel} onStartUnit={startWithUnit} onPracticeUnit={(lessonId) => startSession([lessonId])} onBack={() => setScreen('today')} />
     if (screen === 'learn' && recommendedLesson) return <LearnScreen lesson={recommendedLesson} terms={recommendedLessonTerms} onStartRetrieval={() => startLearnRetrieval(recommendedLesson)} onExit={() => setScreen('today')} />
     if (screen === 'quiz' && currentQuestion) return <QuizScreen question={currentQuestion} unit={currentUnit} currentBox={state.progress[currentQuestion.card.id]?.box ?? 1} index={sessionIndex} total={session.length} feedback={feedback} repairing={repairing} onAnswer={handleAnswer} onStartRepair={beginRepair} onContinue={continueSession} onSkip={skipCurrentCard} onExit={exitSession} onMenu={() => setMenuOpen(true)} menuOpen={menuOpen} menuTriggerRef={menuTriggerRef} viewMode={viewMode} onTogglePresentation={togglePresentationMode} />
     if (screen === 'results') return results ? <ResultsScreen results={results} shelf={sessionShelf} hasMoreCards={hasMoreCards} learningLesson={guidedLearnLesson} onDone={() => setScreen('today')} onKeepGoing={() => startSession(sessionLessonIds)} /> : <ProgressionOverviewScreen state={state} shelf={shelf} activeUnits={activeUnits} onToday={() => setScreen('today')} onCurriculum={() => setScreen('curriculum')} />
-    return <TodayScreen counts={shelf} queueCounts={queueCounts} activeUnits={activeUnits} masteredSelectedCount={masteredSelectedLessonIds.size} dailyGoal={state.dailyGoal} practiceMode={state.practiceMode} missMode={state.missMode} selectedCardCount={selectedCardCount} readyCardCount={readyCardCount} onStart={() => startSession()} notice={notice} motion={shelfMotion} learningLesson={recommendedLesson} onStartLearn={() => setScreen('learn')} />
+    return <TodayScreen counts={shelf} queueCounts={queueCounts} activeUnits={activeUnits} masteredSelectedCount={masteredSelectedLessonIds.size} dailyGoal={state.dailyGoal} practiceMode={state.practiceMode} missMode={state.missMode} selectedCardCount={selectedCardCount} readyCardCount={readyCardCount} onStart={() => startSession()} notice={notice} motion={shelfMotion} learningLesson={recommendedLesson} onStartLearn={() => setScreen('learn')} onChooseUnit={() => setScreen('curriculum')} />
   }
 
   return (
