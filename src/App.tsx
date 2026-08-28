@@ -406,7 +406,7 @@ function MenuSheet({
             <button type="button" className="button menu-reset-button" onClick={onResetLocalData}>Reset all local data</button>
             <p>Erases progress, streak, curriculum selection, and preferences from this browser.</p>
           </div>
-          <p className="menu-disclaimer">Unofficial companion. Selected lesson terms and glosses come from public PFL2 PDFs; other activities are independently authored. Progress stays in this browser.</p>
+          <p className="menu-disclaimer">Unofficial companion. All vocabulary cards use selected lesson terms and glosses from public PFL2 PDFs; other activities are independently authored. Progress stays in this browser.</p>
           <p className="menu-last-updated"><time dateTime="2026-08-27">Last updated: 27 August 2026</time></p>
         </section>
       </aside>
