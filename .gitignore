@@ -1,2 +1,38 @@
-# Local backup of removed independently-authored learning materials
+# Generated build and test output
+/dist/
+/node_modules/
+/playwright-report/
+/test-results/
+/coverage/
+*.log
+
+# Local source-audit inputs, reports, and working notes
+/.tmp/
 /.local-learning-backup/
+
+# Local agent/design tooling and internal planning
+/.agents/
+/.impeccable/
+/docs/
+/AGENTS.md
+/CONTENT_REVIEW.md
+/DESIGN.md
+/HANDOFF.md
+/IMPLEMENTATION_PLAN.md
+/PRODUCT.md
+/PRODUCT_EXPANSION_RESEARCH.md
+/skills-lock.json
+
+# Local-only tests and browser test configuration
+/tests/
+*.test.*
+/playwright.config.ts
+
+# Local environment and editor files
+.env*
+!.env.example
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+NUL
