@@ -398,9 +398,9 @@ function buildExerciseQuestion(
   if (exercise.kind === 'correction') {
     const choices = exercise.segments.map((segment) => segment.id)
     if (exercise.allowNoCorrection) choices.push('none')
-    const choiceLabels = Object.fromEntries(exercise.segments.map((segment, index) => [
+    const choiceLabels = Object.fromEntries(exercise.segments.map((segment) => [
       segment.id,
-      `Segment ${String.fromCharCode(65 + index)} — ${segment.text}`,
+      segment.text,
     ]))
     if (exercise.allowNoCorrection) choiceLabels.none = 'Aucune erreur'
     return {

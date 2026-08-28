@@ -205,11 +205,8 @@ function ExerciseContext({ question }: { question: PracticeQuestion }) {
       <div className="exercise-context correction-context">
         <span className="exercise-context-label">{question.contextLabel}</span>
         <p lang={question.contextLanguage ?? 'fr'} className="correction-sentence">
-          {question.exercise.segments.map((segment, index) => (
-            <span className="correction-segment" key={segment.id}>
-              <strong aria-label={`Segment ${String.fromCharCode(65 + index)}`}>{String.fromCharCode(65 + index)}</strong>
-              <span className="correction-segment-text">{segment.text}</span>
-            </span>
+          {question.exercise.segments.map((segment) => (
+            <span className="correction-segment" key={segment.id}>{segment.text}</span>
           ))}
         </p>
       </div>
@@ -916,7 +913,7 @@ function QuizScreen({
           ? 'Vocabulary · English → French'
           : 'Vocabulary · French → English')
   const questionInstruction = question.exercise?.kind === 'correction'
-    ? 'Read segments A through D as one sentence. Choose the segment that contains the error.'
+    ? 'Read the full sentence, then choose the underlined part that contains the error.'
     : question.exercise?.kind === 'reading'
       ? 'Read the passage, then choose the best answer.'
       : question.exercise?.kind === 'scenario'
@@ -1077,7 +1074,7 @@ function QuizScreen({
               : question.format === 'arrange'
                 ? 'Build the answer again without looking at the correction.'
                 : question.exercise?.kind === 'correction'
-                  ? 'Read segments A through D again, then choose the segment with the error.'
+                  ? 'Read the full sentence again, then choose the underlined part with the error.'
                   : question.card.kind === 'conjugation'
                     ? `Choose the form that matches ${question.card.person}.`
                     : 'Choose the answer again without looking at the correction.'}</span>

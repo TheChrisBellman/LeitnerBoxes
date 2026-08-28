@@ -1822,38 +1822,24 @@ button:disabled {
 
 .correction-segment {
   --segment-accent: var(--ink);
-  --segment-decoration: solid;
   display: inline;
   margin-inline-end: 0.35em;
   padding: 0;
   border: 0;
-  overflow-wrap: anywhere;
-}
-
-.correction-segment:nth-child(1) { --segment-accent: var(--segment-a); --segment-decoration: solid; }
-.correction-segment:nth-child(2) { --segment-accent: var(--segment-b); --segment-decoration: double; }
-.correction-segment:nth-child(3) { --segment-accent: var(--segment-c); --segment-decoration: dashed; }
-.correction-segment:nth-child(4) { --segment-accent: var(--segment-d); --segment-decoration: dotted; }
-
-.correction-segment strong {
-  margin-inline-end: 0.25em;
-  border: 0;
-  color: var(--segment-accent);
-  font-size: 0.75em;
-  letter-spacing: 0.05em;
-  line-height: 1;
-  vertical-align: 0.08em;
-}
-
-.correction-segment-text {
   color: currentColor;
+  overflow-wrap: anywhere;
   text-decoration-line: underline;
   text-decoration-color: var(--segment-accent);
-  text-decoration-style: var(--segment-decoration);
+  text-decoration-style: solid;
   text-decoration-thickness: 2px;
   text-underline-offset: 0.28em;
   text-decoration-skip-ink: auto;
 }
+
+.correction-segment:nth-child(1) { --segment-accent: var(--segment-a); }
+.correction-segment:nth-child(2) { --segment-accent: var(--segment-b); }
+.correction-segment:nth-child(3) { --segment-accent: var(--segment-c); }
+.correction-segment:nth-child(4) { --segment-accent: var(--segment-d); }
 
 @media (forced-colors: active) {
   .correction-segment { --segment-accent: CanvasText !important; }
