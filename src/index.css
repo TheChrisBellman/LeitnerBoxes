@@ -810,6 +810,14 @@ button:disabled {
   border-radius: 10px;
   background: var(--red-soft);
   color: var(--red);
+  transition: opacity var(--motion-standard) var(--ease-out), transform var(--motion-standard) var(--ease-out);
+}
+
+@starting-style {
+  .inline-notice {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
 }
 
 .quiet-note {
@@ -829,6 +837,11 @@ button:disabled {
   animation: backdrop-in var(--motion-standard) ease-out both;
 }
 
+.menu-backdrop.is-closing {
+  animation: backdrop-out var(--motion-standard) var(--ease-standard) both;
+  pointer-events: none;
+}
+
 .menu-sheet {
   position: fixed;
   z-index: 30;
@@ -846,6 +859,11 @@ button:disabled {
   background: var(--surface);
   box-shadow: var(--shadow-menu);
   animation: menu-in 240ms var(--ease-out) both;
+}
+
+.menu-sheet.is-closing {
+  animation: menu-out var(--motion-standard) var(--ease-standard) both;
+  pointer-events: none;
 }
 
 .menu-sheet-header {
@@ -1354,7 +1372,29 @@ button:disabled {
 }
 
 .level-body {
-  border-top: 1px solid var(--line);
+  display: grid;
+  grid-template-rows: 0fr;
+  overflow: hidden;
+  border-top: 1px solid transparent;
+  opacity: 0;
+  transition: grid-template-rows var(--motion-standard) var(--ease-out), border-color var(--motion-quick) ease, opacity var(--motion-standard) var(--ease-out);
+}
+
+.level-body.is-expanded {
+  grid-template-rows: 1fr;
+  border-color: var(--line);
+  opacity: 1;
+}
+
+.level-body-inner {
+  min-height: 0;
+  overflow: hidden;
+  transform: translateY(-6px);
+  transition: transform var(--motion-standard) var(--ease-out);
+}
+
+.level-body.is-expanded .level-body-inner {
+  transform: translateY(0);
 }
 
 .level-actions,
@@ -1717,7 +1757,7 @@ button:disabled {
   min-width: 0;
   min-height: 180px;
   align-content: space-between;
-  gap: 18px;
+  gap: 20px;
   padding: 22px;
   border: 1px solid transparent;
   border-radius: 8px;
@@ -1849,24 +1889,32 @@ button:disabled {
   display: grid;
   min-width: 0;
   justify-items: start;
-  gap: 8px;
+  gap: 10px;
 }
 
 .question-unit-context {
-  display: flex;
+  display: grid;
   min-width: 0;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 6px;
-  color: currentColor;
-  font-size: 12px;
-  font-weight: 650;
-  line-height: 1.35;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  color: inherit;
+  opacity: 0.72;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.45;
 }
 
 .question-unit-context strong {
   flex: 0 0 auto;
-  letter-spacing: 0.05em;
+  padding: 3px 6px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 10%, transparent);
+  color: currentColor;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  line-height: 1;
 }
 
 .question-unit-context span {
@@ -1876,16 +1924,17 @@ button:disabled {
 
 .prompt-card h1 {
   max-width: 100%;
-  margin: 2px 0 0;
-  overflow-wrap: anywhere;
+  margin: 4px 0 0;
+  overflow-wrap: break-word;
   word-break: normal;
+  hyphens: none;
   color: var(--prompt-text);
   font-family: var(--font-editorial);
-  font-size: clamp(2.7rem, 14vw, 5rem);
+  font-size: clamp(2.55rem, 12vw, 4.5rem);
   font-weight: 600;
-  letter-spacing: -0.045em;
-  line-height: 0.94;
-  text-wrap: balance;
+  letter-spacing: -0.03em;
+  line-height: 1.04;
+  text-wrap: pretty;
 }
 
 .prompt-card p {
@@ -1933,7 +1982,7 @@ button:disabled {
   display: grid;
   min-width: 0;
   align-self: end;
-  gap: 16px;
+  gap: 18px;
 }
 
 @container prompt-card (min-width: 640px) {
@@ -1949,7 +1998,11 @@ button:disabled {
 }
 
 .prompt-card.has-long-prompt h1 {
-  font-size: clamp(2.35rem, 10vw, 4.5rem);
+  font-size: clamp(2.3rem, 8vw, 3.75rem);
+}
+
+.prompt-card.has-extra-long-prompt h1 {
+  font-size: clamp(2.05rem, 6.8vw, 3.2rem);
 }
 
 .question-type-label {
@@ -2939,6 +2992,21 @@ button:disabled {
   to { opacity: 1; transform: translateX(0); }
 }
 
+@keyframes backdrop-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes menu-out {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(14px); }
+}
+
+@keyframes menu-out-fade {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
 @keyframes feedback-enter {
   from { opacity: 0; transform: translateY(18px) scale(0.9); }
   68% { opacity: 1; transform: translateY(-4px) scale(1.02); }
@@ -2989,6 +3057,28 @@ button:disabled {
   .choice-button.is-incorrect .choice-number,
   .shelf-compartment.is-target .shelf-arrow {
     animation: none !important;
+  }
+
+  .menu-backdrop.is-closing {
+    animation: backdrop-out 80ms ease both !important;
+  }
+
+  .menu-sheet.is-closing {
+    animation: menu-out-fade 80ms ease both !important;
+  }
+
+  .level-body {
+    transition: opacity 80ms ease;
+  }
+
+  .level-body-inner {
+    transform: none;
+    transition: none;
+  }
+
+  .inline-notice {
+    transform: none;
+    transition: opacity 80ms ease;
   }
 
   .context-disclosure summary .icon,
@@ -3267,11 +3357,16 @@ button:disabled {
   }
 
   .quiz-prompt-column .prompt-card h1 {
-    font-size: clamp(3.5rem, 12cqw, 6rem);
+    font-size: clamp(3rem, 10cqw, 5rem);
+    line-height: 1.06;
   }
 
   .quiz-prompt-column .prompt-card.has-long-prompt h1 {
-    font-size: clamp(3rem, 9cqw, 5rem);
+    font-size: clamp(2.4rem, 7.5cqw, 4rem);
+  }
+
+  .quiz-prompt-column .prompt-card.has-extra-long-prompt h1 {
+    font-size: clamp(2.1rem, 6.5cqw, 3.4rem);
   }
 
   .choice-button {
@@ -3299,7 +3394,7 @@ button:disabled {
   }
 
   .app-shell.is-presentation .app-content.is-quiz {
-    height: 100dvh;
+    height: auto;
     min-height: 100dvh;
     overflow-y: auto;
     padding: clamp(24px, 4vw, 64px) clamp(28px, 5vw, 96px);
@@ -3307,23 +3402,66 @@ button:disabled {
 
   .app-shell.is-presentation .quiz-page {
     width: min(100%, 1600px);
-    height: 100%;
+    height: auto;
     min-height: 0;
-    grid-template-rows: auto auto minmax(0, 1fr);
-    gap: clamp(14px, 1.6vw, 24px);
+    grid-template-rows: auto auto auto;
+    gap: clamp(20px, 2vw, 32px);
   }
 
   .app-shell.is-presentation .quiz-topline {
-    min-height: 44px;
+    min-height: 52px;
+    font-size: clamp(15px, 1.15vw, 18px);
+  }
+
+  .app-shell.is-presentation .quiz-topline .back-button,
+  .app-shell.is-presentation .presentation-button {
+    min-height: 48px;
+    font-size: clamp(15px, 1.15vw, 18px);
+  }
+
+  .app-shell.is-presentation .quiz-context {
+    gap: 5px;
+    font-size: clamp(15px, 1.15vw, 18px);
+  }
+
+  .app-shell.is-presentation .quiz-progress-label {
+    font-size: clamp(16px, 1.25vw, 20px);
+  }
+
+  .app-shell.is-presentation .quiz-progress-bar {
+    width: clamp(128px, 12vw, 192px);
+    height: 9px;
+  }
+
+  .app-shell.is-presentation .presentation-button {
+    display: inline-flex;
+    padding: 0 16px;
+  }
+
+  .app-shell.is-presentation .quiz-box-rail {
+    width: min(100%, 640px);
+  }
+
+  .app-shell.is-presentation .quiz-box-rail li {
+    min-height: 56px;
+    padding: 11px 6px;
+  }
+
+  .app-shell.is-presentation .quiz-box-rail span {
+    font-size: clamp(15px, 1vw, 17px);
+  }
+
+  .app-shell.is-presentation .quiz-box-rail strong {
+    font-size: clamp(21px, 1.6vw, 27px);
   }
 
   .app-shell.is-presentation .quiz-workspace {
-    height: 100%;
+    height: auto;
     min-height: 0;
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(300px, clamp(300px, 46dvh, 560px)) minmax(0, 1fr);
+    grid-template-rows: auto auto;
     gap: clamp(24px, 3vw, 48px);
-    align-items: stretch;
+    align-items: start;
   }
 
   .app-shell.is-presentation .quiz-prompt-column {
@@ -3331,58 +3469,243 @@ button:disabled {
   }
 
   .app-shell.is-presentation .prompt-card {
-    height: 100%;
+    height: auto;
     min-height: 0;
-    padding: clamp(28px, 4vw, 64px);
+    gap: clamp(20px, 2vw, 32px);
+    padding: clamp(24px, 3vw, 48px);
   }
 
   .app-shell.is-presentation .quiz-prompt-column .prompt-card {
-    grid-template-rows: auto minmax(0, 1fr);
-    align-content: space-between;
+    grid-template-rows: none;
+    align-content: start;
   }
 
   .app-shell.is-presentation .quiz-prompt-column .prompt-copy {
-    align-self: center;
+    align-self: start;
+  }
+
+  .app-shell.is-presentation .question-meta {
+    gap: 12px;
+  }
+
+  .app-shell.is-presentation .question-type-label {
+    padding: 8px 12px;
+    font-size: clamp(15px, 1.05vw, 17px);
+  }
+
+  .app-shell.is-presentation .question-unit-context {
+    font-size: clamp(15px, 1vw, 17px);
+  }
+
+  .app-shell.is-presentation .question-unit-context strong {
+    font-size: clamp(12px, 0.8vw, 14px);
+  }
+
+  .app-shell.is-presentation .exercise-context {
+    gap: 10px;
+    padding: 14px 0 14px 16px;
+  }
+
+  .app-shell.is-presentation .exercise-context-label {
+    font-size: clamp(15px, 1vw, 17px);
+  }
+
+  .app-shell.is-presentation .prompt-card .exercise-context p,
+  .app-shell.is-presentation .prompt-card p.correction-sentence {
+    max-width: 65ch;
+    font-size: clamp(20px, 1.55vw, 25px);
+    line-height: 1.55;
+  }
+
+  .app-shell.is-presentation .prompt-card p.correction-sentence {
+    line-height: 1.7;
+  }
+
+  .app-shell.is-presentation .reading-passage h2 {
+    font-size: clamp(22px, 1.6vw, 28px);
+  }
+
+  .app-shell.is-presentation .dialogue-context cite {
+    font-size: clamp(15px, 1.05vw, 18px);
   }
 
   .app-shell.is-presentation .prompt-copy {
-    gap: clamp(24px, 2vw, 36px);
+    gap: clamp(18px, 1.75vw, 28px);
   }
 
   .app-shell.is-presentation .prompt-card h1 {
-    font-size: clamp(4rem, 12cqw, 9rem);
-    line-height: 0.98;
+    max-width: 32ch;
+    font-size: clamp(2.75rem, 4.5vw, 4.75rem);
+    line-height: 1.08;
   }
 
   .app-shell.is-presentation .prompt-card.has-long-prompt h1 {
-    font-size: clamp(3.25rem, 9cqw, 7rem);
+    font-size: clamp(2.5rem, 3.6vw, 3.75rem);
+  }
+
+  .app-shell.is-presentation .prompt-card.has-extra-long-prompt h1 {
+    font-size: clamp(2.25rem, 3.2vw, 3.25rem);
   }
 
   .app-shell.is-presentation .prompt-card p {
-    font-size: clamp(15px, 1.4vw, 20px);
+    max-width: 65ch;
+    font-size: clamp(20px, 1.45vw, 23px);
+    line-height: 1.5;
+  }
+
+  .app-shell.is-presentation .conjugation-person {
+    font-size: clamp(20px, 1.6vw, 26px);
   }
 
   .app-shell.is-presentation .quiz-answer-column {
-    grid-template-rows: minmax(0, 1fr) auto;
-    align-content: stretch;
+    grid-template-rows: none;
+    align-content: start;
+  }
+
+  .app-shell.is-presentation .answer-choice-area,
+  .app-shell.is-presentation .question-help-area {
+    gap: 12px;
+  }
+
+  .app-shell.is-presentation .phrase-help-button,
+  .app-shell.is-presentation .typed-answer-form label,
+  .app-shell.is-presentation .accent-palette-label {
+    font-size: clamp(16px, 1.15vw, 19px);
+  }
+
+  .app-shell.is-presentation .phrase-help-button {
+    min-height: 52px;
+    padding: 10px 14px;
   }
 
   .app-shell.is-presentation .choice-list {
-    height: 100%;
-    grid-template-rows: repeat(2, minmax(0, 1fr));
+    height: auto;
+    grid-template-rows: none;
+    grid-auto-rows: minmax(clamp(76px, 10dvh, 112px), auto);
     gap: clamp(12px, 1.5vw, 24px);
   }
 
   .app-shell.is-presentation .choice-button {
-    min-height: clamp(76px, 10dvh, 112px);
-    padding-right: 20px;
-    font-size: clamp(17px, 1.5vw, 24px);
+    min-height: 0;
+    padding: 16px 20px 16px 14px;
+    font-size: clamp(20px, 1.5vw, 24px);
+    line-height: 1.45;
   }
 
   .app-shell.is-presentation .choice-number {
-    width: clamp(38px, 3.2vw, 48px);
-    height: clamp(38px, 3.2vw, 48px);
-    font-size: clamp(15px, 1.2vw, 18px);
+    width: clamp(40px, 3.2vw, 48px);
+    height: clamp(40px, 3.2vw, 48px);
+    font-size: clamp(16px, 1.2vw, 18px);
+  }
+
+  .app-shell.is-presentation .typed-answer-form {
+    gap: 16px;
+  }
+
+  .app-shell.is-presentation .typed-answer-input {
+    min-height: 72px;
+    font-size: clamp(20px, 1.5vw, 24px);
+  }
+
+  .app-shell.is-presentation .accent-palette {
+    gap: 8px;
+  }
+
+  .app-shell.is-presentation .accent-button {
+    min-width: 52px;
+    min-height: 52px;
+    font-size: 24px;
+  }
+
+  .app-shell.is-presentation .arranged-sentence {
+    min-height: 96px;
+    padding: 16px;
+  }
+
+  .app-shell.is-presentation .arranged-sentence > span,
+  .app-shell.is-presentation .word-token {
+    font-size: clamp(20px, 1.35vw, 22px);
+  }
+
+  .app-shell.is-presentation .word-token {
+    min-height: 56px;
+    padding: 11px 16px;
+  }
+
+  .app-shell.is-presentation .skip-action > span,
+  .app-shell.is-presentation .repair-prompt span,
+  .app-shell.is-presentation .feedback-movement {
+    font-size: clamp(16px, 1.15vw, 19px);
+  }
+
+  .app-shell.is-presentation .repair-prompt {
+    gap: 7px;
+    padding: 16px;
+  }
+
+  .app-shell.is-presentation .repair-prompt strong,
+  .app-shell.is-presentation .feedback-copy > strong {
+    font-size: clamp(19px, 1.35vw, 22px);
+  }
+
+  .app-shell.is-presentation .feedback-panel {
+    gap: 16px;
+    padding: 18px;
+  }
+
+  .app-shell.is-presentation .feedback-mark {
+    width: 52px;
+    height: 52px;
+  }
+
+  .app-shell.is-presentation .feedback-comparison span,
+  .app-shell.is-presentation .feedback-copy > span {
+    font-size: clamp(16px, 1.15vw, 20px);
+    line-height: 1.5;
+  }
+
+  .app-shell.is-presentation .feedback-answer {
+    font-size: clamp(22px, 1.7vw, 28px);
+  }
+
+  .app-shell.is-presentation .feedback-next {
+    min-height: 52px;
+    padding: 0 16px;
+    font-size: clamp(16px, 1.15vw, 19px);
+  }
+
+  .app-shell.is-presentation .success-overlay {
+    padding: clamp(24px, 4vw, 64px);
+  }
+
+  .app-shell.is-presentation .success-panel {
+    width: min(100%, 760px);
+    gap: clamp(20px, 2vw, 28px);
+    padding: clamp(32px, 3vw, 48px);
+  }
+
+  .app-shell.is-presentation .success-mark {
+    width: clamp(104px, 9vw, 136px);
+    height: clamp(104px, 9vw, 136px);
+  }
+
+  .app-shell.is-presentation .success-copy > strong {
+    font-size: clamp(28px, 2.4vw, 42px);
+  }
+
+  .app-shell.is-presentation .success-answer {
+    font-size: clamp(24px, 2vw, 34px);
+  }
+
+  .app-shell.is-presentation .success-explanation,
+  .app-shell.is-presentation .success-movement,
+  .app-shell.is-presentation .success-next {
+    font-size: clamp(18px, 1.3vw, 22px);
+  }
+
+  .app-shell.is-presentation .success-next-button {
+    min-height: 56px;
+    font-size: clamp(17px, 1.25vw, 20px);
   }
 }
 
@@ -3417,6 +3740,14 @@ button:disabled {
 }
 
 @media (max-width: 899px) {
+  .answer-choice-area .shared-answer-tooltip.is-open,
+  .question-help-area .shared-answer-tooltip.is-open,
+  .answer-choice-area:has(.phrase-help-button:focus-visible) .shared-answer-tooltip,
+  .question-help-area:has(.phrase-help-button:focus-visible) .shared-answer-tooltip {
+    position: static;
+    transform: none;
+  }
+
   .today-page {
     min-height: calc(var(--visual-viewport-height) - 57px);
     padding-bottom: calc(var(--mobile-cta-height) + 24px + var(--keyboard-inset));
@@ -3538,11 +3869,16 @@ button:disabled {
   }
 
   .quiz-prompt-column .prompt-card h1 {
-    font-size: clamp(4rem, 12cqw, 7rem);
+    font-size: clamp(3.25rem, 10cqw, 5.25rem);
+    line-height: 1.06;
   }
 
   .quiz-prompt-column .prompt-card.has-long-prompt h1 {
-    font-size: clamp(3.5rem, 9cqw, 5.5rem);
+    font-size: clamp(2.55rem, 7.4cqw, 4.25rem);
+  }
+
+  .quiz-prompt-column .prompt-card.has-extra-long-prompt h1 {
+    font-size: clamp(2.15rem, 6.2cqw, 3.5rem);
   }
 
   .choice-button {

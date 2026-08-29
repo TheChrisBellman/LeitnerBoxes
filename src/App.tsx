@@ -59,6 +59,8 @@ type ShelfMotion = {
 
 const CORRECT_AUTO_ADVANCE_MS = 1600
 const CORRECTION_AUTO_ADVANCE_MS = 4800
+const MENU_CLOSE_MS = 200
+const MENU_CLOSE_REDUCED_MS = 80
 const FRENCH_ACCENTS = ['à', 'â', 'ç', 'é', 'è', 'ê', 'ë', 'î', 'ï', 'ô', 'ù', 'û', 'ü', 'œ'] as const
 
 const levelNames: Record<Level, string> = {
@@ -326,6 +328,7 @@ function MenuSheet({
   onThemeChange,
   onResetLocalData,
   onNavigate,
+  closing,
   onClose,
 }: {
   screen: Screen
@@ -344,13 +347,14 @@ function MenuSheet({
   onThemeChange: (value: Theme) => void
   onResetLocalData: () => void
   onNavigate: (next: Screen) => void
+  closing: boolean
   onClose: () => void
 }) {
   const practiceActive = screen === 'today' || screen === 'learn' || screen === 'quiz'
   return (
     <>
-      <button type="button" className="menu-backdrop" onClick={onClose} aria-label="Close menu" />
-      <aside id="app-menu" className="menu-sheet" role="dialog" aria-modal="true" aria-labelledby="menu-title" onKeyDown={(event) => {
+      <button type="button" className={`menu-backdrop ${closing ? 'is-closing' : ''}`} onClick={onClose} aria-label="Close menu" />
+      <aside id="app-menu" className={`menu-sheet ${closing ? 'is-closing' : ''}`} role="dialog" aria-modal="true" aria-labelledby="menu-title" onKeyDown={(event) => {
         if (event.key !== 'Tab') return
         const focusable = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button, select, [href], input, textarea')).filter((element) => !element.hasAttribute('disabled'))
         const first = focusable[0]
@@ -670,8 +674,8 @@ function CurriculumScreen({
                 <span className="level-header-copy"><strong>Level {level} · {levelNames[level]}</strong><small>{levelDescriptions[level]} · {allLevelMastered ? 'All mastered' : `${selectedInLevel} / ${selectableUnits.length} selected`}</small></span>
                 <Icon name="chevron" size={18} />
               </button>
-              {expanded && (
-                <div className="level-body">
+              <div className={`level-body ${expanded ? 'is-expanded' : ''}`} aria-hidden={!expanded} inert={!expanded}>
+                <div className="level-body-inner">
                   <div className="level-actions">
                     <span>{allLevelMastered ? 'Every unit is mastered.' : selectedInLevel === selectableUnits.length ? 'Every available unit is active.' : 'Select the whole level'}</span>
                     <button type="button" className="text-button" onClick={() => onToggleLevel(level)} disabled={allLevelMastered} aria-pressed={!allLevelMastered && selectedInLevel === selectableUnits.length}>{allLevelMastered ? 'All mastered' : selectedInLevel === selectableUnits.length ? 'Deselect all' : 'Select all'}</button>
@@ -711,7 +715,7 @@ function CurriculumScreen({
                     )
                   })}
                 </div>
-              )}
+              </div>
             </section>
           )
         })}
@@ -993,7 +997,11 @@ function QuizScreen({
         : question.direction === 'english-to-french'
           ? 'Choose the French translation'
           : 'Choose the English translation'
-  const hasLongPrompt = question.prompt.length > 12
+  const promptLengthClass = question.prompt.length >= 75
+    ? 'has-extra-long-prompt'
+    : question.prompt.length >= 45
+      ? 'has-long-prompt'
+      : ''
   const arrangedAnswer = selectedTokenIndexes.map((tokenIndex) => question.tokens?.[tokenIndex] ?? '').join(' ')
   const remainingTokenIndexes = tokenOrder.filter((tokenIndex) => !selectedTokenIndexes.includes(tokenIndex))
   const answerHint = sharedAnswerHint(question.choices, question.answerLanguage) ?? question.help
@@ -1102,7 +1110,7 @@ function QuizScreen({
       </ol>
       <div className="quiz-workspace">
         <div className="quiz-prompt-column">
-          <div key={question.card.id} className={`prompt-card question-type-${question.kind} exercise-format-${question.format} ${hasLongPrompt ? 'has-long-prompt' : ''}`}>
+          <div key={question.card.id} className={`prompt-card question-type-${question.kind} exercise-format-${question.format} ${promptLengthClass}`}>
             <div className="question-meta">
               <span className="question-type-label">{questionLabel}</span>
               {unit && <span className="question-unit-context"><strong>{unit.id.toUpperCase()}</strong><span lang="fr">{unit.title}</span></span>}
@@ -1240,6 +1248,7 @@ export default function App() {
   const [state, setState] = useState<StoredState>(() => loadState())
   const [screen, setScreen] = useState<Screen>('today')
   const [menuOpen, setMenuOpen] = useState(false)
+  const [menuClosing, setMenuClosing] = useState(false)
   const [session, setSession] = useState<ActiveQuestion[]>([])
   const [sessionLessonIds, setSessionLessonIds] = useState<string[]>([])
   const [focusedSession, setFocusedSession] = useState(false)
@@ -1257,6 +1266,7 @@ export default function App() {
   const [viewMode, setViewMode] = useState<ViewMode>('normal')
   const presentationFullscreen = useRef(false)
   const menuTriggerRef = useRef<HTMLButtonElement>(null)
+  const menuCloseTimerRef = useRef<number | null>(null)
   const previousScreenRef = useRef<Screen>(screen)
   const focusMainOnNavigationRef = useRef(false)
 
@@ -1314,6 +1324,10 @@ export default function App() {
     }
   }, [screen])
 
+  useEffect(() => () => {
+    if (menuCloseTimerRef.current !== null) window.clearTimeout(menuCloseTimerRef.current)
+  }, [])
+
   const masteredLessonIds = useMemo(() => getMasteredLessonIds(allTargets, state.progress), [state.progress])
   const masteredSelectedLessonIds = useMemo(() => new Set(state.selectedLessonIds.filter((id) => masteredLessonIds.has(id))), [masteredLessonIds, state.selectedLessonIds])
   const activeLessonIds = useMemo(() => state.selectedLessonIds.filter((id) => !masteredLessonIds.has(id)), [masteredLessonIds, state.selectedLessonIds])
@@ -1354,10 +1368,34 @@ export default function App() {
     })
   }
 
-  function closeMenu() {
-    if (!menuOpen) return
+  function openMenu() {
+    if (menuCloseTimerRef.current !== null) {
+      window.clearTimeout(menuCloseTimerRef.current)
+      menuCloseTimerRef.current = null
+    }
+    setMenuClosing(false)
+    setMenuOpen(true)
+  }
+
+  function closeMenuImmediately() {
+    if (menuCloseTimerRef.current !== null) {
+      window.clearTimeout(menuCloseTimerRef.current)
+      menuCloseTimerRef.current = null
+    }
+    setMenuClosing(false)
     setMenuOpen(false)
-    window.requestAnimationFrame(() => menuTriggerRef.current?.focus())
+  }
+
+  function closeMenu() {
+    if (!menuOpen || menuClosing) return
+    setMenuClosing(true)
+    const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? MENU_CLOSE_REDUCED_MS : MENU_CLOSE_MS
+    menuCloseTimerRef.current = window.setTimeout(() => {
+      menuCloseTimerRef.current = null
+      setMenuOpen(false)
+      setMenuClosing(false)
+      window.requestAnimationFrame(() => menuTriggerRef.current?.focus())
+    }, duration)
   }
 
   function exitPresentationMode() {
@@ -1385,7 +1423,7 @@ export default function App() {
     focusMainOnNavigationRef.current = true
     if (next === 'results') setResults(null)
     setScreen(next)
-    setMenuOpen(false)
+    closeMenuImmediately()
   }
 
   function beginSession(
@@ -1418,7 +1456,7 @@ export default function App() {
     setNotice(null)
     setShelfMotion(null)
     setScreen('quiz')
-    setMenuOpen(false)
+    closeMenuImmediately()
   }
 
   function startSession(lessonIds?: readonly string[]) {
@@ -1440,7 +1478,7 @@ export default function App() {
             : 'No cards are available right now.')
       if (lessonIds !== undefined) {
         setScreen('today')
-        setMenuOpen(false)
+        closeMenuImmediately()
       }
       return
     }
@@ -1660,7 +1698,7 @@ export default function App() {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [menuOpen])
+  }, [menuOpen, menuClosing])
 
   useEffect(() => {
     if (menuOpen || screen !== 'quiz' || !currentQuestion || feedback?.correct || !['choice', 'cloze', 'correction'].includes(currentQuestion.format)) return undefined
@@ -1682,7 +1720,7 @@ export default function App() {
     const hasMoreCards = sessionQueueCounts.overdue + sessionQueueCounts.due + sessionQueueCounts.newCards > 0
     if (screen === 'curriculum') return <CurriculumScreen selectedIds={activeLessonIds} masteredIds={masteredLessonIds} masteredSelectedCount={masteredSelectedLessonIds.size} selectedCardCount={selectedCardCount} practiceMode={state.practiceMode} unitCardCounts={unitCardCounts} onToggleLesson={toggleLesson} onToggleGroup={toggleGroup} onToggleLevel={toggleLevel} onStartUnit={startWithUnit} onPracticeUnit={(lessonId) => startSession([lessonId])} onBack={() => setScreen('today')} />
     if (screen === 'learn' && recommendedLesson) return <LearnScreen lesson={recommendedLesson} terms={recommendedLessonTerms} onStartRetrieval={() => startLearnRetrieval(recommendedLesson)} onExit={() => setScreen('today')} />
-    if (screen === 'quiz' && currentQuestion) return <QuizScreen question={currentQuestion} unit={currentUnit} currentBox={state.progress[currentQuestion.card.id]?.box ?? 1} index={sessionIndex} total={session.length} feedback={feedback} repairing={repairing} onAnswer={handleAnswer} onStartRepair={beginRepair} onContinue={continueSession} onSkip={skipCurrentCard} onExit={exitSession} onMenu={() => setMenuOpen(true)} menuOpen={menuOpen} menuTriggerRef={menuTriggerRef} viewMode={viewMode} onTogglePresentation={togglePresentationMode} />
+    if (screen === 'quiz' && currentQuestion) return <QuizScreen question={currentQuestion} unit={currentUnit} currentBox={state.progress[currentQuestion.card.id]?.box ?? 1} index={sessionIndex} total={session.length} feedback={feedback} repairing={repairing} onAnswer={handleAnswer} onStartRepair={beginRepair} onContinue={continueSession} onSkip={skipCurrentCard} onExit={exitSession} onMenu={openMenu} menuOpen={menuOpen} menuTriggerRef={menuTriggerRef} viewMode={viewMode} onTogglePresentation={togglePresentationMode} />
     if (screen === 'results') return results ? <ResultsScreen results={results} shelf={sessionShelf} hasMoreCards={hasMoreCards} learningLesson={guidedLearnLesson} onDone={() => setScreen('today')} onKeepGoing={() => startSession(sessionLessonIds)} /> : <ProgressionOverviewScreen state={state} shelf={shelf} activeUnits={activeUnits} onToday={() => setScreen('today')} onCurriculum={() => setScreen('curriculum')} />
     return <TodayScreen counts={shelf} queueCounts={queueCounts} activeUnits={activeUnits} masteredSelectedCount={masteredSelectedLessonIds.size} dailyGoal={state.dailyGoal} practiceMode={state.practiceMode} missMode={state.missMode} selectedCardCount={selectedCardCount} readyCardCount={readyCardCount} onStart={() => startSession()} notice={notice} motion={shelfMotion} learningLesson={recommendedLesson} onStartLearn={() => setScreen('learn')} onChooseUnit={() => setScreen('curriculum')} />
   }
@@ -1691,10 +1729,10 @@ export default function App() {
     <div className={`app-shell ${screen === 'quiz' ? 'is-quiz' : ''} ${viewMode === 'presentation' && screen === 'quiz' ? 'is-presentation' : ''}`}>
       <div className="app-view" inert={menuOpen || Boolean(feedback?.correct)}>
         <a className="skip-link" href="#main-content">Skip to practice</a>
-        {screen !== 'quiz' && <MobileHeader onMenu={() => setMenuOpen(true)} menuOpen={menuOpen} triggerRef={menuTriggerRef} screen={screen} onNavigate={navigate} />}
+        {screen !== 'quiz' && <MobileHeader onMenu={openMenu} menuOpen={menuOpen} triggerRef={menuTriggerRef} screen={screen} onNavigate={navigate} />}
         <main id="main-content" className={`app-content ${screen === 'quiz' ? 'is-quiz' : ''}`} tabIndex={-1}>{renderScreen()}</main>
       </div>
-      {menuOpen && <MenuSheet screen={screen} dailyGoal={state.dailyGoal} practiceMode={state.practiceMode} missMode={state.missMode} correctAdvanceMode={state.correctAdvanceMode} enabledActivityTypes={state.enabledActivityTypes} activityCounts={activityCounts} theme={state.theme} onDailyGoalChange={updateDailyGoal} onPracticeModeChange={updatePracticeMode} onMissModeChange={updateMissMode} onCorrectAdvanceModeChange={updateCorrectAdvanceMode} onActivityTypesChange={updateActivityTypes} onThemeChange={updateTheme} onResetLocalData={resetLocalData} onNavigate={navigate} onClose={closeMenu} />}
+      {menuOpen && <MenuSheet screen={screen} dailyGoal={state.dailyGoal} practiceMode={state.practiceMode} missMode={state.missMode} correctAdvanceMode={state.correctAdvanceMode} enabledActivityTypes={state.enabledActivityTypes} activityCounts={activityCounts} theme={state.theme} onDailyGoalChange={updateDailyGoal} onPracticeModeChange={updatePracticeMode} onMissModeChange={updateMissMode} onCorrectAdvanceModeChange={updateCorrectAdvanceMode} onActivityTypesChange={updateActivityTypes} onThemeChange={updateTheme} onResetLocalData={resetLocalData} onNavigate={navigate} closing={menuClosing} onClose={closeMenu} />}
       {screen === 'quiz' && currentQuestion && feedback?.correct && <SuccessOverlay question={currentQuestion} feedback={feedback} index={sessionIndex} total={session.length} advanceMode={state.correctAdvanceMode} onContinue={continueSession} />}
     </div>
   )
