@@ -1,5 +1,5 @@
 import { addDays, dateKey, isDateKey, type CardProgress, type MissMode, type PracticeMode } from './leitner.ts'
-import { curriculumById, DEFAULT_LESSON_IDS } from './data/curriculum.ts'
+import { curriculumById } from './data/curriculum.ts'
 import { ACTIVITY_TYPES, type ActivityType } from './data/types.ts'
 import { allTargets } from './data/words.ts'
 
@@ -43,7 +43,7 @@ export function defaultState(): StoredState {
     missMode: 'step-back',
     correctAdvanceMode: 'automatic',
     enabledActivityTypes: [...ACTIVITY_TYPES],
-    selectedLessonIds: [...DEFAULT_LESSON_IDS],
+    selectedLessonIds: [],
     progress: {},
     streak: { count: 0 },
   }
@@ -64,6 +64,7 @@ function isProgress(value: unknown): value is CardProgress {
   return isBox(candidate.box)
     && isDateKey(candidate.due)
     && (maintenanceStep === undefined || (candidate.box === 5 && isMaintenanceStep(maintenanceStep)))
+    && (candidate.lastMissedDate === undefined || isDateKey(candidate.lastMissedDate))
 }
 
 function isPracticeMode(value: unknown): value is PracticeMode {

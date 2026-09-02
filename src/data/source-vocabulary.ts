@@ -928,7 +928,7 @@ for (const key of additionalBaselineQuarantineKeys) {
 }
 
 const sourceTier: CardTier = 'expansion'
-export type VocabularyChoiceFamily = 'question' | 'sentence' | 'infinitive' | 'verb-form' | 'determiner' | 'interrogative-determiner' | 'noun' | 'noun-definite' | 'noun-indefinite' | 'pronoun' | 'subject-form' | 'contraction' | 'connector' | 'function' | 'weekday' | 'month' | 'sequence' | 'duration' | 'number-time' | 'adverb' | 'modifier' | 'expression' | 'math' | 'quantity' | 'time' | 'occupation' | 'proper-noun' | 'grammar-form' | 'material'
+export type VocabularyChoiceFamily = 'question' | 'sentence' | 'infinitive' | 'verb-form' | 'determiner' | 'interrogative-determiner' | 'noun' | 'noun-definite' | 'noun-indefinite' | 'pronoun' | 'subject-form' | 'contraction' | 'connector' | 'function' | 'weekday' | 'month' | 'sequence' | 'duration' | 'number-time' | 'adverb' | 'modifier' | 'expression' | 'math' | 'quantity' | 'time' | 'occupation' | 'proper-noun' | 'grammar-form' | 'material' | 'colour' | 'shape' | 'dimension' | 'condition'
 
 const englishFunction = /^(?:of|to|from|at|in|on|with|without|for|by|before|after|during|between|among|under|over|through|toward|towards|until|since|as|than|thanks to|because of|due to)(?:\s|$)/i
 const frenchFunction = /^(?:de|du|à|au|aux|chez|dans|en|sur|sous|avec|sans|pour|par|avant|après|depuis|pendant|entre|vers|jusqu|dès|grâce à|à cause de|en raison de|quant à)(?:\s|\+|$)/iu
@@ -956,11 +956,17 @@ const timeEnglish = /^(?:yesterday|tomorrow|today|in the future|at the moment|th
 const quantityFrench = /^(?:beaucoup de|peu de|un peu(?: de)?|quelques(?:-uns)?|plusieurs|la plupart de|un bon nombre de|un certain nombre de|un grand nombre de|une dizaine|une vingtaine|une trentaine|une cinquantaine|un millier)$/iu
 const quantityEnglish = /^(?:a lot|a little|a few|some|several|the majority|a good number|a number|a great number|about (?:ten|twenty|thirty|fifty|one thousand)|many)\b/i
 const materialFrench = /^(?:en bois|en plastique|en laine|en métal|en carton|en papier|en brique?s?|en cuir)$/iu
+// A-04 practises describing office objects. Keep choices within the property
+// named by the prompt so a colour is never the only plausible option.
+const a04ColourFrench = /^(?:blanc|blanche|bleu|bleue|jaune|noir|noire|rouge|vert|verte)$/iu
+const a04ShapeFrench = /^(?:rond|ronde|carré|carrée|ovale|rectangulaire|triangulaire)$/iu
+const a04DimensionFrench = /^(?:long|longue|mince|épais|épaisse|bas|basse|haut|haute|petit|petite|gros|grosse|grand|grande|court|courte|étroit|étroite|large|profond|profonde)$/iu
+const a04ConditionFrench = /^(?:propre|sale|neuf|neuve|vieux|vieille|usagé|usagée|usé|usée|excellent|abîmé|abîmée|endommagé|endommagée)$/iu
 const occupationEnglish = /\b(?:librarian|head|leader|commissionaire|accountant|advisor|co-ordinator|coordinator|director general|member of parliament|manager|minister|receptionist|secretary|specialist|supervisor|technician|translator|auditor|chief|clerk|programmer|assistant|officer|lawyer|teacher|doctor|engineer|economist|analyst)\b/i
 const grammarFrench = /^(?:quel(?:le)?s?|c['’]est|ce sont|passé composé|imparfait|futur simple|futur proche|le conditionnel passé|interrogation indirecte|style indirect|aimer au conditionnel)$/iu
 const grammarEnglish = /\b(?:masculine|feminine|plural|singular|perfect tense|imperfect tense|future tense|immediate future|conditional|indirect question|indirect speech)\b/i
 
-export function vocabularyChoiceFamily(row: { french: string; answer: string }): VocabularyChoiceFamily {
+export function vocabularyChoiceFamily(row: { french: string; answer: string; lessonId?: string }): VocabularyChoiceFamily {
   const english = row.answer.trim()
   const englishLower = english.toLocaleLowerCase('en')
   const french = row.french.trim()
@@ -975,6 +981,10 @@ export function vocabularyChoiceFamily(row: { french: string; answer: string }):
   if (timeFrench.test(french) || timeEnglish.test(english)) return 'time'
   if (quantityFrench.test(french) || quantityEnglish.test(english)) return 'quantity'
   if (occupationEnglish.test(english)) return 'occupation'
+  if (row.lessonId === 'a-04' && a04ColourFrench.test(french)) return 'colour'
+  if (row.lessonId === 'a-04' && a04ShapeFrench.test(french)) return 'shape'
+  if (row.lessonId === 'a-04' && a04DimensionFrench.test(french)) return 'dimension'
+  if (row.lessonId === 'a-04' && a04ConditionFrench.test(french)) return 'condition'
   if (materialFrench.test(french)) return 'material'
   if (/^[A-ZÀ-ÖØ-Þ][\p{L}'’]*(?:\s|$)/u.test(french)) return 'proper-noun'
   if (frenchBareDeterminer.test(french) || englishBareDeterminer.test(english)) return 'determiner'

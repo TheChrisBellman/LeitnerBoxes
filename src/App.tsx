@@ -3,8 +3,6 @@ import { curriculumById, curriculumUnits, type CurriculumUnit, type Level } from
 import { allExercises } from './data/pilot-exercises'
 import { allCards, allTargets } from './data/words'
 import { ACTIVITY_TYPES, type ActivityType, type PracticeTarget } from './data/types'
-import { focusedLearningTargetQueue, learningPilotTerms, recommendedLearningPilotLesson, type LearningPilotLesson } from './data/learning-pilot'
-import { LearnScreen } from './Learn'
 import {
   BOXES,
   activityAvailability,
@@ -25,7 +23,7 @@ import {
 } from './leitner'
 import { clearStoredState, completeStreak, defaultState, loadState, saveState, type CorrectAdvanceMode, type StoredState, type Theme } from './storage'
 
-type Screen = 'today' | 'learn' | 'curriculum' | 'quiz' | 'results'
+type Screen = 'today' | 'curriculum' | 'quiz' | 'results'
 type ViewMode = 'normal' | 'presentation'
 type IconName = 'menu' | 'close' | 'settings' | 'expand' | 'minimize' | 'arrow' | 'arrowLeft' | 'check' | 'chevron' | 'calendar' | 'book' | 'progress' | 'practice' | 'spark' | 'clock' | 'cards'
 
@@ -63,6 +61,10 @@ const MENU_CLOSE_MS = 200
 const MENU_CLOSE_REDUCED_MS = 80
 const FRENCH_ACCENTS = ['à', 'â', 'ç', 'é', 'è', 'ê', 'ë', 'î', 'ï', 'ô', 'ù', 'û', 'ü', 'œ'] as const
 
+function immediateMissLimit(sessionSize: number): number {
+  return Math.max(1, Math.ceil(sessionSize / 3))
+}
+
 const levelNames: Record<Level, string> = {
   A: 'Foundations',
   B: 'Consolidate',
@@ -76,16 +78,16 @@ const levelDescriptions: Record<Level, string> = {
 }
 
 const activityOptions: { type: ActivityType; label: string; description: string }[] = [
-  { type: 'vocabulary', label: 'Vocabulary', description: 'Meaning, grammar, and spelling recognition.' },
+  { type: 'vocabulary', label: 'Vocabulary', description: 'Match French words and meanings.' },
   { type: 'conjugation', label: 'Conjugation', description: 'Present-tense form recall.' },
   { type: 'best-response', label: 'Best response', description: 'Choose the most useful workplace reply.' },
-  { type: 'contextual-cloze', label: 'Contextual cloze', description: 'Complete a sentence in context.' },
+  { type: 'contextual-cloze', label: 'Fill in the blank', description: 'Complete a sentence in context.' },
   { type: 'ordered', label: 'Tap to order', description: 'Build a French phrase from word tiles.' },
-  { type: 'correction', label: 'Bounded correction', description: 'Find the segment that needs correction.' },
-  { type: 'reading', label: 'Reading comprehension', description: 'Read a passage and answer questions.' },
-  { type: 'transformation', label: 'Reformulation', description: 'Choose an equivalent expression.' },
-  { type: 'scenario', label: 'Scenario choice', description: 'Choose the next workplace action.' },
-  { type: 'typed', label: 'Typed recall', description: 'Type the French answer.' },
+  { type: 'correction', label: 'Spot the mistake', description: 'Find the part that needs correction.' },
+  { type: 'reading', label: 'Reading', description: 'Read a passage and answer questions.' },
+  { type: 'transformation', label: 'Rephrase it', description: 'Choose an equivalent expression.' },
+  { type: 'scenario', label: 'Scenario', description: 'Choose the next workplace action.' },
+  { type: 'typed', label: 'Spelling & typing', description: 'Type and spell the French answer.' },
 ]
 
 function activityTypesForMode(mode: PracticeMode): ActivityType[] {
@@ -193,11 +195,11 @@ function sharedAnswerHint(choices: readonly string[], language: 'fr' | 'en'): An
 function AnswerHintPopover({ hint, id, open, onToggle }: { hint: AnswerHint; id: string; open: boolean; onToggle: () => void }) {
   return (
     <>
-      <button type="button" className="phrase-help-button" aria-expanded={open} aria-controls={id} aria-describedby={id} onClick={onToggle}>
+      <button type="button" className="phrase-help-button" aria-expanded={open} aria-controls={id} onClick={onToggle}>
         <span>{hint.label}</span>
-        {hint.phrase && <span lang="fr" className="choice-shared-phrase">{hint.phrase}</span>}
+        {hint.phrase && <span lang="fr" className="phrase-help-term">{hint.phrase}</span>}
       </button>
-      <p id={id} className={`shared-answer-tooltip ${open ? 'is-open' : ''}`} role="tooltip">
+      <p id={id} className={`shared-answer-tooltip ${open ? 'is-open' : ''}`} role="tooltip" hidden={!open}>
         {hint.phrase && <><span lang="fr">{hint.phrase}</span> — </>}{hint.text}{hint.note && <> ({hint.note})</>}
       </p>
     </>
@@ -225,14 +227,14 @@ function answerDisplayFor(question: PracticeQuestion, value = question.answer): 
 
 function exerciseLabel(question: PracticeQuestion): string | undefined {
   switch (question.exercise?.kind) {
-    case 'contextual-cloze': return 'Contextual cloze'
-    case 'correction': return 'Bounded correction'
+    case 'contextual-cloze': return 'Fill in the blank'
+    case 'correction': return 'Spot the mistake'
     case 'best-response': return 'Best response'
-    case 'reading': return 'Reading comprehension'
-    case 'scenario': return 'Scenario choice'
-    case 'transformation': return 'Reformulation'
+    case 'reading': return 'Reading'
+    case 'scenario': return 'Scenario'
+    case 'transformation': return 'Rephrase it'
     case 'ordered': return 'Tap to order'
-    case 'typed': return 'Contextual typed recall'
+    case 'typed': return 'Spelling & typing'
     default: return undefined
   }
 }
@@ -294,12 +296,12 @@ function ActiveCurriculumLabel({ units }: { units: CurriculumUnit[] }) {
 }
 
 function MobileHeader({ onMenu, menuOpen, triggerRef, screen, onNavigate }: { onMenu: () => void; menuOpen: boolean; triggerRef: { current: HTMLButtonElement | null }; screen: Screen; onNavigate: (next: Screen) => void }) {
-  const practiceActive = screen === 'today' || screen === 'learn' || screen === 'quiz'
+  const practiceActive = screen === 'today' || screen === 'quiz'
   return (
     <header className="mobile-header">
-      <button type="button" className="brand-name" aria-label="Workplace French — Daily practice" onClick={() => onNavigate('today')}>Workplace French</button>
+      <button type="button" className="brand-name" aria-label="Workplace French — Practice" onClick={() => onNavigate('today')}>Workplace French</button>
       <nav className="desktop-nav" aria-label="Primary navigation">
-        <button type="button" className={practiceActive ? 'is-active' : ''} aria-current={practiceActive ? 'page' : undefined} onClick={() => onNavigate('today')}>Daily practice</button>
+        <button type="button" className={practiceActive ? 'is-active' : ''} aria-current={practiceActive ? 'page' : undefined} onClick={() => onNavigate('today')}>Practice</button>
         <button type="button" className={screen === 'curriculum' ? 'is-active' : ''} aria-current={screen === 'curriculum' ? 'page' : undefined} onClick={() => onNavigate('curriculum')}>Curriculum</button>
         <button type="button" className={screen === 'results' ? 'is-active' : ''} aria-current={screen === 'results' ? 'page' : undefined} onClick={() => onNavigate('results')}>Progress</button>
       </nav>
@@ -314,17 +316,12 @@ function MobileHeader({ onMenu, menuOpen, triggerRef, screen, onNavigate }: { on
 function MenuSheet({
   screen,
   dailyGoal,
-  practiceMode,
   missMode,
   correctAdvanceMode,
-  enabledActivityTypes,
-  activityCounts,
   theme,
   onDailyGoalChange,
-  onPracticeModeChange,
   onMissModeChange,
   onCorrectAdvanceModeChange,
-  onActivityTypesChange,
   onThemeChange,
   onResetLocalData,
   onNavigate,
@@ -333,24 +330,19 @@ function MenuSheet({
 }: {
   screen: Screen
   dailyGoal: number
-  practiceMode: PracticeMode
   missMode: MissMode
   correctAdvanceMode: CorrectAdvanceMode
-  enabledActivityTypes: readonly ActivityType[]
-  activityCounts: Record<ActivityType, number>
   theme: Theme
   onDailyGoalChange: (value: number) => void
-  onPracticeModeChange: (value: PracticeMode) => void
   onMissModeChange: (value: MissMode) => void
   onCorrectAdvanceModeChange: (value: CorrectAdvanceMode) => void
-  onActivityTypesChange: (value: ActivityType[]) => void
   onThemeChange: (value: Theme) => void
   onResetLocalData: () => void
   onNavigate: (next: Screen) => void
   closing: boolean
   onClose: () => void
 }) {
-  const practiceActive = screen === 'today' || screen === 'learn' || screen === 'quiz'
+  const practiceActive = screen === 'today' || screen === 'quiz'
   return (
     <>
       <button type="button" className={`menu-backdrop ${closing ? 'is-closing' : ''}`} onClick={onClose} aria-label="Close menu" />
@@ -377,41 +369,13 @@ function MenuSheet({
         <section className="menu-group" aria-labelledby="menu-navigation-heading">
           <h3 id="menu-navigation-heading">Navigate</h3>
           <nav className="menu-links" aria-label="App sections">
-            <button type="button" className={practiceActive ? 'is-active' : ''} aria-current={practiceActive ? 'page' : undefined} onClick={() => onNavigate('today')}><strong>Daily practice</strong></button>
+            <button type="button" className={practiceActive ? 'is-active' : ''} aria-current={practiceActive ? 'page' : undefined} onClick={() => onNavigate('today')}><strong>Practice</strong></button>
             <button type="button" className={screen === 'curriculum' ? 'is-active' : ''} aria-current={screen === 'curriculum' ? 'page' : undefined} onClick={() => onNavigate('curriculum')}><strong>Curriculum</strong></button>
             <button type="button" className={screen === 'results' ? 'is-active' : ''} aria-current={screen === 'results' ? 'page' : undefined} onClick={() => onNavigate('results')}><strong>Progress</strong></button>
           </nav>
         </section>
         <section className="menu-group" aria-labelledby="menu-practice-heading">
-          <h3 id="menu-practice-heading">Practice</h3>
-          <div className="menu-setting">
-            <label htmlFor="practice-mode">Practice mode</label>
-            <select id="practice-mode" name="practice-mode" autoComplete="off" value={practiceMode} onChange={(event) => onPracticeModeChange(event.target.value as PracticeMode)}>
-              <option value="mixed">Mixed: selected activities</option>
-              <option value="vocabulary">Vocabulary only</option>
-              <option value="conjugation">Conjugation only</option>
-            </select>
-            <p className="menu-helper">Mixed practice uses the checked activity types below.</p>
-          </div>
-          <fieldset className="activity-picker">
-            <legend>Activity types</legend>
-            <p className="menu-helper">At least one activity stays enabled. Available activities are mixed into each session when they are due or new.</p>
-            <div className="activity-options">
-              {activityOptions.map(({ type, label, description }) => {
-                const checked = enabledActivityTypes.includes(type)
-                const available = activityCounts[type]
-                const unavailable = available === 0
-                return (
-                  <label className={`activity-option ${checked ? 'is-selected' : ''} ${unavailable ? 'is-unavailable' : ''}`} aria-disabled={unavailable && !checked} key={type}>
-                    <input type="checkbox" aria-label={label} checked={checked} disabled={(unavailable && !checked) || (checked && enabledActivityTypes.length === 1)} onChange={() => onActivityTypesChange(checked ? enabledActivityTypes.filter((item) => item !== type) : [...enabledActivityTypes, type])} />
-                    <span className="custom-check" aria-hidden="true"><Icon name="check" size={13} /></span>
-                    <span className="activity-option-copy"><strong>{label}</strong><small>{description}</small></span>
-                    <span className="activity-option-count" aria-label={`${available} available`}>{available}</span>
-                  </label>
-                )
-              })}
-            </div>
-          </fieldset>
+          <h3 id="menu-practice-heading">Session options</h3>
           <div className="menu-setting">
             <label htmlFor="miss-mode">On a missed answer</label>
             <select id="miss-mode" name="miss-mode" autoComplete="off" value={missMode} onChange={(event) => onMissModeChange(event.target.value as MissMode)}>
@@ -450,7 +414,7 @@ function MenuSheet({
             <button type="button" className="button menu-reset-button" onClick={onResetLocalData}>Reset all local data</button>
             <p>Erases progress, streak, curriculum selection, and preferences from this browser.</p>
           </div>
-          <p className="menu-disclaimer">Unofficial companion. All vocabulary cards use selected lesson terms and glosses from public PFL2 PDFs; other activities are independently authored. Progress stays in this browser.</p>
+          <p className="menu-disclaimer">Unofficial companion. Vocabulary cards use selected curriculum terms and glosses from public PFL2 PDFs; other activities are independently authored. Progress stays in this browser.</p>
           <p className="menu-last-updated"><time dateTime="2026-08-27">Last updated: 27 August 2026</time></p>
         </section>
       </aside>
@@ -498,7 +462,7 @@ function MemoryShelf({ counts, motion, showHint = true }: { counts: Record<Box, 
                 <span className="compartment-unit">{count === 1 ? 'card' : 'cards'}</span>
               </div>
               <div className="compartment-meter">
-                <span className="compartment-cadence">{box === 1 ? 'Learning' : box === 2 ? '1-day review' : box === 3 ? '2-day review' : box === 4 ? '4-day review' : '14+ day review'}</span>
+                <span className="compartment-cadence">{box === 1 ? 'New' : box === 2 ? '1-day review' : box === 3 ? '2-day review' : box === 4 ? '4-day review' : '14+ day review'}</span>
               </div>
               {isTarget && <span className="shelf-arrow" aria-hidden="true"><Icon name="arrow" size={15} /></span>}
             </div>
@@ -517,14 +481,15 @@ function TodayScreen({
   dailyGoal,
   practiceMode,
   missMode,
+  enabledActivityTypes,
+  activityCounts,
   selectedCardCount,
   readyCardCount,
   onStart,
   notice,
   motion,
-  learningLesson,
-  onStartLearn,
-  onChooseUnit,
+  onChooseCurriculum,
+  onActivityTypesChange,
 }: {
   counts: Record<Box, number>
   queueCounts: ReturnType<typeof getQueueCounts>
@@ -533,14 +498,15 @@ function TodayScreen({
   dailyGoal: number
   practiceMode: PracticeMode
   missMode: MissMode
+  enabledActivityTypes: readonly ActivityType[]
+  activityCounts: Record<ActivityType, number>
   selectedCardCount: number
   readyCardCount: number
   onStart: () => void
   notice: string | null
   motion: ShelfMotion | null
-  learningLesson?: LearningPilotLesson
-  onStartLearn: () => void
-  onChooseUnit: () => void
+  onChooseCurriculum: () => void
+  onActivityTypesChange: (value: ActivityType[]) => void
 }) {
   const actionPanelRef = useRef<HTMLElement>(null)
 
@@ -565,28 +531,67 @@ function TodayScreen({
   const modeDescription = practiceMode === 'conjugation' ? 'conjugation cards' : practiceMode === 'vocabulary' ? 'vocabulary cards' : 'cards'
   const missDescription = missMode === 'step-back' ? 'Missed cards step back one box.' : 'Missed cards return to Box 1.'
   const masteredOnly = activeUnits.length === 0 && masteredSelectedCount > 0
-  const canStartLearn = dueCount === 0 && Boolean(learningLesson)
+  const selectedUnitCount = activeUnits.length + masteredSelectedCount
   return (
     <section className="page today-page">
       <header className="today-header">
         <div>
-          <span className="today-kicker">Daily practice</span>
-          <h1 tabIndex={-1}>Today</h1>
+          <span className="today-kicker">Practice tool</span>
+          <h1 tabIndex={-1}>Choose and practice.</h1>
         </div>
-        <div className="today-summary" aria-label={canStartLearn ? 'Today’s learning summary' : 'Today’s practice summary'}>
-          {canStartLearn
-            ? <span><strong>{learningLesson!.cardIds.length}</strong> to learn</span>
-            : <><span><strong>{dueCount}</strong> due</span><span className="summary-divider" aria-hidden="true" /><span><strong>{queueCounts.newCards}</strong> new</span></>}
+        <div className="today-summary" aria-label="Practice queue summary">
+          <span><strong>{dueCount}</strong> due</span><span className="summary-divider" aria-hidden="true" /><span><strong>{queueCounts.newCards}</strong> new</span>
         </div>
       </header>
       <section className="today-focus-panel">
         <div className="today-study-column">
+          <section className="practice-setup surface-panel" aria-labelledby="practice-setup-heading">
+            <div className="setup-heading">
+              <span className="today-kicker">Set up your practice</span>
+              <h2 id="practice-setup-heading">Pick the material and activities you want.</h2>
+            </div>
+            <section className="setup-section" aria-labelledby="curriculum-step-heading">
+              <div className="setup-section-heading">
+                <span className="setup-step" aria-hidden="true">1</span>
+                <div><span className="setup-label">Curriculum</span><h3 id="curriculum-step-heading">What do you want to practice?</h3></div>
+              </div>
+              <button type="button" className="selection-control" onClick={onChooseCurriculum}>
+                <span className="selection-control-copy">
+                  <strong>{selectedUnitCount > 0 ? <ActiveCurriculumLabel units={activeUnits} /> : 'Choose curriculum'}</strong>
+                  <small>{selectedUnitCount > 0 ? `${selectedUnitCount} unit${selectedUnitCount === 1 ? '' : 's'} selected` : 'Select one or more units'}</small>
+                </span>
+                <Icon name="arrow" size={17} />
+              </button>
+            </section>
+            <fieldset className="setup-section home-activity-picker" disabled={selectedUnitCount === 0}>
+              <legend className="setup-section-heading">
+                <span className="setup-step" aria-hidden="true">2</span>
+                <span><span className="setup-label">Activities</span><span className="setup-legend-title">How do you want to practice?</span></span>
+              </legend>
+              <p className="setup-helper">{selectedUnitCount === 0 ? 'Choose curriculum first to see the activities available.' : 'Choose one or more. Unavailable activities will unlock when you add curriculum that supports them.'}</p>
+              <div className="home-activity-options">
+                {activityOptions.map(({ type, label, description }) => {
+                  const checked = enabledActivityTypes.includes(type)
+                  const available = activityCounts[type]
+                  const unavailable = available === 0
+                  return (
+                    <label className={`activity-option home-activity-option ${checked ? 'is-selected' : ''} ${unavailable ? 'is-unavailable' : ''}`} aria-disabled={unavailable && !checked} key={type}>
+                      <input type="checkbox" aria-label={label} checked={checked} disabled={(unavailable && !checked) || (checked && enabledActivityTypes.length === 1)} onChange={() => onActivityTypesChange(checked ? enabledActivityTypes.filter((item) => item !== type) : [...enabledActivityTypes, type])} />
+                      <span className="custom-check" aria-hidden="true"><Icon name="check" size={13} /></span>
+                      <span className="activity-option-copy"><strong>{label}</strong><small>{description}</small></span>
+                      <span className="activity-option-count" aria-label={`${available} available`}>{available}</span>
+                    </label>
+                  )
+                })}
+              </div>
+            </fieldset>
+          </section>
           <MemoryShelf counts={counts} motion={motion} showHint={false} />
           <div className="today-disclosures">
             <details className="context-disclosure">
               <summary><span>How it works</span><Icon name="chevron" size={16} /></summary>
               <p>The Leitner system keeps every card in one of five boxes. Correct answers move it forward and schedule it farther into the future, so familiar cards appear less often. {missDescription}</p>
-              <p>This tool brings cards back when they are due, adds new material when there is room, and saves each card’s place in this browser.</p>
+              <p>This tool brings cards back when they are due, adds new practice items when there is room, and saves each card’s place in this browser.</p>
             </details>
             <details className="context-disclosure">
               <summary><span>Session details</span><Icon name="chevron" size={16} /></summary>
@@ -597,21 +602,19 @@ function TodayScreen({
           {notice && <p className="inline-notice today-message" role="alert">{notice}</p>}
           {!hasCards && !notice && activeUnits.length > 0 && <p className="quiet-note today-message">{selectedCardCount === 0 ? `No ${modeDescription} are authored for the selected units yet. Switch practice mode or choose A-01–A-03.` : hasFutureCards ? 'No cards are due right now. Come back when the next review is ready.' : 'No cards are available right now.'}</p>}
           {!hasCards && !notice && masteredOnly && <p className="quiet-note today-message">Mastered objectives return for occasional refreshes. {hasFutureCards ? 'The next refresh is scheduled.' : 'No refresh is due right now.'}</p>}
-          {activeUnits.length === 0 && !masteredOnly && <p className="empty-guidance today-message">Open Menu → Curriculum to choose a starting area.</p>}
-          {activeUnits.length > 0 && selectedCardCount === 0 && <p className="empty-guidance today-message">Open Menu to choose an available activity or another curriculum unit.</p>}
+          {activeUnits.length === 0 && !masteredOnly && <p className="empty-guidance today-message">Choose at least one curriculum unit above.</p>}
+          {activeUnits.length > 0 && selectedCardCount === 0 && <p className="empty-guidance today-message">Choose an available activity or add another curriculum unit.</p>}
         </div>
         <section ref={actionPanelRef} className="next-card-panel">
           <div className="next-card-copy">
-            <span className="focus-kicker">{canStartLearn ? 'Recommended next step' : 'Next session'}</span>
-            <h2>{canStartLearn ? `Learn ${learningLesson!.lessonId.toUpperCase()} first` : masteredOnly ? hasCards ? `${sessionSize} refresh card${sessionSize === 1 ? '' : 's'} ready` : 'All caught up' : activeUnits.length === 0 ? 'Choose a curriculum to begin.' : selectedCardCount === 0 ? `No ${modeDescription} here yet` : hasCards ? `${sessionSize} cards ready` : 'All caught up'}</h2>
-            {canStartLearn && <p>Preview six useful workplace terms before retrieving them.</p>}
+            <span className="focus-kicker">Start practicing</span>
+            <h2>{masteredOnly ? hasCards ? `${sessionSize} refresh item${sessionSize === 1 ? '' : 's'} ready` : 'All caught up' : activeUnits.length === 0 ? 'Choose your curriculum.' : selectedCardCount === 0 ? `No ${modeDescription} here yet` : hasCards ? `${sessionSize} practice item${sessionSize === 1 ? '' : 's'} ready` : 'All caught up'}</h2>
+            {hasCards && <p>{enabledActivityTypes.length} activit{enabledActivityTypes.length === 1 ? 'y' : 'ies'} selected · up to {dailyGoal} items</p>}
           </div>
-          {canStartLearn
-            ? <><button type="button" className="button button-primary button-large" onClick={onStartLearn}>Learn {learningLesson!.lessonId.toUpperCase()} <Icon name="arrow" size={17} /></button><button type="button" className="button button-secondary button-large" onClick={onChooseUnit}>Already studying? Choose your unit</button><button type="button" className="button button-secondary button-large" onClick={onStart} disabled={!hasCards}>{hasCards ? `Start ${sessionSize}-card practice` : 'No practice ready'}</button></>
-            : <button type="button" className="button button-primary button-large" onClick={onStart} disabled={!hasCards}>
-              {hasCards ? dueCount > 0 ? 'Review due cards' : `Start ${sessionSize}-card practice` : masteredOnly ? 'All caught up' : activeUnits.length === 0 ? 'Choose a curriculum first' : 'All caught up'}
-              {hasCards && <Icon name="arrow" size={17} />}
-            </button>}
+          <button type="button" className="button button-primary button-large" onClick={activeUnits.length === 0 && !masteredOnly ? onChooseCurriculum : onStart} disabled={!hasCards && (activeUnits.length > 0 || masteredOnly)}>
+            {hasCards ? 'Start practice' : masteredOnly ? 'All caught up' : activeUnits.length === 0 ? 'Choose curriculum' : 'No practice ready'}
+            {(hasCards || activeUnits.length === 0) && <Icon name="arrow" size={17} />}
+          </button>
         </section>
       </section>
     </section>
@@ -626,10 +629,7 @@ function CurriculumScreen({
   practiceMode,
   unitCardCounts,
   onToggleLesson,
-  onToggleGroup,
   onToggleLevel,
-  onStartUnit,
-  onPracticeUnit,
   onBack,
 }: {
   selectedIds: string[]
@@ -639,10 +639,7 @@ function CurriculumScreen({
   practiceMode: PracticeMode
   unitCardCounts: Record<string, number>
   onToggleLesson: (lessonId: string) => void
-  onToggleGroup: (group: string) => void
   onToggleLevel: (level: Level) => void
-  onStartUnit: (lessonId: string) => void
-  onPracticeUnit: (lessonId: string) => void
   onBack: () => void
 }) {
   const [expandedLevels, setExpandedLevels] = useState<Record<Level, boolean>>({ A: true, B: false, C: false })
@@ -650,14 +647,13 @@ function CurriculumScreen({
 
   return (
     <section className="page curriculum-page">
-      <ScreenHeader title="Curriculum" description="Choose the objectives and themes you want in your practice. Mastered objectives pause automatically and return for occasional refreshes." onBack={onBack} />
+      <ScreenHeader title="Choose curriculum" description="Pick one or more units. This only controls which material appears when you practice." onBack={onBack} />
       <div className="selection-summary surface-panel">
-        <span className="screen-kicker">Current selection</span>
-        <strong className="selection-total">{selectedCardCount}</strong>
-        <span className="selection-label">learning items available</span>
-        <p>{practiceModeLabel(practiceMode)} · {selectedIds.length > 0 ? `${selectedIds.length} active unit${selectedIds.length === 1 ? '' : 's'}.` : masteredSelectedCount > 0 ? `${masteredSelectedCount} mastered unit${masteredSelectedCount === 1 ? '' : 's'} will return for occasional refreshes.` : 'Choose at least one unit to start.'}</p>
-        <p>Choose <strong>Start here</strong> on any unit to make it your practice scope. Earlier units are not marked mastered.</p>
-        <button type="button" className="button button-primary button-full" onClick={onBack} disabled={selectedIds.length === 0 && masteredSelectedCount === 0}>Practice selected units <Icon name="arrow" size={16} /></button>
+        <span className="screen-kicker">Your curriculum</span>
+        <strong className="selection-total">{selectedIds.length + masteredSelectedCount}</strong>
+        <span className="selection-label">unit{selectedIds.length + masteredSelectedCount === 1 ? '' : 's'} selected</span>
+        <p>{selectedCardCount} practice item{selectedCardCount === 1 ? '' : 's'} available · {practiceModeLabel(practiceMode)}</p>
+        <button type="button" className="button button-primary button-full" onClick={onBack} disabled={selectedIds.length === 0 && masteredSelectedCount === 0}>Use this curriculum <Icon name="arrow" size={16} /></button>
       </div>
       <div className="curriculum-list">
         {(['A', 'B', 'C'] as Level[]).map((level) => {
@@ -684,12 +680,11 @@ function CurriculumScreen({
                     const groupUnits = units.filter((unit) => unit.group === group)
                     const selectableGroupUnits = groupUnits.filter((unit) => !masteredIds.has(unit.id))
                     const allGroupMastered = selectableGroupUnits.length === 0
-                    const selectedGroup = !allGroupMastered && selectableGroupUnits.every((unit) => selected.has(unit.id))
                     return (
                       <div className="unit-group" key={group}>
                         <div className="unit-group-heading">
                           <span>{groupLabel(group)}</span>
-                          <button type="button" className="text-button" onClick={() => onToggleGroup(group)} disabled={allGroupMastered} aria-pressed={selectedGroup}>{allGroupMastered ? 'All mastered' : selectedGroup ? 'Deselect all' : 'Select all'}</button>
+                          {allGroupMastered && <span>All mastered</span>}
                         </div>
                         <div className="unit-options">
                           {groupUnits.map((unit) => {
@@ -703,10 +698,6 @@ function CurriculumScreen({
                                   <span className="unit-copy"><strong lang="fr">{unit.title}</strong><small>{unit.id.toUpperCase()}{mastered ? ' · Mastered · occasional refresh' : ''}</small></span>
                                 </label>
                                 <span className="unit-count">{mastered ? 'Mastered' : unitCardCounts[unit.id] ?? 0}</span>
-                                <span className="unit-actions">
-                                  <button type="button" className="unit-start-button" onClick={() => onStartUnit(unit.id)} aria-label={`Start with ${unit.id.toUpperCase()}: ${unit.title}`}>Start here</button>
-                                  <button type="button" className="unit-practice-button" onClick={() => onPracticeUnit(unit.id)} aria-label={`Practice only ${unit.id.toUpperCase()}: ${unit.title}`} title={`Practice only ${unit.id.toUpperCase()}`}><Icon name="practice" size={16} /></button>
-                                </span>
                               </div>
                             )
                           })}
@@ -971,10 +962,10 @@ function QuizScreen({
         ? 'What should you say next?'
         : question.exercise?.kind === 'best-response'
           ? 'Choose the most appropriate response.'
-          : question.exercise?.kind === 'transformation'
+            : question.exercise?.kind === 'transformation'
             ? 'Choose the best reformulation.'
             : question.exercise?.kind === 'contextual-cloze'
-              ? 'Choose the word or phrase that completes the context.'
+              ? 'Try each option in the blank. Choose the one that makes the French sentence complete.'
               : question.exercise?.kind === 'ordered'
                 ? 'Tap the words to build the directive.'
                 : question.format === 'typed'
@@ -997,11 +988,6 @@ function QuizScreen({
         : question.direction === 'english-to-french'
           ? 'Choose the French translation'
           : 'Choose the English translation'
-  const promptLengthClass = question.prompt.length >= 75
-    ? 'has-extra-long-prompt'
-    : question.prompt.length >= 45
-      ? 'has-long-prompt'
-      : ''
   const arrangedAnswer = selectedTokenIndexes.map((tokenIndex) => question.tokens?.[tokenIndex] ?? '').join(' ')
   const remainingTokenIndexes = tokenOrder.filter((tokenIndex) => !selectedTokenIndexes.includes(tokenIndex))
   const answerHint = sharedAnswerHint(question.choices, question.answerLanguage) ?? question.help
@@ -1083,7 +1069,7 @@ function QuizScreen({
   return (
     <section className="page quiz-page">
       <div className={`quiz-topline ${viewMode === 'presentation' ? 'is-presentation' : ''}`}>
-        <button type="button" className="back-button" onClick={onExit}><Icon name="arrowLeft" size={17} /> Back to Today</button>
+        <button type="button" className="back-button" onClick={onExit}><Icon name="arrowLeft" size={17} /> Back to practice</button>
         <div className="quiz-context">
           <span>Level {unit?.level ?? question.card.level}</span>
           {unit && <span>{unit.id.toUpperCase()}</span>}
@@ -1110,18 +1096,19 @@ function QuizScreen({
       </ol>
       <div className="quiz-workspace">
         <div className="quiz-prompt-column">
-          <div key={question.card.id} className={`prompt-card question-type-${question.kind} exercise-format-${question.format} ${promptLengthClass}`}>
+          <div key={question.card.id} className={`prompt-card question-type-${question.kind} exercise-format-${question.format} exercise-kind-${question.exercise?.kind ?? 'none'}`}>
             <div className="question-meta">
               <span className="question-type-label">{questionLabel}</span>
               {unit && <span className="question-unit-context"><strong>{unit.id.toUpperCase()}</strong><span lang="fr">{unit.title}</span></span>}
             </div>
             <ExerciseContext question={question} />
             <div className="prompt-copy">
+              {question.exercise?.kind === 'contextual-cloze' && <span className="prompt-task-label">Complete the French sentence</span>}
               <div className={`prompt-headline ${question.kind === 'conjugation' ? 'is-conjugation' : ''}`}>
                 <h1 ref={questionHeadingRef} tabIndex={-1} lang={question.promptLanguage}>{question.prompt}</h1>
                 {question.card.kind === 'conjugation' && question.format !== 'cloze' && <span className="conjugation-person">{question.card.person}</span>}
               </div>
-              <p>{questionInstruction}</p>
+              {question.exercise?.kind !== 'scenario' && <p>{questionInstruction}</p>}
             </div>
           </div>
         </div>
@@ -1138,25 +1125,20 @@ function QuizScreen({
                     ? `Choose the form that matches ${question.card.person}.`
                     : 'Choose the answer again without looking at the correction.'}</span>
           </div>}
-          {(question.format === 'choice' || question.format === 'cloze' || question.format === 'correction') && <div className={`answer-choice-area ${answerHint ? 'has-shared-hint has-question-help' : ''}`}>
-            {answerHint && answerHintId && <AnswerHintPopover hint={answerHint} id={answerHintId} open={phraseHelpOpen} onToggle={() => setPhraseHelpOpen((open) => !open)} />}
+          {(question.format === 'choice' || question.format === 'cloze' || question.format === 'correction') && <div className="answer-choice-area">
             <div className="choice-list" role="group" aria-label={answerGroupLabel}>
               {question.choices.map((choice, choiceIndex) => {
                 const choiceLabel = question.choiceLabels?.[choice] ?? choice
                 const isCorrect = Boolean(feedback?.correct || feedback?.stage === 'repair') && feedback?.answer === choice
                 const isSelected = feedback?.selectedChoice === choice
-                const hasAnswerHint = Boolean(answerHint?.phrase && choiceLabel.toLocaleLowerCase('fr').startsWith(`${answerHint.phrase.toLocaleLowerCase('fr')} `))
-                const answerPhraseLength = answerHint?.phrase?.length ?? 0
-                const answerPhrase = hasAnswerHint ? choiceLabel.slice(0, answerPhraseLength) : undefined
-                const answerRemainder = hasAnswerHint ? choiceLabel.slice(answerPhraseLength) : choiceLabel
                 const repairLabel = feedback?.stage === 'repair' && !feedback.correct && choice === feedback.answer
                   ? `${index + 1 === total ? 'Show results' : 'Continue to the next card'}`
                   : undefined
                 const accessibleLabel = repairLabel ? `${choiceLabel}. ${repairLabel}` : undefined
                 return (
-                  <button ref={choiceIndex === 0 ? firstChoiceRef : undefined} type="button" className={`choice-button ${isCorrect ? 'is-correct' : ''} ${isSelected && !isCorrect ? 'is-incorrect' : ''}`} key={choice} onClick={() => onAnswer(choice)} disabled={Boolean(feedback?.correct || (feedback?.stage === 'repair' && choice !== feedback.answer))} aria-label={accessibleLabel} aria-describedby={answerHintId}>
+                  <button ref={choiceIndex === 0 ? firstChoiceRef : undefined} type="button" className={`choice-button ${isCorrect ? 'is-correct' : ''} ${isSelected && !isCorrect ? 'is-incorrect' : ''}`} key={choice} onClick={() => onAnswer(choice)} disabled={Boolean(feedback?.correct || (feedback?.stage === 'repair' && choice !== feedback.answer))} aria-label={accessibleLabel}>
                     <span className="choice-number">{feedback && isCorrect ? <Icon name="check" size={16} /> : choiceIndex + 1}</span>
-                    <span lang={question.answerLanguage}>{answerPhrase ? <><span className="choice-shared-phrase">{answerPhrase}</span>{answerRemainder}</> : choiceLabel}</span>
+                    <span lang={question.answerLanguage}>{choiceLabel}</span>
                     {feedback && isSelected && !isCorrect && <Icon name="close" size={18} />}
                   </button>
                 )
@@ -1164,7 +1146,6 @@ function QuizScreen({
             </div>
           </div>}
           {question.format === 'typed' && <div className="question-help-area">
-            {answerHint && answerHintId && <AnswerHintPopover hint={answerHint} id={answerHintId} open={phraseHelpOpen} onToggle={() => setPhraseHelpOpen((open) => !open)} />}
             <form className="typed-answer-form" onSubmit={submitTypedAnswer}>
               <label htmlFor="typed-answer">Your answer</label>
               <input ref={typedInputRef} id="typed-answer" className="typed-answer-input" value={typedAnswer} onChange={(event) => setTypedAnswer(event.target.value)} onSelect={captureAccentSelection} onBlur={captureAccentSelection} lang={question.answerLanguage} inputMode="text" enterKeyHint="done" autoComplete="off" autoCapitalize="none" spellCheck={false} disabled={Boolean(feedback)} />
@@ -1176,7 +1157,6 @@ function QuizScreen({
             </form>
           </div>}
           {question.format === 'arrange' && <div className="question-help-area arrange-help-area">
-            {answerHint && answerHintId && <AnswerHintPopover hint={answerHint} id={answerHintId} open={phraseHelpOpen} onToggle={() => setPhraseHelpOpen((open) => !open)} />}
             <div className="arrange-answer">
               <div className="arranged-sentence" aria-label="Your arranged answer" lang={question.answerLanguage}>
                 {selectedTokenIndexes.length === 0 && <span>Tap words below to build the answer.</span>}
@@ -1188,9 +1168,12 @@ function QuizScreen({
               <button type="button" className="button button-primary arrange-check" onClick={submitArrangedAnswer} disabled={remainingTokenIndexes.length > 0 || Boolean(feedback)}>Check answer</button>
             </div>
           </div>}
-          {!feedback && !repairing && <div className="skip-action">
-            <button type="button" className="button button-secondary skip-button" onClick={onSkip}>Skip for now</button>
-            <span>No penalty. This item stays in your pile.</span>
+          {!feedback && !repairing && <div className="quiz-support-actions">
+            <div className="skip-action">
+              <button type="button" className="button button-secondary skip-button" onClick={onSkip}>Skip for now</button>
+              <span>No penalty. This item stays in your pile.</span>
+            </div>
+            {answerHint && answerHintId && <AnswerHintPopover hint={answerHint} id={answerHintId} open={phraseHelpOpen} onToggle={() => setPhraseHelpOpen((open) => !open)} />}
           </div>}
           {feedback && !feedback.correct && <FeedbackPanel question={question} feedback={feedback} index={index} total={total} onStartRepair={onStartRepair} onContinue={onContinue} />}
         </div>
@@ -1221,15 +1204,15 @@ function ProgressionOverviewScreen({ state, shelf, activeUnits, onToday, onCurri
   )
 }
 
-function ResultsScreen({ results, shelf, hasMoreCards, learningLesson, onDone, onKeepGoing }: { results: SessionStats & { box5Count: number }; shelf: Record<Box, number>; hasMoreCards: boolean; learningLesson: LearningPilotLesson | null; onDone: () => void; onKeepGoing: () => void }) {
+function ResultsScreen({ results, shelf, hasMoreCards, onDone, onKeepGoing }: { results: SessionStats & { box5Count: number }; shelf: Record<Box, number>; hasMoreCards: boolean; onDone: () => void; onKeepGoing: () => void }) {
   const accuracy = results.total === 0 ? 0 : Math.round((results.correct / results.total) * 100)
   return (
     <section className="page results-page session-results-page">
-      <ScreenHeader title="Session complete" description={learningLesson ? `Immediate retrieval for ${learningLesson.lessonId.toUpperCase()}; normal scheduled reviews remain separate.` : 'First-try accuracy, repairs, skips, and shelf movement.'} />
+      <ScreenHeader title="Session complete" description="First-try accuracy, repairs, skips, and shelf movement." />
       <div className="results-score surface-panel">
-        <span className="screen-kicker">{learningLesson ? 'Immediate retrieval' : 'First-try accuracy'}</span>
+        <span className="screen-kicker">First-try accuracy</span>
         <strong>{accuracy}%</strong>
-        <p>{results.correct} correct answer{results.correct === 1 ? '' : 's'} out of {results.total} answered item{results.total === 1 ? '' : 's'}. {results.skipped > 0 && `${results.skipped} skipped item${results.skipped === 1 ? '' : 's'} remain in your queue. `}{learningLesson ? 'This first pass starts new cards in the normal Box 1 path. Repairs do not change the original result.' : 'Repairs are practice, not first-try answers.'}</p>
+        <p>{results.correct} correct answer{results.correct === 1 ? '' : 's'} out of {results.total} answered item{results.total === 1 ? '' : 's'}. {results.skipped > 0 && `${results.skipped} skipped item${results.skipped === 1 ? '' : 's'} remain in your queue. `}Repairs are practice, not first-try answers.</p>
         <div className="results-actions"><button type="button" className="button button-primary" onClick={onDone}>Done <Icon name="check" size={16} /></button><button type="button" className="button button-secondary" onClick={onKeepGoing} disabled={!hasMoreCards}>{hasMoreCards ? 'Keep going' : 'All caught up'}{hasMoreCards && <Icon name="arrow" size={16} />}</button></div>
       </div>
       <div className="results-grid">
@@ -1254,7 +1237,6 @@ export default function App() {
   const [focusedSession, setFocusedSession] = useState(false)
   const [sessionMode, setSessionMode] = useState<PracticeMode>('mixed')
   const [sessionActivityTypes, setSessionActivityTypes] = useState<ActivityType[]>([...ACTIVITY_TYPES])
-  const [guidedLearnLesson, setGuidedLearnLesson] = useState<LearningPilotLesson | null>(null)
   const [sessionIndex, setSessionIndex] = useState(0)
   const [feedback, setFeedback] = useState<Feedback | null>(null)
   const [repairing, setRepairing] = useState(false)
@@ -1332,10 +1314,8 @@ export default function App() {
   const masteredSelectedLessonIds = useMemo(() => new Set(state.selectedLessonIds.filter((id) => masteredLessonIds.has(id))), [masteredLessonIds, state.selectedLessonIds])
   const activeLessonIds = useMemo(() => state.selectedLessonIds.filter((id) => !masteredLessonIds.has(id)), [masteredLessonIds, state.selectedLessonIds])
   const queueCounts = useMemo(() => getQueueCounts(allTargets, state.progress, activeLessonIds, today, state.practiceMode, state.enabledActivityTypes, masteredSelectedLessonIds), [activeLessonIds, masteredSelectedLessonIds, state.enabledActivityTypes, state.progress, state.practiceMode, today])
-  const recommendedLesson = useMemo(() => recommendedLearningPilotLesson(state.progress, activeLessonIds), [activeLessonIds, state.progress])
-  const recommendedLessonTerms = useMemo(() => recommendedLesson ? learningPilotTerms(recommendedLesson) : [], [recommendedLesson])
-  const readyCardCount = useMemo(() => queueCards(allTargets, state.progress, activeLessonIds, today, state.dailyGoal, { mode: state.practiceMode, maxNewCards: state.dailyGoal, activityTypes: state.enabledActivityTypes, masteredLessonIds: masteredSelectedLessonIds }).length, [activeLessonIds, masteredSelectedLessonIds, state.dailyGoal, state.enabledActivityTypes, state.practiceMode, state.progress, today])
-  const activityCounts = useMemo(() => activityAvailability(allTargets, state.selectedLessonIds, state.practiceMode), [state.practiceMode, state.selectedLessonIds])
+  const readyCardCount = useMemo(() => queueCards(allTargets, state.progress, activeLessonIds, today, state.dailyGoal, { mode: state.practiceMode, maxNewCards: state.dailyGoal, maxImmediateMisses: immediateMissLimit(state.dailyGoal), activityTypes: state.enabledActivityTypes, masteredLessonIds: masteredSelectedLessonIds }).length, [activeLessonIds, masteredSelectedLessonIds, state.dailyGoal, state.enabledActivityTypes, state.practiceMode, state.progress, today])
+  const activityCounts = useMemo(() => activityAvailability(allTargets, state.selectedLessonIds, 'mixed'), [state.selectedLessonIds])
   const activeUnits = useMemo(() => activeLessonIds.map((id) => curriculumById.get(id)).filter((unit): unit is CurriculumUnit => Boolean(unit)), [activeLessonIds])
   const unitCardCounts = useMemo(() => allTargets.reduce<Record<string, number>>((counts, card) => {
     if (cardMatchesMode(card, state.practiceMode, state.enabledActivityTypes)) counts[card.lessonId] = (counts[card.lessonId] ?? 0) + 1
@@ -1432,10 +1412,9 @@ export default function App() {
     sessionPracticeMode: PracticeMode,
     sessionTypes: readonly ActivityType[],
     focused: boolean,
-    learnLesson: LearningPilotLesson | null = null,
   ) {
     const nextSession = shuffleByActivityType(
-      buildSessionQuestions(nextQueue, state.progress, sessionTypes, allCards, allExercises).map((question) => ({
+      buildSessionQuestions(nextQueue, state.progress, sessionTypes, allCards, allExercises, Math.random).map((question) => ({
         ...question,
         choices: choicesFor(question),
       })),
@@ -1446,7 +1425,6 @@ export default function App() {
     setFocusedSession(focused)
     setSessionMode(sessionPracticeMode)
     setSessionActivityTypes([...sessionTypes])
-    setGuidedLearnLesson(learnLesson)
     setSessionIndex(0)
     setFeedback(null)
     setRepairing(false)
@@ -1467,14 +1445,14 @@ export default function App() {
     const sessionTypes = state.enabledActivityTypes
     const focusedQueueCounts = getQueueCounts(allTargets, state.progress, focusedActiveLessonIds, today, sessionPracticeMode, sessionTypes, focusedMasteredLessonIds)
     const focusedCardCount = allTargets.filter((card) => focusedActiveLessonIds.includes(card.lessonId) && cardMatchesMode(card, sessionPracticeMode, sessionTypes)).length
-    const nextQueue = queueCards(allTargets, state.progress, focusedActiveLessonIds, today, state.dailyGoal, { mode: sessionPracticeMode, maxNewCards: state.dailyGoal, activityTypes: sessionTypes, masteredLessonIds: focusedMasteredLessonIds })
+    const nextQueue = queueCards(allTargets, state.progress, focusedActiveLessonIds, today, state.dailyGoal, { mode: sessionPracticeMode, maxNewCards: state.dailyGoal, maxImmediateMisses: immediateMissLimit(state.dailyGoal), activityTypes: sessionTypes, masteredLessonIds: focusedMasteredLessonIds })
     if (nextQueue.length === 0) {
       setNotice(focusedActiveLessonIds.length === 0 && focusedMasteredLessonIds.size === 0
         ? 'Choose at least one curriculum unit before starting.'
         : focusedQueueCounts.future > 0
           ? 'No cards are due right now. Your next review will appear on its scheduled date.'
           : focusedCardCount === 0
-            ? 'No learning items are available for the selected units yet.'
+            ? 'No practice items are available for the selected units yet.'
             : 'No cards are available right now.')
       if (lessonIds !== undefined) {
         setScreen('today')
@@ -1483,10 +1461,6 @@ export default function App() {
       return
     }
     beginSession(nextQueue, requestedLessonIds, sessionPracticeMode, sessionTypes, lessonIds !== undefined)
-  }
-
-  function startLearnRetrieval(lesson: LearningPilotLesson) {
-    beginSession(focusedLearningTargetQueue(lesson), [lesson.lessonId], 'vocabulary', ['vocabulary'], true, lesson)
   }
 
   function answer(choice: string) {
@@ -1586,10 +1560,6 @@ export default function App() {
     updateState((previous) => ({ ...previous, dailyGoal: value }))
   }
 
-  function updatePracticeMode(value: PracticeMode) {
-    updateState((previous) => ({ ...previous, practiceMode: value, enabledActivityTypes: activityTypesForMode(value) }))
-  }
-
   function updateActivityTypes(values: ActivityType[]) {
     const enabledActivityTypes = ACTIVITY_TYPES.filter((type) => values.includes(type))
     if (enabledActivityTypes.length === 0) return
@@ -1629,7 +1599,6 @@ export default function App() {
     setFocusedSession(false)
     setSessionMode('mixed')
     setSessionActivityTypes([...ACTIVITY_TYPES])
-    setGuidedLearnLesson(null)
     setSessionIndex(0)
     setFeedback(null)
     setRepairing(false)
@@ -1640,12 +1609,6 @@ export default function App() {
     setShelfMotion(null)
   }
 
-  function startWithUnit(lessonId: string) {
-    updateState((previous) => ({ ...previous, selectedLessonIds: [lessonId] }))
-    setNotice(`${lessonId.toUpperCase()} is now your practice scope. Earlier units were not marked mastered.`)
-    setScreen('today')
-  }
-
   function toggleLesson(lessonId: string) {
     if (masteredLessonIds.has(lessonId)) return
     setNotice(null)
@@ -1653,18 +1616,6 @@ export default function App() {
       const selected = new Set(previous.selectedLessonIds)
       if (selected.has(lessonId)) selected.delete(lessonId)
       else selected.add(lessonId)
-      return { ...previous, selectedLessonIds: [...selected] }
-    })
-  }
-
-  function toggleGroup(group: string) {
-    setNotice(null)
-    updateState((previous) => {
-      const mastered = getMasteredLessonIds(allTargets, previous.progress)
-      const groupIds = curriculumUnits.filter((unit) => unit.group === group && !mastered.has(unit.id)).map((unit) => unit.id)
-      const selected = new Set(previous.selectedLessonIds)
-      const shouldSelect = groupIds.some((id) => !selected.has(id))
-      groupIds.forEach((id) => shouldSelect ? selected.add(id) : selected.delete(id))
       return { ...previous, selectedLessonIds: [...selected] }
     })
   }
@@ -1718,11 +1669,10 @@ export default function App() {
 
   function renderScreen() {
     const hasMoreCards = sessionQueueCounts.overdue + sessionQueueCounts.due + sessionQueueCounts.newCards > 0
-    if (screen === 'curriculum') return <CurriculumScreen selectedIds={activeLessonIds} masteredIds={masteredLessonIds} masteredSelectedCount={masteredSelectedLessonIds.size} selectedCardCount={selectedCardCount} practiceMode={state.practiceMode} unitCardCounts={unitCardCounts} onToggleLesson={toggleLesson} onToggleGroup={toggleGroup} onToggleLevel={toggleLevel} onStartUnit={startWithUnit} onPracticeUnit={(lessonId) => startSession([lessonId])} onBack={() => setScreen('today')} />
-    if (screen === 'learn' && recommendedLesson) return <LearnScreen lesson={recommendedLesson} terms={recommendedLessonTerms} onStartRetrieval={() => startLearnRetrieval(recommendedLesson)} onExit={() => setScreen('today')} />
+    if (screen === 'curriculum') return <CurriculumScreen selectedIds={activeLessonIds} masteredIds={masteredLessonIds} masteredSelectedCount={masteredSelectedLessonIds.size} selectedCardCount={selectedCardCount} practiceMode={state.practiceMode} unitCardCounts={unitCardCounts} onToggleLesson={toggleLesson} onToggleLevel={toggleLevel} onBack={() => setScreen('today')} />
     if (screen === 'quiz' && currentQuestion) return <QuizScreen question={currentQuestion} unit={currentUnit} currentBox={state.progress[currentQuestion.card.id]?.box ?? 1} index={sessionIndex} total={session.length} feedback={feedback} repairing={repairing} onAnswer={handleAnswer} onStartRepair={beginRepair} onContinue={continueSession} onSkip={skipCurrentCard} onExit={exitSession} onMenu={openMenu} menuOpen={menuOpen} menuTriggerRef={menuTriggerRef} viewMode={viewMode} onTogglePresentation={togglePresentationMode} />
-    if (screen === 'results') return results ? <ResultsScreen results={results} shelf={sessionShelf} hasMoreCards={hasMoreCards} learningLesson={guidedLearnLesson} onDone={() => setScreen('today')} onKeepGoing={() => startSession(sessionLessonIds)} /> : <ProgressionOverviewScreen state={state} shelf={shelf} activeUnits={activeUnits} onToday={() => setScreen('today')} onCurriculum={() => setScreen('curriculum')} />
-    return <TodayScreen counts={shelf} queueCounts={queueCounts} activeUnits={activeUnits} masteredSelectedCount={masteredSelectedLessonIds.size} dailyGoal={state.dailyGoal} practiceMode={state.practiceMode} missMode={state.missMode} selectedCardCount={selectedCardCount} readyCardCount={readyCardCount} onStart={() => startSession()} notice={notice} motion={shelfMotion} learningLesson={recommendedLesson} onStartLearn={() => setScreen('learn')} onChooseUnit={() => setScreen('curriculum')} />
+    if (screen === 'results') return results ? <ResultsScreen results={results} shelf={sessionShelf} hasMoreCards={hasMoreCards} onDone={() => setScreen('today')} onKeepGoing={() => startSession(sessionLessonIds)} /> : <ProgressionOverviewScreen state={state} shelf={shelf} activeUnits={activeUnits} onToday={() => setScreen('today')} onCurriculum={() => setScreen('curriculum')} />
+    return <TodayScreen counts={shelf} queueCounts={queueCounts} activeUnits={activeUnits} masteredSelectedCount={masteredSelectedLessonIds.size} dailyGoal={state.dailyGoal} practiceMode={state.practiceMode} missMode={state.missMode} enabledActivityTypes={state.enabledActivityTypes} activityCounts={activityCounts} selectedCardCount={selectedCardCount} readyCardCount={readyCardCount} onStart={() => startSession()} notice={notice} motion={shelfMotion} onChooseCurriculum={() => setScreen('curriculum')} onActivityTypesChange={updateActivityTypes} />
   }
 
   return (
@@ -1732,7 +1682,7 @@ export default function App() {
         {screen !== 'quiz' && <MobileHeader onMenu={openMenu} menuOpen={menuOpen} triggerRef={menuTriggerRef} screen={screen} onNavigate={navigate} />}
         <main id="main-content" className={`app-content ${screen === 'quiz' ? 'is-quiz' : ''}`} tabIndex={-1}>{renderScreen()}</main>
       </div>
-      {menuOpen && <MenuSheet screen={screen} dailyGoal={state.dailyGoal} practiceMode={state.practiceMode} missMode={state.missMode} correctAdvanceMode={state.correctAdvanceMode} enabledActivityTypes={state.enabledActivityTypes} activityCounts={activityCounts} theme={state.theme} onDailyGoalChange={updateDailyGoal} onPracticeModeChange={updatePracticeMode} onMissModeChange={updateMissMode} onCorrectAdvanceModeChange={updateCorrectAdvanceMode} onActivityTypesChange={updateActivityTypes} onThemeChange={updateTheme} onResetLocalData={resetLocalData} onNavigate={navigate} closing={menuClosing} onClose={closeMenu} />}
+      {menuOpen && <MenuSheet screen={screen} dailyGoal={state.dailyGoal} missMode={state.missMode} correctAdvanceMode={state.correctAdvanceMode} theme={state.theme} onDailyGoalChange={updateDailyGoal} onMissModeChange={updateMissMode} onCorrectAdvanceModeChange={updateCorrectAdvanceMode} onThemeChange={updateTheme} onResetLocalData={resetLocalData} onNavigate={navigate} closing={menuClosing} onClose={closeMenu} />}
       {screen === 'quiz' && currentQuestion && feedback?.correct && <SuccessOverlay question={currentQuestion} feedback={feedback} index={sessionIndex} total={session.length} advanceMode={state.correctAdvanceMode} onContinue={continueSession} />}
     </div>
   )

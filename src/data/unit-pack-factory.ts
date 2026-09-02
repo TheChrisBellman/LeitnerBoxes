@@ -268,18 +268,21 @@ export function createUnitPack(seed: UnitPackSeed, alternatives: AlternativeSeed
     `Je vais ${secondAlternative.decision}.`,
     `Je vais ${thirdAlternative.decision}.`,
   ]
+  const scenarioSetup = scaffold?.context
+    ? scaffold.context.split(/(?<=[.!?])\s+/u)[0]
+    : isFoundation
+      ? `Au travail, vous devez ${goal}. Le résultat attendu est ${result}.`
+      : band === 'developing' || band === 'advanced'
+        ? `${sentenceStart(topicFrame)}, la prochaine étape est de ${thirdPersonAction}. Le résultat attendu est ${result}, mais un collègue propose de passer à l’étape suivante sans vérifier les informations.`
+        : `${sentenceStart(topicFrame)}, vous devez ${goal}. Le résultat attendu est ${result}, mais un collègue propose de passer à l’étape suivante sans vérifier les informations.`
   const scenario: Scenario = {
     id: scenarioId,
     unitId,
     title: `Une décision ${topicReference}`,
-    setup: scaffold?.context ?? (isFoundation
-      ? `Au travail, vous devez ${goal}. Le résultat attendu est ${result}.`
-      : band === 'developing' || band === 'advanced'
-        ? `${sentenceStart(topicFrame)}, la prochaine étape est de ${thirdPersonAction}. Le résultat attendu est ${result}, mais un collègue propose de passer à l’étape suivante sans vérifier les informations.`
-        : `${sentenceStart(topicFrame)}, vous devez ${goal}. Le résultat attendu est ${result}, mais un collègue propose de passer à l’étape suivante sans vérifier les informations.`),
+    setup: scenarioSetup,
     nodes: [{
       id: 'next-step',
-      prompt: isScaffold ? 'What should you do next?' : `Que faites-vous ensuite pour ${goal}?`,
+      prompt: isScaffold ? 'What should you say next?' : `Que faites-vous ensuite pour ${goal}?`,
       choices: scenarioChoices,
       answer: scenarioAnswer,
       feedback: isScaffold ? 'Choose the action that helps with the task.' : `La réponse propose l’étape suivante nécessaire pour « ${goal} ».`,

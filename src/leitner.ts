@@ -13,6 +13,7 @@ export type CardProgress = {
   box: Box
   due: string
   maintenanceStep?: MaintenanceStep
+  lastMissedDate?: string
 }
 
 export type SchedulableCard = {
@@ -110,7 +111,7 @@ export function scheduleAnswer(
   let progress: CardProgress
 
   if (!correct) {
-    progress = { box: nextBox, due: today }
+    progress = { box: nextBox, due: today, lastMissedDate: today }
   } else if (previousBox === 5) {
     const maintenanceStep = Math.min(
       MAINTENANCE_INTERVALS.length - 1,
@@ -149,6 +150,7 @@ export type QueueCounts = {
 export type QueueOptions = {
   mode?: PracticeMode
   maxNewCards?: number
+  maxImmediateMisses?: number
   activityTypes?: readonly ActivityType[]
   masteredLessonIds?: Iterable<string>
   random?: () => number
@@ -542,6 +544,7 @@ function buildExerciseQuestion(
     distractors: choices.filter((choice) => choice !== node?.answer),
     context: scenario?.setup,
     contextTitle: scenario?.title,
+    contextLabel: scenario ? 'Situation' : undefined,
     contextKind: scenario ? 'situation' : undefined,
   }
 }
@@ -552,6 +555,7 @@ export function buildSessionQuestions(
   enabledActivityTypes: readonly ActivityType[] = ACTIVITY_TYPES,
   vocabularyPool: readonly PracticeCard[] = cards.filter((card): card is PracticeCard => card.kind !== 'exercise'),
   exercises: readonly AuthoredExercise[] = allExercises,
+  randomActivity?: () => number,
 ): PracticeQuestion[] {
   let vocabularyOrdinal = 0
 
@@ -577,7 +581,7 @@ export function buildSessionQuestions(
     }
 
     const box = progress[card.id]?.box ?? 1
-    const selectedActivity = chooseActivityType(card, enabledActivityTypes, box, activityOrdinal++)
+    const selectedActivity = chooseActivityType(card, enabledActivityTypes, box, activityOrdinal++, randomActivity)
     if (card.kind === 'conjugation') {
       const answer = normalizeConjugationForm(card.answer)
       return {
@@ -620,10 +624,12 @@ function chooseActivityType(
   enabledActivityTypes: readonly ActivityType[],
   box: Box,
   ordinal: number,
+  random?: () => number,
 ): ActivityType | undefined {
   const supported = enabledActivityTypes.filter((type) => activityTypesForTarget(card).includes(type))
   if (supported.length === 0) return undefined
   if (supported.length === 1) return supported[0]
+  if (random) return supported[Math.floor(random() * supported.length)] ?? supported[0]
   if (card.kind === 'vocabulary' && supported.includes('vocabulary')) {
     if (box >= 3 && supported.includes('typed')) return 'typed'
     if (box >= 2 && supported.includes('ordered')) return 'ordered'
@@ -784,22 +790,7 @@ function orderNew<T extends SchedulableCard>(
     buckets.set(item.card.lessonId, bucket)
   })
   buckets.forEach((bucket) => {
-    bucket.sort((left, right) =>
-      (left.card.queuePriority ?? 1) - (right.card.queuePriority ?? 1)
-        || tierRank(left.card.tier) - tierRank(right.card.tier)
-        || (left.card.order ?? left.index) - (right.card.order ?? right.index)
-        || left.index - right.index,
-    )
-    const grouped: { card: T; index: number }[][] = []
-    bucket.forEach((item) => {
-      const previous = grouped[grouped.length - 1]
-      const previousItem = previous?.[0]
-      if (previousItem
-        && (previousItem.card.queuePriority ?? 1) === (item.card.queuePriority ?? 1)
-        && tierRank(previousItem.card.tier) === tierRank(item.card.tier)) previous.push(item)
-      else grouped.push([item])
-    })
-    bucket.splice(0, bucket.length, ...grouped.flatMap((group) => shuffle(group, random)))
+    bucket.splice(0, bucket.length, ...shuffle(bucket, random))
   })
 
   const unitIds = shuffle([...new Set(selectedLessonIds.filter((lessonId) => (buckets.get(lessonId)?.length ?? 0) > 0))], random)
@@ -822,15 +813,12 @@ function orderNew<T extends SchedulableCard>(
     }
     const lessonId = unitIds[chosenUnitIndex]
     const bucket = buckets.get(lessonId) ?? []
-    const firstPriority = bucket[0]?.card.queuePriority ?? 1
-    const firstTier = tierRank(bucket[0]?.card.tier)
     const preferredIndex = requestedType
-      ? bucket.findIndex((item) => (item.card.queuePriority ?? 1) === firstPriority && tierRank(item.card.tier) === firstTier && activityTypesForTarget(item.card).includes(requestedType))
+      ? bucket.findIndex((item) => activityTypesForTarget(item.card).includes(requestedType))
       : mode === 'mixed'
-        ? bucket.findIndex((item) => (item.card.queuePriority ?? 1) === firstPriority && tierRank(item.card.tier) === firstTier && cardKind(item.card) === nextKind)
+        ? bucket.findIndex((item) => cardKind(item.card) === nextKind)
         : -1
-    const priorityIndex = bucket.findIndex((item) => (item.card.queuePriority ?? 1) === firstPriority)
-    const item = bucket.splice(preferredIndex >= 0 ? preferredIndex : priorityIndex >= 0 ? priorityIndex : 0, 1)[0]
+    const item = bucket.splice(preferredIndex >= 0 ? preferredIndex : 0, 1)[0]
     result.push(item.card)
     if (requestedType) nextActivityIndex += 1
     else if (mode === 'mixed') nextKind = nextKind === 'vocabulary' ? 'conjugation' : 'vocabulary'
@@ -856,7 +844,10 @@ export function queueCards<T extends SchedulableCard>(
   const reviews = eligible.filter((item): item is typeof item & { progress: CardProgress } => Boolean(item.progress))
   const newItems = eligible.filter(({ progress: item }) => !item)
   const random = options.random ?? Math.random
-  const reviewCards = orderReviews(reviews, today, mode, random)
+  const immediateMisses = reviews.filter(({ progress: item }) => item.lastMissedDate === today)
+  const scheduledReviews = reviews.filter(({ progress: item }) => item.lastMissedDate !== today)
+  const reviewCards = orderReviews(scheduledReviews, today, mode, random)
+  const missedCards = orderReviews(immediateMisses, today, mode, random)
   const available = Number.isFinite(limit) ? Math.max(0, limit) : Number.POSITIVE_INFINITY
   const selectedReviews = reviewCards.slice(0, available)
   const refreshCandidates = masteredRefreshCandidates(cards, progress, selectedLessonIds, options.masteredLessonIds, today, mode, options.activityTypes, true)
@@ -865,10 +856,13 @@ export function queueCards<T extends SchedulableCard>(
     ? shuffle(refreshCandidates.filter((candidate) => candidate.progress.due === firstRefresh.progress.due), random)[0]
     : undefined
   const selectedRefresh = refresh && selectedReviews.length < available ? [refresh.card] : []
-  const remaining = available === Number.POSITIVE_INFINITY ? Number.POSITIVE_INFINITY : available - selectedReviews.length - selectedRefresh.length
+  const remainingAfterReviews = available === Number.POSITIVE_INFINITY ? Number.POSITIVE_INFINITY : available - selectedReviews.length - selectedRefresh.length
+  const maxImmediateMisses = Math.max(0, Math.floor(options.maxImmediateMisses ?? Number.POSITIVE_INFINITY))
+  const selectedMisses = missedCards.slice(0, Math.min(remainingAfterReviews, maxImmediateMisses))
+  const remaining = remainingAfterReviews === Number.POSITIVE_INFINITY ? Number.POSITIVE_INFINITY : remainingAfterReviews - selectedMisses.length
   const maxNewCards = Math.max(0, Math.floor(options.maxNewCards ?? MAX_NEW_CARDS_PER_SESSION))
   const selectedNew = orderNew(newItems, selectedLessonIds, mode, Math.min(remaining, maxNewCards), options.activityTypes, random)
-  return [...selectedReviews, ...selectedRefresh, ...selectedNew]
+  return [...selectedReviews, ...selectedRefresh, ...selectedMisses, ...selectedNew]
 }
 
 export function shelfCounts(
