@@ -1,4 +1,4 @@
-import { addDays, dateKey, isDateKey, type CardProgress, type MissMode, type PracticeMode } from './leitner.ts'
+import { BOX_INTERVALS, addDays, dateKey, isDateKey, isTimestamp, type CardProgress, type MissMode, type PracticeMode } from './leitner.ts'
 import { curriculumById } from './data/curriculum.ts'
 import { ACTIVITY_TYPES, type ActivityType } from './data/types.ts'
 import { allTargets } from './data/words.ts'
@@ -64,6 +64,7 @@ function isProgress(value: unknown): value is CardProgress {
   return isBox(candidate.box)
     && isDateKey(candidate.due)
     && (maintenanceStep === undefined || (candidate.box === 5 && isMaintenanceStep(maintenanceStep)))
+    && (candidate.lastAskedAt === undefined || isTimestamp(candidate.lastAskedAt))
     && (candidate.lastMissedDate === undefined || isDateKey(candidate.lastMissedDate))
 }
 
@@ -141,7 +142,17 @@ const knownLessonIds = new Set(curriculumById.keys())
 function sanitizeState(state: StoredState): StoredState {
   const selectedLessonIds = [...new Set(state.selectedLessonIds.filter((id) => knownLessonIds.has(id)))]
   const progress: Record<string, CardProgress> = Object.fromEntries(
-    Object.entries(state.progress).filter(([targetId]) => knownTargetIds.has(targetId)),
+    Object.entries(state.progress)
+      .filter(([targetId]) => knownTargetIds.has(targetId))
+      .map(([targetId, item]) => {
+        // Older versions intentionally made a miss due immediately. Convert
+        // those persisted records once so an update takes effect mid-day too.
+        const missedDate = item.lastMissedDate
+        const wasLegacyImmediateMiss = !item.lastAskedAt && missedDate !== undefined && item.due === missedDate
+        return [targetId, wasLegacyImmediateMiss
+          ? { ...item, due: addDays(missedDate, BOX_INTERVALS[item.box - 1]) }
+          : item]
+      }),
   )
   const enabledActivityTypes = [...new Set(state.enabledActivityTypes.filter(isActivityType))]
   return { ...state, selectedLessonIds, progress, enabledActivityTypes: enabledActivityTypes.length > 0 ? enabledActivityTypes : [...ACTIVITY_TYPES] }

@@ -61,10 +61,6 @@ const MENU_CLOSE_MS = 200
 const MENU_CLOSE_REDUCED_MS = 80
 const FRENCH_ACCENTS = ['à', 'â', 'ç', 'é', 'è', 'ê', 'ë', 'î', 'ï', 'ô', 'ù', 'û', 'ü', 'œ'] as const
 
-function immediateMissLimit(sessionSize: number): number {
-  return Math.max(1, Math.ceil(sessionSize / 3))
-}
-
 const levelNames: Record<Level, string> = {
   A: 'Foundations',
   B: 'Consolidate',
@@ -1296,7 +1292,7 @@ export default function App() {
   const masteredSelectedLessonIds = useMemo(() => new Set(state.selectedLessonIds.filter((id) => masteredLessonIds.has(id))), [masteredLessonIds, state.selectedLessonIds])
   const activeLessonIds = useMemo(() => state.selectedLessonIds.filter((id) => !masteredLessonIds.has(id)), [masteredLessonIds, state.selectedLessonIds])
   const queueCounts = useMemo(() => getQueueCounts(allTargets, state.progress, activeLessonIds, today, state.practiceMode, state.enabledActivityTypes, masteredSelectedLessonIds), [activeLessonIds, masteredSelectedLessonIds, state.enabledActivityTypes, state.progress, state.practiceMode, today])
-  const readyCardCount = useMemo(() => queueCards(allTargets, state.progress, activeLessonIds, today, state.dailyGoal, { mode: state.practiceMode, maxNewCards: state.dailyGoal, maxImmediateMisses: immediateMissLimit(state.dailyGoal), activityTypes: state.enabledActivityTypes, masteredLessonIds: masteredSelectedLessonIds }).length, [activeLessonIds, masteredSelectedLessonIds, state.dailyGoal, state.enabledActivityTypes, state.practiceMode, state.progress, today])
+  const readyCardCount = useMemo(() => queueCards(allTargets, state.progress, activeLessonIds, today, state.dailyGoal, { mode: state.practiceMode, maxNewCards: state.dailyGoal, activityTypes: state.enabledActivityTypes, masteredLessonIds: masteredSelectedLessonIds }).length, [activeLessonIds, masteredSelectedLessonIds, state.dailyGoal, state.enabledActivityTypes, state.practiceMode, state.progress, today])
   const activityCounts = useMemo(() => activityAvailability(allTargets, state.selectedLessonIds, 'mixed'), [state.selectedLessonIds])
   const activeUnits = useMemo(() => activeLessonIds.map((id) => curriculumById.get(id)).filter((unit): unit is CurriculumUnit => Boolean(unit)), [activeLessonIds])
   const unitCardCounts = useMemo(() => allTargets.reduce<Record<string, number>>((counts, card) => {
@@ -1425,9 +1421,10 @@ export default function App() {
     const focusedActiveLessonIds = requestedLessonIds.filter((id) => !focusedMasteredLessonIds.has(id))
     const sessionPracticeMode = state.practiceMode
     const sessionTypes = state.enabledActivityTypes
-    const focusedQueueCounts = getQueueCounts(allTargets, state.progress, focusedActiveLessonIds, today, sessionPracticeMode, sessionTypes, focusedMasteredLessonIds)
+    const currentDate = dateKey()
+    const focusedQueueCounts = getQueueCounts(allTargets, state.progress, focusedActiveLessonIds, currentDate, sessionPracticeMode, sessionTypes, focusedMasteredLessonIds)
     const focusedCardCount = allTargets.filter((card) => focusedActiveLessonIds.includes(card.lessonId) && cardMatchesMode(card, sessionPracticeMode, sessionTypes)).length
-    const nextQueue = queueCards(allTargets, state.progress, focusedActiveLessonIds, today, state.dailyGoal, { mode: sessionPracticeMode, maxNewCards: state.dailyGoal, maxImmediateMisses: immediateMissLimit(state.dailyGoal), activityTypes: sessionTypes, masteredLessonIds: focusedMasteredLessonIds })
+    const nextQueue = queueCards(allTargets, state.progress, focusedActiveLessonIds, currentDate, state.dailyGoal, { mode: sessionPracticeMode, maxNewCards: state.dailyGoal, activityTypes: sessionTypes, masteredLessonIds: focusedMasteredLessonIds })
     if (nextQueue.length === 0) {
       setNotice(focusedActiveLessonIds.length === 0 && focusedMasteredLessonIds.size === 0
         ? 'Choose at least one curriculum unit before starting.'
@@ -1449,7 +1446,7 @@ export default function App() {
     if (!currentQuestion || feedback || repairing) return
     const correct = responseIsCorrect(currentQuestion, choice)
     const cardId = currentQuestion.card.id
-    const result = scheduleAnswer(state.progress[cardId], correct, today, state.missMode)
+    const result = scheduleAnswer(state.progress[cardId], correct, dateKey(), state.missMode)
     const nextState: StoredState = { ...state, progress: { ...state.progress, [cardId]: result.progress } }
     commitState(nextState)
     setFeedback({ correct, answer: currentQuestion.answer, selectedChoice: choice, previousBox: result.previousBox, nextBox: result.nextBox, stage: 'first' })

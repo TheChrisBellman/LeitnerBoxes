@@ -13,6 +13,8 @@ export type CardProgress = {
   box: Box
   due: string
   maintenanceStep?: MaintenanceStep
+  /** ISO timestamp of the most recent scored attempt. */
+  lastAskedAt?: string
   lastMissedDate?: string
 }
 
@@ -53,6 +55,10 @@ export function isDateKey(value: unknown): value is string {
   return parsed.getFullYear() === year && parsed.getMonth() === month - 1 && parsed.getDate() === day
 }
 
+export function isTimestamp(value: unknown): value is string {
+  return typeof value === 'string' && Number.isFinite(Date.parse(value))
+}
+
 export function addDays(value: string, days: number): string {
   const [year, month, day] = value.split('-').map(Number)
   const result = new Date(year, month - 1, day, 12)
@@ -69,7 +75,11 @@ export function createNewProgress(today = dateKey()): CardProgress {
 }
 
 export function isDue(progress: CardProgress, today = dateKey()): boolean {
-  return compareDateKeys(progress.due, today) <= 0
+  if (compareDateKeys(progress.due, today) > 0) return false
+  // `due` is the scheduling authority. This additional guard protects both
+  // migrated data and future callers from presenting a card twice on the same
+  // local calendar day if a malformed progress record has a stale due date.
+  return !progress.lastAskedAt || dateKey(new Date(progress.lastAskedAt)) !== today
 }
 
 export function isBeyondBoxFive(progress: CardProgress | undefined): boolean {
@@ -103,15 +113,24 @@ export function scheduleAnswer(
   correct: boolean,
   today = dateKey(),
   missMode: MissMode = 'step-back',
+  askedAt = new Date(),
 ): ScheduleResult {
   const previousBox = current?.box ?? 1
   const nextBox = correct
     ? Math.min(5, previousBox + 1) as Box
     : missMode === 'full-reset' ? 1 : Math.max(1, previousBox - 1) as Box
   let progress: CardProgress
+  const lastAskedAt = askedAt.toISOString()
 
   if (!correct) {
-    progress = { box: nextBox, due: today, lastMissedDate: today }
+    // A missed card returns to a lower box, but is not an immediate repeat.
+    // Its next appearance follows that box's normal day interval.
+    progress = {
+      box: nextBox,
+      due: addDays(today, BOX_INTERVALS[nextBox - 1]),
+      lastAskedAt,
+      lastMissedDate: today,
+    }
   } else if (previousBox === 5) {
     const maintenanceStep = Math.min(
       MAINTENANCE_INTERVALS.length - 1,
@@ -121,11 +140,13 @@ export function scheduleAnswer(
       box: 5,
       due: addDays(today, MAINTENANCE_INTERVALS[maintenanceStep]),
       maintenanceStep,
+      lastAskedAt,
     }
   } else {
     progress = {
       box: nextBox,
       due: addDays(today, BOX_INTERVALS[previousBox - 1]),
+      lastAskedAt,
       ...(nextBox === 5 ? { maintenanceStep: 0 as const } : {}),
     }
   }
@@ -150,7 +171,6 @@ export type QueueCounts = {
 export type QueueOptions = {
   mode?: PracticeMode
   maxNewCards?: number
-  maxImmediateMisses?: number
   activityTypes?: readonly ActivityType[]
   masteredLessonIds?: Iterable<string>
   random?: () => number
@@ -779,9 +799,9 @@ export function getQueueCounts<T extends SchedulableCard>(
     if (!selected.has(card.lessonId) || !matchesMode(card, mode) || !matchesActivityTypes(card, activityTypes)) return current
     const item = progress[card.id]
     if (!item) current.newCards += 1
+    else if (!isDue(item, today)) current.future += 1
     else if (compareDateKeys(item.due, today) < 0) current.overdue += 1
     else if (item.due === today) current.due += 1
-    else current.future += 1
     return current
   }, { overdue: 0, due: 0, newCards: 0, future: 0 })
   const refresh = masteredRefreshCandidates(cards, progress, selectedLessonIds, masteredLessonIds, today, mode, activityTypes, false)[0]
@@ -908,10 +928,7 @@ export function queueCards<T extends SchedulableCard>(
   const reviews = eligible.filter((item): item is typeof item & { progress: CardProgress } => Boolean(item.progress))
   const newItems = eligible.filter(({ progress: item }) => !item)
   const random = options.random ?? Math.random
-  const immediateMisses = reviews.filter(({ progress: item }) => item.lastMissedDate === today)
-  const scheduledReviews = reviews.filter(({ progress: item }) => item.lastMissedDate !== today)
-  const reviewCards = orderReviews(scheduledReviews, today, mode, random)
-  const missedCards = orderReviews(immediateMisses, today, mode, random)
+  const reviewCards = orderReviews(reviews, today, mode, random)
   const available = Number.isFinite(limit) ? Math.max(0, limit) : Number.POSITIVE_INFINITY
   const selectedReviews = reviewCards.slice(0, available)
   const refreshCandidates = masteredRefreshCandidates(cards, progress, selectedLessonIds, options.masteredLessonIds, today, mode, options.activityTypes, true)
@@ -921,12 +938,10 @@ export function queueCards<T extends SchedulableCard>(
     : undefined
   const selectedRefresh = refresh && selectedReviews.length < available ? [refresh.card] : []
   const remainingAfterReviews = available === Number.POSITIVE_INFINITY ? Number.POSITIVE_INFINITY : available - selectedReviews.length - selectedRefresh.length
-  const maxImmediateMisses = Math.max(0, Math.floor(options.maxImmediateMisses ?? Number.POSITIVE_INFINITY))
-  const selectedMisses = missedCards.slice(0, Math.min(remainingAfterReviews, maxImmediateMisses))
-  const remaining = remainingAfterReviews === Number.POSITIVE_INFINITY ? Number.POSITIVE_INFINITY : remainingAfterReviews - selectedMisses.length
+  const remaining = remainingAfterReviews
   const maxNewCards = Math.max(0, Math.floor(options.maxNewCards ?? MAX_NEW_CARDS_PER_SESSION))
   const selectedNew = orderNew(newItems, selectedLessonIds, mode, Math.min(remaining, maxNewCards), options.activityTypes, random)
-  return [...selectedReviews, ...selectedRefresh, ...selectedMisses, ...selectedNew]
+  return [...selectedReviews, ...selectedRefresh, ...selectedNew]
 }
 
 export function shelfCounts(
