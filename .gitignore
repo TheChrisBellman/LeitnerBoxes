@@ -1,8 +1,10 @@
 # Generated build and test output
 /dist/
+/site/
 /node_modules/
 /playwright-report/
 /test-results/
+/.playwright-cli/
 /coverage/
 *.log
 
