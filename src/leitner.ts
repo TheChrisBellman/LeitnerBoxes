@@ -327,8 +327,62 @@ function vocabularyQuestionHelp(card: VocabularyCard, reverse: boolean): Questio
   }
 }
 
-function exerciseQuestionHelp(kind: AuthoredExercise['kind']): QuestionHelp {
-  const text = kind === 'contextual-cloze'
+type SharedFrenchSupport = {
+  phrase: string
+  forms: readonly string[]
+  text: string
+}
+
+// These are support forms rather than answer targets. We only surface one when
+// every selectable response contains it, so the help cannot give away what the
+// learner is being asked to distinguish.
+const sharedFrenchSupports: readonly SharedFrenchSupport[] = [
+  { phrase: 'Je m’appelle', forms: ["je m'appelle"], text: 'means “my name is” or, literally, “I call myself.” « appelle » is a form of « appeler » (to call).' },
+  { phrase: 'Elle doit', forms: ['elle doit'], text: 'means “she must” or “she needs to.” « doit » is the il/elle form of « devoir » (to have to / must).' },
+  { phrase: 'Il doit', forms: ['il doit'], text: 'means “he must” or “he needs to.” « doit » is the il/elle form of « devoir » (to have to / must).' },
+  { phrase: 'On doit', forms: ['on doit'], text: 'means “we/one must” or “need(s) to.” « doit » is the on form of « devoir » (to have to / must).' },
+  { phrase: 'Je dois', forms: ['je dois'], text: 'means “I must” or “I need to.” « dois » is the je form of « devoir » (to have to / must).' },
+  { phrase: 'Tu dois', forms: ['tu dois'], text: 'means “you must” or “you need to.” « dois » is the tu form of « devoir » (to have to / must).' },
+  { phrase: 'Nous devons', forms: ['nous devons'], text: 'means “we must” or “we need to.” « devons » is the nous form of « devoir » (to have to / must).' },
+  { phrase: 'Vous devez', forms: ['vous devez'], text: 'means “you must” or “you need to.” « devez » is the vous form of « devoir » (to have to / must).' },
+  { phrase: 'Ils doivent', forms: ['ils doivent'], text: 'means “they must” or “they need to.” « doivent » is the ils/elles form of « devoir » (to have to / must).' },
+  { phrase: 'Elles doivent', forms: ['elles doivent'], text: 'means “they must” or “they need to.” « doivent » is the ils/elles form of « devoir » (to have to / must).' },
+  { phrase: 'Je vais', forms: ['je vais'], text: 'means “I am going to” or “I will.” « vais » is the je form of « aller » (to go).' },
+  { phrase: 'Nous allons', forms: ['nous allons'], text: 'means “we are going to” or “we will.” « allons » is the nous form of « aller » (to go).' },
+  { phrase: 'Vous allez', forms: ['vous allez'], text: 'means “you are going to” or “you will.” « allez » is the vous form of « aller » (to go).' },
+  { phrase: 'Je peux', forms: ['je peux'], text: 'means “I can.” « peux » is the je form of « pouvoir » (can / to be able to).' },
+  { phrase: 'Il faut', forms: ['il faut'], text: 'means “it is necessary” or “we need to.” « faut » is used with « il » in this impersonal form of « falloir ».' },
+  { phrase: 'Je voudrais', forms: ['je voudrais'], text: 'means “I would like.” It is a polite form of « vouloir » (to want).' },
+  { phrase: 'Pourriez-vous', forms: ['pourriez-vous'], text: 'means “could you?” It is a polite conditional form of « pouvoir » (can / to be able to).' },
+  { phrase: 'vérifiera', forms: ['vérifiera'], text: 'means “will check” or “will verify.” It is a future form of « vérifier ».' },
+  { phrase: 'prépare', forms: ['prépare'], text: 'means “prepares” or “is preparing.” It is a present-tense form of « préparer » (to prepare).' },
+  { phrase: 'C’est', forms: ["c'est"], text: 'means “it is” or “this is.”' },
+  { phrase: 'doit', forms: ['doit'], text: 'means “must” or “needs to.” It is a form of « devoir » (to have to / must).' },
+  { phrase: 'doivent', forms: ['doivent'], text: 'means “must” or “need to.” It is the ils/elles form of « devoir » (to have to / must).' },
+]
+
+function normalizeFrenchSupport(value: string): string {
+  return value.toLocaleLowerCase('fr').replace(/[‘’]/g, "'").replace(/\s+/g, ' ').trim()
+}
+
+function containsSharedFrenchForm(value: string, form: string): boolean {
+  const escaped = form.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+')
+  return new RegExp(`(?:^|[^\\p{L}])${escaped}(?=$|[^\\p{L}])`, 'u').test(value)
+}
+
+export function sharedFrenchAnswerHelp(choices: readonly string[], language: 'fr' | 'en'): QuestionHelp | undefined {
+  if (language !== 'fr' || choices.length < 2) return undefined
+  const normalizedChoices = choices.map(normalizeFrenchSupport)
+  const sharedSupport = sharedFrenchSupports.find((support) => support.forms.some((form) =>
+    normalizedChoices.every((choice) => containsSharedFrenchForm(choice, form)),
+  ))
+  return sharedSupport
+    ? { label: 'Activity help', phrase: sharedSupport.phrase, text: sharedSupport.text }
+    : undefined
+}
+
+function exerciseQuestionHelp(kind: AuthoredExercise['kind'], choices: readonly string[] = []): QuestionHelp {
+  const activityText = kind === 'contextual-cloze'
     ? 'Use the surrounding sentence to choose the form that fits.'
     : kind === 'best-response'
       ? 'Choose the response that best fits the situation and moves the conversation forward.'
@@ -343,7 +397,10 @@ function exerciseQuestionHelp(kind: AuthoredExercise['kind']): QuestionHelp {
               : kind === 'scenario'
                 ? 'Choose the response that is both appropriate and useful in this situation.'
                 : 'Use the context to recall the French answer.'
-  return { label: 'Activity help', text }
+  const sharedHelp = sharedFrenchAnswerHelp(choices, 'fr')
+  return sharedHelp
+    ? { ...sharedHelp, text: `${sharedHelp.text} ${activityText}` }
+    : { label: 'Activity help', text: activityText }
 }
 
 export function buildVocabularyQuestion(
@@ -427,7 +484,6 @@ function buildExerciseQuestion(
     answerLanguage: 'fr' as const,
     contextLanguage: exercise.contextLanguage ?? 'fr',
     exercise,
-    help: exerciseQuestionHelp(exercise.kind),
   }
 
   if (exercise.kind === 'contextual-cloze') {
@@ -437,6 +493,7 @@ function buildExerciseQuestion(
       prompt: exercise.prompt,
       answer: exercise.answer,
       distractors: [...exercise.distractors],
+      help: exerciseQuestionHelp(exercise.kind, [exercise.answer, ...exercise.distractors]),
       context: exercise.context,
       contextKind: exercise.context ? 'situation' : undefined,
     }
@@ -450,6 +507,7 @@ function buildExerciseQuestion(
       prompt: exercise.prompt,
       answer: exercise.answer,
       distractors: [...exercise.distractors],
+      help: exerciseQuestionHelp(exercise.kind, [exercise.answer, ...exercise.distractors]),
       context: dialogue ? `${dialogue.text}\n\n${exercise.situation}` : exercise.situation,
       contextTitle: dialogue?.title,
       contextKind: dialogue ? 'dialogue' : 'situation',
@@ -464,6 +522,7 @@ function buildExerciseQuestion(
       prompt: exercise.prompt,
       answer: exercise.answer,
       distractors: [...exercise.distractors],
+      help: exerciseQuestionHelp(exercise.kind, [exercise.answer, ...exercise.distractors]),
       context: passage?.text,
       contextTitle: passage?.title,
       contextLabel: passage?.genre,
@@ -478,6 +537,7 @@ function buildExerciseQuestion(
       prompt: exercise.prompt,
       answer: exercise.answer,
       distractors: [...exercise.distractors],
+      help: exerciseQuestionHelp(exercise.kind, [exercise.answer, ...exercise.distractors]),
       context: exercise.source,
       contextLabel: 'Phrase de départ',
       contextKind: 'situation',
@@ -491,6 +551,7 @@ function buildExerciseQuestion(
       prompt: exercise.prompt,
       answer: exercise.answer,
       distractors: [],
+      help: exerciseQuestionHelp(exercise.kind),
       tokens: [...exercise.tokens],
       acceptedAnswers: exercise.acceptedAnswers ? [...exercise.acceptedAnswers] : undefined,
       context: exercise.context,
@@ -514,6 +575,7 @@ function buildExerciseQuestion(
       answerDisplay: exercise.correction,
       distractors: choices.filter((choice) => choice !== exercise.answerSegmentId),
       choiceLabels,
+      help: exerciseQuestionHelp(exercise.kind),
       context: exercise.segments.map((segment) => segment.text).join(' '),
       contextLabel: 'Texte à relire',
       contextKind: 'situation',
@@ -527,6 +589,7 @@ function buildExerciseQuestion(
       prompt: exercise.prompt,
       answer: exercise.answer,
       distractors: [],
+      help: exerciseQuestionHelp(exercise.kind),
       acceptedAnswers: exercise.acceptedAnswers ? [...exercise.acceptedAnswers] : undefined,
       context: exercise.context,
       contextKind: exercise.context ? 'situation' : undefined,
@@ -542,6 +605,7 @@ function buildExerciseQuestion(
     prompt: node?.prompt ?? '',
     answer: node?.answer ?? '',
     distractors: choices.filter((choice) => choice !== node?.answer),
+    help: exerciseQuestionHelp(exercise.kind, choices),
     context: scenario?.setup,
     contextTitle: scenario?.title,
     contextLabel: scenario ? 'Situation' : undefined,

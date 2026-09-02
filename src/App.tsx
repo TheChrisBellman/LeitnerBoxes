@@ -174,24 +174,6 @@ type AnswerHint = NonNullable<PracticeQuestion['help']> & {
   note?: string
 }
 
-const sharedAnswerHints: AnswerHint[] = [
-  { label: 'Phrase help', phrase: 'Je vais', text: 'I’m going to / I will', note: 'aller, “to go”' },
-  { label: 'Phrase help', phrase: 'Je dois', text: 'I have to / I must' },
-  { label: 'Phrase help', phrase: 'Je peux', text: 'I can' },
-  { label: 'Phrase help', phrase: 'Il faut', text: 'It is necessary / We need to' },
-  { label: 'Phrase help', phrase: 'Nous devons', text: 'We must / We have to' },
-  { label: 'Phrase help', phrase: 'Vous devez', text: 'You must / You have to' },
-]
-
-function sharedAnswerHint(choices: readonly string[], language: 'fr' | 'en'): AnswerHint | undefined {
-  if (language !== 'fr' || choices.length < 2) return undefined
-  return sharedAnswerHints.find(({ phrase }) => {
-    if (!phrase) return false
-    const prefix = `${phrase.toLocaleLowerCase('fr')} `
-    return choices.every((choice) => choice.toLocaleLowerCase('fr').startsWith(prefix))
-  })
-}
-
 function AnswerHintPopover({ hint, id, open, onToggle }: { hint: AnswerHint; id: string; open: boolean; onToggle: () => void }) {
   return (
     <>
@@ -990,7 +972,7 @@ function QuizScreen({
           : 'Choose the English translation'
   const arrangedAnswer = selectedTokenIndexes.map((tokenIndex) => question.tokens?.[tokenIndex] ?? '').join(' ')
   const remainingTokenIndexes = tokenOrder.filter((tokenIndex) => !selectedTokenIndexes.includes(tokenIndex))
-  const answerHint = sharedAnswerHint(question.choices, question.answerLanguage) ?? question.help
+  const answerHint = question.help
   const answerHintId = answerHint ? `question-help-${question.card.id}` : undefined
 
   useEffect(() => {
