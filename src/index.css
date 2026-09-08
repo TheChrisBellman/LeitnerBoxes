@@ -828,6 +828,54 @@ button:disabled {
   gap: 7px;
 }
 
+.practice-presets {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.practice-preset {
+  display: grid;
+  min-height: 76px;
+  align-content: center;
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color var(--motion-quick) ease, background-color var(--motion-quick) ease;
+}
+
+.practice-preset:hover,
+.practice-preset.is-selected {
+  border-color: var(--selection-border);
+  background: var(--cobalt-soft);
+}
+
+.practice-preset:focus-visible {
+  outline: 3px solid var(--cobalt-dark);
+  outline-offset: 2px;
+}
+
+.practice-preset strong {
+  font-size: 14px;
+}
+
+.practice-preset small {
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.custom-activity-options {
+  display: grid;
+  gap: 6px;
+  padding-top: 2px;
+}
+
 .home-activity-option {
   min-height: 58px;
   grid-template-columns: 22px minmax(0, 1fr) auto;
@@ -856,6 +904,34 @@ button:disabled {
 
 .home-activity-picker:disabled .home-activity-option {
   cursor: not-allowed;
+}
+
+.curriculum-search-label {
+  color: var(--ink);
+  font-size: var(--font-size-ui);
+  font-weight: 700;
+}
+
+.curriculum-search {
+  min-height: 48px;
+  width: 100%;
+  margin-top: -10px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+
+.curriculum-search:focus-visible {
+  border-color: var(--cobalt-dark);
+  outline: 3px solid var(--cobalt-dark);
+  outline-offset: 2px;
+}
+
+.curriculum-empty {
+  margin: 0;
 }
 
 .today-focus-panel .next-card-panel {
@@ -2933,6 +3009,50 @@ button:disabled {
   padding: 0 12px;
 }
 
+.missed-recap {
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.missed-recap summary {
+  min-height: 48px;
+  padding: 14px 0;
+  color: var(--cobalt-dark);
+  cursor: pointer;
+  font-size: var(--font-size-ui);
+  font-weight: 750;
+}
+
+.missed-recap ol {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0 0 16px 22px;
+}
+
+.missed-recap li {
+  display: grid;
+  gap: 3px;
+  padding-left: 5px;
+}
+
+.missed-recap-prompt {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.missed-recap li strong {
+  color: var(--green);
+  font-size: var(--font-size-ui);
+}
+
+.missed-recap li p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 @media (max-width: 600px) {
   .success-overlay {
     padding: 16px;
@@ -3930,6 +4050,10 @@ button:disabled {
   }
 
   .home-activity-options {
+    grid-template-columns: 1fr;
+  }
+
+  .practice-presets {
     grid-template-columns: 1fr;
   }
 

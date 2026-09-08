@@ -69,3 +69,22 @@ export const curriculumUnits: CurriculumUnit[] = [
 export const DEFAULT_LESSON_IDS = ['a-01', 'a-02', 'a-03']
 
 export const curriculumById = new Map(curriculumUnits.map((unit) => [unit.id, unit]))
+
+/** Short English labels for the material picker; `title` remains the official French source title. */
+export const materialLabelsById: Record<string, string> = {
+  'a-01': 'Identify people', 'a-02': 'Identify objects and documents', 'a-03': 'Express belonging', 'a-04': 'Express possession',
+  'a-05': 'Locate people, objects, and places', 'a-06': 'Give numerical information', 'a-07': 'Give directions', 'a-08': 'Place events in time',
+  'a-09': 'Talk about past, present, and future', 'a-10': 'Assign tasks', 'a-11': 'Explain how to complete a task', 'a-12': 'Amounts and quantities',
+  'a-13': 'Describe past events and habits', 'a-14': 'Ask about or report an event', 'a-15': 'Make requests and obtain things', 'a-16': 'Offer and respond to offers',
+  'a-17': 'Discuss presence and availability', 'a-18': 'Express wants, tastes, and preferences', 'a-19': 'Evaluate things', 'a-20': 'Evaluate people',
+  'a-21': 'Ask about standards and rules', 'a-22': 'Specify work timing', 'a-23': 'Set project conditions', 'a-24': 'Relate events to one another',
+  'a-25': 'Describe process steps', 'a-26': 'Describe movement', 'a-27': 'Describe physical tasks', 'a-28': 'Stress the importance of a directive',
+  'a-29': 'Assess abilities and skills', 'a-30': 'Allow or prohibit things', 'a-31': 'Express wants and wishes', 'a-32': 'State conditions',
+  'b-33': 'Express a choice', 'b-34': 'Propose solutions', 'b-35': 'Make predictions', 'b-36': 'Ask for and give information',
+  'b-37': 'Describe a project approach', 'b-38': 'Explain causes and effects', 'b-39': 'Evaluate a proposed change', 'b-40': 'Persuade someone',
+  'c-01': 'My department: mandate and structure', 'c-02': 'Self-awareness', 'c-03': 'Teamwork', 'c-04': 'Change', 'c-05': 'Stress',
+  'c-06': 'Work-life balance', 'c-07': 'Communication', 'c-08': 'The workplace', 'c-09': 'Leadership', 'c-10': 'Negotiations and pressure tactics',
+  'c-11': 'Collaboration and competition', 'c-12': 'Collective agreement', 'c-13': 'Globalization', 'c-14': 'Client service', 'c-15': 'Meetings',
+  'c-16': 'Values and ethics', 'c-17': 'My department: mandate and objectives', 'c-18': 'Workplace diversity and equity', 'c-19': 'Technology',
+  'c-20': 'Skills', 'c-21': 'Natural resources and environmental protection',
+}

@@ -25,7 +25,10 @@ const unique = (values: readonly string[]) => new Set(values.map(normalizeChoice
 const legacyGeneratedChoice = /Je vais attendre demain|Je vais oublier la tâche|Je vais partir sans agir|Je vais attendre sans agir|Je vais annuler la tâche|Je ne sais pas quoi faire|Je ne sais pas; nous verrons bien|Le dossier est là, mais personne ne doit le lire|Cette question attendra|Je transmets la réponse immédiatement|Je supprime le dossier|Je demande à chacun de deviner|Elle doit attendre sans agir|Elle doit annuler la tâche|Elle ne sait pas quoi faire/iu
 const invalidNarrativePossessive = /\b(?:l’équipe|elle)\s+doit\b[^.?!]*\b(?:mon|ma|mes)\b/iu
 const invalidContraction = /(?:au sujet|cadre) de (?:le|les|un|une)\b|liées à (?:le|les)\b/iu
-const invalidInfinitiveElision = /\b(?:éviter|demande) de (?=[aeiouyàâéèêëîïôùûüœ])/iu
+const invalidInfinitiveElision = /\bde (?=[aeiouyàâéèêëîïôùûüœ])/iu
+const hasUnpromptedTransformationReferentShift = (source: string, answer: string) =>
+  (/\bl’équipe\b/iu.test(source) && /\bnous\b/iu.test(answer)) ||
+  (/\bnous\b/iu.test(source) && /\bl’équipe\b/iu.test(answer))
 const scaffoldAUnits = new Set(['a-01', 'a-02', 'a-03', 'a-04'])
 const earlyAUnit = /^a-(?:0[1-9]|1[0-2])$/
 const repeatedDocumentFrame = /documents(?: de référence)?[^.?!]*dans le cadre[^.?!]*documents(?: de référence)?/iu
@@ -96,6 +99,7 @@ export function validateAuthoredExercises(): string[] {
     const text = JSON.stringify(exercise)
     if (invalidContraction.test(text)) failures.push(`invalid contraction: ${exercise.id}`)
     if (exercise.id.includes('-unit-pack-') && invalidInfinitiveElision.test(text)) failures.push(`invalid infinitive elision: ${exercise.id}`)
+    if (exercise.kind === 'transformation' && hasUnpromptedTransformationReferentShift(exercise.source, exercise.answer)) failures.push(`unprompted transformation referent shift: ${exercise.id}`)
     if (exercise.id.includes('-unit-pack-') && /\bJe vais [^.?!]*(?:\bson\b|\bses\b)/iu.test(text)) failures.push(`wrong first-person possessive: ${exercise.id}`)
     if (exercise.id.includes('-unit-pack-') && invalidNarrativePossessive.test(text)) failures.push(`wrong narrative possessive: ${exercise.id}`)
     if (exercise.id.includes('-unit-pack-') && earlyAUnit.test(exercise.unitId) && /dans le cadre/iu.test(text)) failures.push(`too-formal early A context: ${exercise.id}`)

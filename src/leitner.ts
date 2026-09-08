@@ -1,5 +1,6 @@
-import { conjugationCatches } from './data/conjugation-catches.ts'
+import { conjugationAlternatives, conjugationCatches } from './data/conjugation-catches.ts'
 import { allExercises, dialoguesById, exercisesByTargetId, passagesById, scenariosById } from './data/pilot-exercises.ts'
+import { vocabularyEquivalentForms } from './data/source-vocabulary.ts'
 import { ACTIVITY_TYPES, type ActivityType, type AuthoredExercise, type CardKind, type CardTier, type ConjugationCard, type ExerciseLanguage, type ExerciseTarget, type PracticeCard, type PracticeTarget, type QuestionHelp, type VocabularyCard } from './data/types.ts'
 
 export type Box = 1 | 2 | 3 | 4 | 5
@@ -214,7 +215,7 @@ export function isFrenchTypedAnswer(value: string): boolean {
 export const isKeyboardSafeTypedAnswer = isFrenchTypedAnswer
 
 function normalizeTypedAnswer(value: string): string {
-  return value.trim().toLocaleLowerCase('fr').replace(/’/g, "'").replace(/\s+/g, ' ')
+  return value.normalize('NFC').trim().toLocaleLowerCase('fr').replace(/[‘’‛′]/g, "'").replace(/'\s+/g, "'").replace(/\s+/g, ' ')
 }
 
 export function responseIsCorrect(question: PracticeQuestion, value: string): boolean {
@@ -273,11 +274,12 @@ const conjugationSubjectAliases: Record<ConjugationCard['person'], readonly stri
 }
 
 function conjugationAnswerVariants(card: ConjugationCard): string[] {
-  const authoredForms = card.answer.split(/\s*\/\s*/).map((form) => form.trim()).filter(Boolean)
+  const authoredForms = [...card.answer.split(/\s*\/\s*/), ...(conjugationAlternatives[`${card.infinitive}|${card.person}`] ?? [])].map((form) => form.trim()).filter(Boolean)
   const variants = new Set([card.answer, ...authoredForms])
   authoredForms.forEach((form) => {
     const subjectless = form.replace(conjugationSubjectPrefix, '').trim()
     if (!subjectless) return
+    variants.add(subjectless)
     if (card.person === 'je') {
       const subject = /^[aeiouyàâäéèêëîïôöùûüœh]/iu.test(subjectless) ? "j'" : 'je '
       variants.add(`${subject}${subjectless}`)
@@ -296,25 +298,18 @@ function conjugationDistractors(
   const sameVerb = questionPool.filter((item): item is PracticeCard & { kind: 'conjugation' } =>
     item.kind === 'conjugation' && item.id !== card.id && item.infinitive === card.infinitive,
   )
-  const sameLesson = questionPool.filter((item): item is PracticeCard & { kind: 'conjugation' } =>
-    item.kind === 'conjugation' && item.id !== card.id && item.lessonId === card.lessonId,
-  )
-  const allConjugations = questionPool.filter((item): item is PracticeCard & { kind: 'conjugation' } =>
-    item.kind === 'conjugation' && item.id !== card.id,
-  )
-  const answer = normalizeConjugationForm(card.answer)
+  const accepted = new Set(conjugationAnswerVariants(card).map(normalizeConjugationForm).map(normalizeTypedAnswer))
   const conjugationCatch = conjugationCatches[`${card.infinitive}|${card.person}`]
   const candidates = [
     ...(conjugationCatch ? [conjugationCatch] : []),
     ...card.distractors,
     ...sameVerb.flatMap((item) => [item.answer, ...item.distractors]),
-    ...sameLesson.flatMap((item) => [item.answer, ...item.distractors]),
-    ...allConjugations.flatMap((item) => [item.answer, ...item.distractors]),
+    card.infinitive,
   ]
 
   return [...new Set(candidates
     .map(normalizeConjugationForm)
-    .filter((item) => item && item !== answer))].slice(0, 3)
+    .filter((item) => item && !accepted.has(normalizeTypedAnswer(item))))].slice(0, 3)
 }
 
 function normalizeResponse(value: string): string {
@@ -332,6 +327,8 @@ function vocabularyQuestionHelp(card: VocabularyCard, reverse: boolean): Questio
     }
   }
   const french = card.french.trim()
+  if (card.lessonId === 'a-07' && french === 'rentrer') return { label: 'Usage help', text: 'The source marks this use as familiar speech.' }
+  if (card.lessonId === 'a-32' && french === 'se pouvoir') return { label: 'Usage help', text: 'This expression is impersonal, as in « Ça se peut ». Keep the reflexive pronoun.' }
   if (/^(?:le|la|l['’]|les|un|une|des|du|de la|de l['’])(?:\s|$)/iu.test(french)) {
     return { label: 'Grammar help', text: 'Keep the article with the noun; it carries useful gender and number information.' }
   }
@@ -453,6 +450,12 @@ export function buildVocabularyQuestion(
       .map((candidate) => candidate.french)
       .filter((french) => french !== card.french))]
     : []
+  const reviewed = vocabularyEquivalentForms(card)
+  const equivalentAnswers = reviewed.answers.filter((answer) => normalizeResponse(answer) !== normalizeResponse(card.answer))
+  const reverseEquivalents = reviewed.french.filter((french) => normalizeResponse(french) !== normalizeResponse(card.french))
+  const allAcceptedAnswers = reverse
+    ? [...new Set([...acceptedAnswers, ...reverseEquivalents])]
+    : equivalentAnswers
   return {
     card,
     kind: card.kind,
@@ -463,7 +466,7 @@ export function buildVocabularyQuestion(
     answer: reverse ? card.french : card.answer,
     answerLanguage: reverse ? 'fr' : 'en',
     distractors: reverse ? [...card.reverseDistractors] : [...card.distractors],
-    ...(acceptedAnswers.length > 0 ? { acceptedAnswers } : {}),
+    ...(allAcceptedAnswers.length > 0 ? { acceptedAnswers: allAcceptedAnswers } : {}),
     help: vocabularyQuestionHelp(card, reverse),
   }
 }
@@ -700,7 +703,7 @@ export function buildSessionQuestions(
 function matchesMode(card: SchedulableCard, mode: PracticeMode): boolean {
   if (card.kind === 'exercise' || card.targetType === 'exercise') return mode === 'mixed'
   if (mode === 'mixed') return true
-  return mode === 'vocabulary' ? card.kind !== 'conjugation' : card.kind === 'conjugation'
+  return mode === 'vocabulary' ? card.kind === 'vocabulary' && !('practice' in card && card.practice) : card.kind === 'conjugation'
 }
 
 function chooseActivityType(
@@ -730,7 +733,7 @@ export function activityTypesForTarget(card: SchedulableCard): ActivityType[] {
     const answer = 'answer' in card && typeof card.answer === 'string' ? card.answer : undefined
     return ['conjugation', ...(answer && isFrenchTypedAnswer(normalizeConjugationForm(answer)) ? ['typed' as const] : [])]
   }
-  if (card.kind === 'vocabulary' && 'practice' in card && card.practice) return ['vocabulary']
+  if (card.kind === 'vocabulary' && 'practice' in card && card.practice) return ['grammar']
   const types: ActivityType[] = ['vocabulary']
   const french = 'french' in card && typeof card.french === 'string' ? card.french : undefined
   if (!french) return types

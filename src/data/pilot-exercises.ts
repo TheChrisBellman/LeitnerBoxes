@@ -236,7 +236,7 @@ const a10Clozes: ContextualClozeExercise[] = [
     unitId: 'a-10',
     targetId: 'a-10-polite-request',
     kind: 'contextual-cloze',
-    context: 'Dans un courriel professionnel,',
+    context: 'Pour formuler une demande polie dans un courriel professionnel,',
     prompt: 'Je ___ vous demander de confirmer la réception.',
     answer: 'voudrais',
     distractors: ['dois', 'viens', 'suis'],

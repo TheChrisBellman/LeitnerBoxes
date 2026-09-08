@@ -10,7 +10,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'c-01', french: 'le service', answer: 'the service' },
   { lessonId: 'c-01', french: 'faire appel à', answer: 'to call on' },
   { lessonId: 'c-01', french: 'des entreprises privées', answer: 'private companies' },
-  { lessonId: 'c-01', french: 'des consultants', answer: 'contractors' },
+  { lessonId: 'c-01', french: 'des consultants', answer: "consultants" },
   { lessonId: 'c-01', french: 'des spécialistes', answer: 'specialists' },
   { lessonId: 'c-01', french: 'un mandat', answer: 'a mandate' },
   { lessonId: 'c-01', french: 'avoir pour mandat de', answer: 'to have the mandate to' },
@@ -26,7 +26,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'c-01', french: 'les politiques', answer: 'policies' },
   { lessonId: 'c-01', french: 'élaborer les politiques', answer: 'to develop policies' },
   { lessonId: 'c-01', french: 'appliquer les politiques', answer: 'to implement policies' },
-  { lessonId: 'c-01', french: 'faire respecter les politiques', answer: 'to administer policies' },
+  { lessonId: 'c-01', french: 'faire respecter les politiques', answer: "to enforce policies" },
   { lessonId: 'c-01', french: 'un programme', answer: 'a program' },
   { lessonId: 'c-01', french: 'administrer un programme', answer: 'to administer a program' },
   { lessonId: 'c-01', french: 'être responsable d’un programme', answer: 'to be in charge of a program' },
@@ -97,9 +97,9 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'c-03', french: 'l’esprit d’équipe', answer: 'team spirit' },
   { lessonId: 'c-03', french: 'le travail d’équipe', answer: 'teamwork' },
   { lessonId: 'c-03', french: 'les objectifs', answer: 'goals' },
-  { lessonId: 'c-03', french: 'atteindre ses objectifs', answer: 'to reach one’s goal' },
+  { lessonId: 'c-03', french: 'atteindre ses objectifs', answer: 'to reach one’s goals' },
   { lessonId: 'c-03', french: 'avoir des objectifs communs', answer: 'to have common goals' },
-  { lessonId: 'c-03', french: 'se fixer des objectifs', answer: 'to set oneself a goal' },
+  { lessonId: 'c-03', french: 'se fixer des objectifs', answer: 'to set goals for oneself' },
   { lessonId: 'c-03', french: 'la responsabilité', answer: 'responsibility' },
   { lessonId: 'c-03', french: 'avoir la responsabilité de', answer: 'to have responsibility for' },
   { lessonId: 'c-03', french: 'être responsable de', answer: 'to be responsible for' },
@@ -135,7 +135,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'c-04', french: 'bien', answer: 'well' },
   { lessonId: 'c-04', french: 'mal', answer: 'badly' },
   { lessonId: 'c-04', french: 'incompétent', answer: 'incompetent' },
-  { lessonId: 'c-04', french: 'menacé', answer: 'insecure' },
+  { lessonId: 'c-04', french: 'menacé', answer: "threatened, at risk" },
   { lessonId: 'c-04', french: 's’adapter à la nouvelle situation', answer: 'to adapt to the new situation' },
   { lessonId: 'c-04', french: 's’adapter au changement', answer: 'to adapt to change' },
   { lessonId: 'c-04', french: 'difficilement', answer: 'with difficulty' },
@@ -175,7 +175,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'c-05', french: 'être stressé', answer: 'to feel stressed out' },
 
   // L6 — work and personal life
-  { lessonId: 'c-06', french: 'une activité', answer: 'things to do' },
+  { lessonId: 'c-06', french: 'une activité', answer: "an activity" },
   { lessonId: 'c-06', french: 'avoir des activités', answer: 'to do things' },
   { lessonId: 'c-06', french: 'un choix', answer: 'a choice' },
   { lessonId: 'c-06', french: 'faire un choix', answer: 'to make a choice' },
@@ -213,7 +213,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'c-07', french: 'communiquer', answer: 'to communicate' },
   { lessonId: 'c-07', french: 'oralement', answer: 'orally' },
   { lessonId: 'c-07', french: 'par écrit', answer: 'in writing' },
-  { lessonId: 'c-07', french: 'savoir communiquer', answer: 'to be a communicator' },
+  { lessonId: 'c-07', french: 'savoir communiquer', answer: "to know how to communicate" },
   { lessonId: 'c-07', french: 'l’autre', answer: 'the other person' },
   { lessonId: 'c-07', french: 'se comprendre', answer: 'to understand each other' },
   { lessonId: 'c-07', french: 'se faire comprendre', answer: 'to make oneself understood' },
@@ -284,7 +284,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'c-09', french: 'un communicateur', answer: 'a communicator' },
   { lessonId: 'c-09', french: 'être un bon communicateur', answer: 'to be a good communicator' },
   { lessonId: 'c-09', french: 'communiquer efficacement', answer: 'to communicate effectively' },
-  { lessonId: 'c-09', french: 'une compétence', answer: 'a competence' },
+  { lessonId: 'c-09', french: 'une compétence', answer: "a skill" },
   { lessonId: 'c-09', french: 'avoir des compétences', answer: 'to be competent' },
   { lessonId: 'c-09', french: 'compétent', answer: 'competent' },
   { lessonId: 'c-09', french: 'une décision', answer: 'a decision' },
@@ -316,7 +316,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'c-09', french: 'avoir une vision', answer: 'to have a vision' },
 
   // L10 — negotiation and pressure tactics
-  { lessonId: 'c-10', french: 'un contrat de travail', answer: 'a working agreement' },
+  { lessonId: 'c-10', french: 'un contrat de travail', answer: "an employment contract" },
   { lessonId: 'c-10', french: 'la convention collective', answer: 'the collective agreement' },
   { lessonId: 'c-10', french: 'signer la convention collective', answer: 'to sign the collective agreement' },
   { lessonId: 'c-10', french: 'demander', answer: 'to ask for' },
@@ -329,7 +329,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'c-10', french: 'conclure une entente', answer: 'to agree on' },
   { lessonId: 'c-10', french: 'le gouvernement', answer: 'government' },
   { lessonId: 'c-10', french: 'une grève', answer: 'a strike' },
-  { lessonId: 'c-10', french: 'du zèle', answer: 'work to rule' },
+  { lessonId: 'c-10', french: 'du zèle', answer: "zeal" },
   { lessonId: 'c-10', french: 'faire la grève', answer: 'to be on strike' },
   { lessonId: 'c-10', french: 'être en grève', answer: 'to be on strike' },
   { lessonId: 'c-10', french: 'la négociation', answer: 'negotiation' },
@@ -345,7 +345,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'c-10', french: 'accepter les offres', answer: 'to accept the offers' },
   { lessonId: 'c-10', french: 'rejeter les offres', answer: 'to reject the offers' },
   { lessonId: 'c-10', french: 'offrir', answer: 'to offer' },
-  { lessonId: 'c-10', french: 'syndical', answer: 'union' },
+  { lessonId: 'c-10', french: 'syndical', answer: "union-related" },
   { lessonId: 'c-10', french: 'les relations patronales-syndicales', answer: 'management-union relations' },
   { lessonId: 'c-10', french: 'le représentant syndical', answer: 'the union representative' },
   { lessonId: 'c-10', french: 'le syndicat', answer: 'the union' },
@@ -398,7 +398,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'c-12', french: 'la table de négociations', answer: 'negotiation table' },
   { lessonId: 'c-12', french: 'une plainte', answer: 'a complaint' },
   { lessonId: 'c-12', french: 'faire une plainte', answer: 'to lodge a complaint' },
-  { lessonId: 'c-12', french: 'syndical', answer: 'union related' },
+  { lessonId: 'c-12', french: 'syndical', answer: "union-related" },
   { lessonId: 'c-12', french: 'un représentant syndical', answer: 'a union representative' },
   { lessonId: 'c-12', french: 'un délégué syndical', answer: 'a union steward' },
   { lessonId: 'c-12', french: 'les cotisations syndicales', answer: 'union fees' },
@@ -447,9 +447,9 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'c-14', french: 'un contact', answer: 'a contact' },
   { lessonId: 'c-14', french: 'avoir un bon contact', answer: 'to have good rapport' },
   { lessonId: 'c-14', french: 'être en contact', answer: 'to be in touch' },
-  { lessonId: 'c-14', french: 'disponible', answer: 'accessible' },
-  { lessonId: 'c-14', french: 'être disponible', answer: 'to be accessible' },
-  { lessonId: 'c-14', french: 'la disponibilité', answer: 'accessibility' },
+  { lessonId: 'c-14', french: 'disponible', answer: "available" },
+  { lessonId: 'c-14', french: 'être disponible', answer: "to be available" },
+  { lessonId: 'c-14', french: 'la disponibilité', answer: "availability" },
   { lessonId: 'c-14', french: 'écouter', answer: 'to listen' },
   { lessonId: 'c-14', french: 'savoir écouter', answer: 'to be a good listener' },
   { lessonId: 'c-14', french: 'se plaindre', answer: 'to make a complaint' },
@@ -472,7 +472,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'c-14', french: 'un service efficace', answer: 'an efficient service' },
   { lessonId: 'c-14', french: 'un service en ligne', answer: 'on-line service' },
   { lessonId: 'c-14', french: 'un service rapide', answer: 'a quick service' },
-  { lessonId: 'c-14', french: 'assurer un service', answer: 'to service' },
+  { lessonId: 'c-14', french: 'assurer un service', answer: "to provide a service" },
   { lessonId: 'c-14', french: 'fournir un service', answer: 'to provide a service' },
 
   // L15 — meetings
@@ -495,7 +495,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'c-15', french: 'se préparer', answer: 'to prepare, to get ready' },
   { lessonId: 'c-15', french: 'une réunion interminable', answer: 'a never-ending meeting' },
   { lessonId: 'c-15', french: 'une réunion productive', answer: 'a productive meeting' },
-  { lessonId: 'c-15', french: 'une réunion improductive', answer: 'a counterproductive meeting' },
+  { lessonId: 'c-15', french: 'une réunion improductive', answer: "an unproductive meeting" },
   { lessonId: 'c-15', french: 'animer', answer: 'to moderate' },
   { lessonId: 'c-15', french: 'annuler', answer: 'to cancel' },
   { lessonId: 'c-15', french: 'assister à une réunion', answer: 'to attend a meeting' },
@@ -518,7 +518,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'c-16', french: 'un code d’éthique', answer: 'a code of ethics' },
   { lessonId: 'c-16', french: 'un conflit d’intérêts', answer: 'a conflict of interest' },
   { lessonId: 'c-16', french: 'être en conflit d’intérêts', answer: 'to have a conflict of interest' },
-  { lessonId: 'c-16', french: 'y avoir un conflit d’intérêts', answer: 'there is a conflict of interest' },
+  { lessonId: 'c-16', french: 'y avoir un conflit d’intérêts', answer: "for there to be a conflict of interest" },
   { lessonId: 'c-16', french: 'le favoritisme', answer: 'favoritism' },
   { lessonId: 'c-16', french: 'l’image de la fonction publique', answer: 'the image of the Public Service' },
   { lessonId: 'c-16', french: 'l’image du fonctionnaire', answer: 'the image of the civil servant' },
@@ -557,15 +557,15 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'c-17', french: 'un mandat', answer: 'a mandate' },
   { lessonId: 'c-17', french: 'avoir pour mandat de', answer: 'to have the mandate to' },
   { lessonId: 'c-17', french: 'un objectif', answer: 'an objective, a goal' },
-  { lessonId: 'c-17', french: 'atteindre ses objectifs', answer: 'to reach one’s goal' },
+  { lessonId: 'c-17', french: 'atteindre ses objectifs', answer: 'to reach one’s goals' },
   { lessonId: 'c-17', french: 'avoir des objectifs communs', answer: 'to have common goals' },
   { lessonId: 'c-17', french: 'avoir pour objectif', answer: 'to have as an objective' },
-  { lessonId: 'c-17', french: 'se fixer des objectifs', answer: 'to set oneself a goal' },
+  { lessonId: 'c-17', french: 'se fixer des objectifs', answer: 'to set goals for oneself' },
   { lessonId: 'c-17', french: 's’occuper d’un dossier', answer: 'to take care of a file' },
   { lessonId: 'c-17', french: 'les politiques', answer: 'policies' },
   { lessonId: 'c-17', french: 'appliquer les politiques', answer: 'to implement policies' },
   { lessonId: 'c-17', french: 'élaborer les politiques', answer: 'to develop policies' },
-  { lessonId: 'c-17', french: 'faire respecter les politiques', answer: 'to administer policies' },
+  { lessonId: 'c-17', french: 'faire respecter les politiques', answer: "to enforce policies" },
   { lessonId: 'c-17', french: 'une priorité', answer: 'a priority' },
   { lessonId: 'c-17', french: 'avoir des priorités', answer: 'to have priorities' },
   { lessonId: 'c-17', french: 'définir les priorités', answer: 'to set priorities' },
@@ -627,7 +627,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'c-19', french: 'l’accès au savoir', answer: 'access to knowledge' },
   { lessonId: 'c-19', french: 'avoir accès à', answer: 'to have access to' },
   { lessonId: 'c-19', french: 'en ligne', answer: 'online' },
-  { lessonId: 'c-19', french: 'un cours en ligne', answer: 'online training' },
+  { lessonId: 'c-19', french: 'un cours en ligne', answer: "an online course" },
   { lessonId: 'c-19', french: 'de la formation en ligne', answer: 'online training' },
   { lessonId: 'c-19', french: 'des services en ligne', answer: 'online services' },
   { lessonId: 'c-19', french: 'la formation à distance', answer: 'distance learning' },
@@ -638,7 +638,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'c-19', french: 'surfer sur Internet', answer: 'to surf the net' },
   { lessonId: 'c-19', french: 'un ordinateur personnel', answer: 'a personal computer' },
   { lessonId: 'c-19', french: 'un ordinateur portatif', answer: 'a laptop computer' },
-  { lessonId: 'c-19', french: 'gèle', answer: 'crashes' },
+  { lessonId: 'c-19', french: 'gèle', answer: "freezes" },
   { lessonId: 'c-19', french: 'un outil de recherche', answer: 'a search tool' },
   { lessonId: 'c-19', french: 'un outil de travail', answer: 'a work tool' },
   { lessonId: 'c-19', french: 'la sécurité', answer: 'security' },
@@ -782,6 +782,8 @@ const englishEvidenceOverrides: Record<string, readonly string[]> = {
   'c-14|répondre à une plainte': ['to react'],
 }
 
+const reviewedTranslationKeys = new Set(["c-03|atteindre ses objectifs", "c-03|se fixer des objectifs", "c-17|atteindre ses objectifs", "c-17|se fixer des objectifs", "c-06|un déséquilibre","c-01|des consultants","c-01|faire respecter les politiques","c-04|menacé","c-06|une activité","c-07|savoir communiquer","c-09|une compétence","c-10|un contrat de travail","c-10|du zèle","c-10|syndical","c-12|syndical","c-14|disponible","c-14|être disponible","c-14|la disponibilité","c-14|assurer un service","c-15|une réunion improductive","c-16|y avoir un conflit d’intérêts","c-17|faire respecter les politiques","c-19|un cours en ligne","c-19|gèle"])
+
 function categoryFor(row: SourceSupplementRow): SourceEvidence['category'] {
   if (row.answer.toLowerCase().startsWith('to ')) return 'verb/form'
   if (row.french.includes(' ')) return 'expression'
@@ -790,6 +792,7 @@ function categoryFor(row: SourceSupplementRow): SourceEvidence['category'] {
 
 export const sourceSupplementsC: readonly SourceSupplement[] = sourceSupplementRows.map((row) => {
   const evidence = lexiconEvidence[row.lessonId]
+  const key = `${row.lessonId}|${row.french}`
   return {
     ...row,
     evidence: {
@@ -799,6 +802,7 @@ export const sourceSupplementsC: readonly SourceSupplement[] = sourceSupplementR
       section: evidence.section,
       category: categoryFor(row),
       evidenceType: 'source-table',
+      englishOrigin: reviewedTranslationKeys.has(key) ? 'reviewed-translation' : undefined,
       sourceFragments: sourceFragments[`${row.lessonId}|${row.french}`],
       englishFragments: englishEvidenceOverrides[`${row.lessonId}|${row.french}`] ?? englishEvidenceFragments(row.answer),
     },

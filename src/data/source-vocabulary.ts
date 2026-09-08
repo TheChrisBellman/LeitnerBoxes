@@ -1,10 +1,11 @@
 import { sourceSupplements } from './source-supplements.ts'
 import { sourceSupplements1120 } from './source-supplements-11-20.ts'
-import { sourceSupplements2140 } from './source-supplements-21-40.ts'
+import { reviewedTranslationKeys, sourceSupplements2140 } from './source-supplements-21-40.ts'
 import { sourceSupplementsC } from './source-supplements-c.ts'
 import { sourceSupplementsFollowup } from './source-supplements-followup.ts'
 import { englishEvidenceFragments, type SourceEvidence, type SourceSupplement } from './source-evidence.ts'
 import { vocabularyPracticeFor } from './vocabulary-practice.ts'
+import { reviewedVocabularyChoices, reviewedVocabularyEquivalences } from './vocabulary-reviewed-choices.ts'
 import type { CardTier, Word } from './types.ts'
 
 /**
@@ -182,9 +183,9 @@ export const baselineSourceRows: readonly SourceRow[] = [
   { lessonId: "a-11", french: "à l’aide de", answer: "with the help of" },
   { lessonId: "a-12", french: "beaucoup de", answer: "a lot of" },
   { lessonId: "a-12", french: "diviser", answer: "to divide, separate" },
-  { lessonId: "a-12", french: "en grande quantité", answer: "large amount" },
+  { lessonId: "a-12", french: "en grande quantité", answer: "in large quantities" },
   { lessonId: "a-12", french: "la minorité", answer: "the minority" },
-  { lessonId: "a-12", french: "peu de", answer: "a little" },
+  { lessonId: "a-12", french: "peu de", answer: "little" },
   { lessonId: "a-12", french: "un bon nombre de", answer: "a good number of" },
   { lessonId: "a-12", french: "un certain nombre de", answer: "a number of" },
   { lessonId: "a-12", french: "un grand nombre de", answer: "a great number of" },
@@ -248,7 +249,7 @@ export const baselineSourceRows: readonly SourceRow[] = [
   { lessonId: "a-19", french: "acceptable", answer: "acceptable" },
   { lessonId: "a-19", french: "adéquat", answer: "adequate" },
   { lessonId: "a-19", french: "approprié", answer: "appropriate" },
-  { lessonId: "a-19", french: "conforme", answer: "appropriate" },
+  { lessonId: "a-19", french: "conforme", answer: "compliant, conforming" },
   { lessonId: "a-19", french: "convenir à", answer: "to suit" },
   { lessonId: "a-19", french: "correspondre à", answer: "to correspond to" },
   { lessonId: "a-19", french: "dépassé", answer: "outdated" },
@@ -507,7 +508,7 @@ export const baselineSourceRows: readonly SourceRow[] = [
   { lessonId: "b-39", french: "se détériorer", answer: "to deteriorate" },
   { lessonId: "b-39", french: "se laisser dire", answer: "to be told" },
   { lessonId: "b-40", french: "conseiller", answer: "to advise" },
-  { lessonId: "b-40", french: "conseiller de", answer: "to advise to" },
+  { lessonId: "b-40", french: "conseiller de", answer: "to advise someone to do something" },
   { lessonId: "b-40", french: "demander conseil", answer: "to ask for advice" },
   { lessonId: "b-40", french: "faire une objection", answer: "to raise an objection" },
   { lessonId: "b-40", french: "influencer", answer: "to influence" },
@@ -681,6 +682,8 @@ export const a04SourceSupplements: readonly SourceSupplement[] = a04FormGroups.f
       section: phonetics ? '4.8 Phonétique' : placement ? '4.4 Grammaire' : grammar ? '4.1 and 4.3 Grammaire' : physical ? '4.2 Notions and 4.4 Grammaire' : '4.1 Notions',
       category,
       evidenceType: 'source-table',
+      englishOrigin: french === 'la chute du e muet' ? 'reviewed-translation' : undefined,
+      sourceFragments: french === 'la chute du e muet' ? ['la chute du', 'mute'] : undefined,
       englishFragments: a04EnglishEvidenceOverrides[french] ?? englishEvidenceFragments(answer),
     },
   }
@@ -692,7 +695,7 @@ const a06RetainedTerms = new Set(['plus', 'moins', 'fois', 'multiplié par', 'di
 const supplementalRowsWithoutPrimaryEnglish = [
   ...sourceSupplements.filter((row) => (row.lessonId === 'a-01' && ['ici', 'à l’appareil', 's’appeler', 'se présenter', 'être', 'titre'].includes(row.french)) || (row.lessonId === 'a-02' && row.french === 'comment') || (row.lessonId === 'a-03' && /^(?:je|tu|il|elle|on|nous|vous|ils|elles) (?:fais|fait|faisons|faites|font|viens|vient|venons|venez|viennent)$/.test(row.french)) || (row.lessonId === 'a-06' && !a06RetainedTerms.has(row.french)) || (row.lessonId === 'a-07' && ['va', 'comment', 'par où'].includes(row.french)) || (row.lessonId === 'a-08' && ['mercredi', 'samedi', 'février', 'décembre', 'minuit'].includes(row.french)) || (row.lessonId === 'a-09' && row.french === 'être en train de') || (row.lessonId === 'a-10' && ['réserver', 'réviser', 'entretenir'].includes(row.french))),
   ...sourceSupplements1120.filter((row) => (row.lessonId === 'a-01' && ['s’appeler', 'se présenter'].includes(row.french)) || (row.lessonId === 'a-11' && ['difficilement', 'sans difficulté', 'intelligemment', 'différemment', 'suffisamment', 'étant', 'ayant', 'sachant', 'soigneusement', 'avec soin', 'poliment'].includes(row.french)) || (row.lessonId === 'a-12' && ['partager', 'répartir', 'en deux', 'en équipes de deux'].includes(row.french)) || (row.lessonId === 'a-14' && ['se répéter', 'il y aura', 'a lieu', 'être annulé', 'il est utile de', 'il est nécessaire de', 'il faut', 'il est important de'].includes(row.french)) || (row.lessonId === 'a-16' && row.french === 'se trouver') || (row.lessonId === 'a-21' && ['déclencher', 'avertir', 'le périmètre', 'l’épaisseur', 'la largeur', 'la hauteur', 'la profondeur'].includes(row.french)) || (row.lessonId === 'a-22' && ['il y a', 'se tromper'].includes(row.french)) || (row.lessonId === 'a-24' && ['le plus-que-parfait', 'j’étais tombé'].includes(row.french)) || (row.lessonId === 'a-31' && ['j’aurais aimé', 'vouloir que', 's’attendre à ce que', 'aimer mieux que', 'demander que', 'insister pour que', 'préférer que', 'tenir à ce que'].includes(row.french))),
-  ...sourceSupplements2140.filter((row) => ['a-23', 'a-32', 'b-33', 'b-34', 'b-35', 'b-36', 'b-37', 'b-39', 'b-40'].includes(row.lessonId) || (row.lessonId === 'a-21' && ['déclencher', 'avertir', 'le périmètre', 'l’épaisseur', 'la largeur', 'la hauteur', 'la profondeur', 'la longueur'].includes(row.french)) || (row.lessonId === 'a-22' && ['il y a', 'se tromper', 's’entendre'].includes(row.french)) || (row.lessonId === 'a-24' && ['le plus-que-parfait', 'j’étais tombé', 'j’avais mangé'].includes(row.french)) || (row.lessonId === 'a-29' && ['empêcher de', 'parvenir à', 'réussir à'].includes(row.french)) || (row.lessonId === 'a-30' && row.french === 'avoir le droit de') || (row.lessonId === 'a-31' && ['j’aurais aimé', 'vouloir que', 's’attendre à ce que', 'aimer mieux que', 'demander que', 'insister pour que', 'préférer que', 'tenir à ce que'].includes(row.french))),
+  ...sourceSupplements2140.filter((row) => !reviewedTranslationKeys.has(`${row.lessonId}|${row.french}`.replace(/[‘’]/g, "'").toLocaleLowerCase('fr')) && (['a-23', 'a-32', 'b-33', 'b-34', 'b-35', 'b-36', 'b-37', 'b-39', 'b-40'].includes(row.lessonId) || (row.lessonId === 'a-21' && ['déclencher', 'avertir', 'le périmètre', 'l’épaisseur', 'la largeur', 'la hauteur', 'la profondeur', 'la longueur'].includes(row.french)) || (row.lessonId === 'a-22' && ['il y a', 'se tromper', 's’entendre'].includes(row.french)) || (row.lessonId === 'a-24' && ['le plus-que-parfait', 'j’étais tombé', 'j’avais mangé'].includes(row.french)) || (row.lessonId === 'a-29' && ['empêcher de', 'parvenir à', 'réussir à'].includes(row.french)) || (row.lessonId === 'a-30' && row.french === 'avoir le droit de') || (row.lessonId === 'a-31' && ['j’aurais aimé', 'vouloir que', 's’attendre à ce que', 'aimer mieux que', 'demander que', 'insister pour que', 'préférer que', 'tenir à ce que'].includes(row.french)))),
   ...sourceSupplementsC.filter((row) => (row.lessonId === 'c-04' && ['un changement organisationnel', 's’adapter à la nouvelle situation'].includes(row.french))),
 ]
 
@@ -926,6 +929,10 @@ for (const key of additionalBaselineQuarantineKeys) {
   quarantinedSourceKeys.add(key)
   baselineQuarantinedSourceKeys.add(key)
 }
+for (const key of reviewedTranslationKeys) {
+  quarantinedSourceKeys.delete(key)
+  baselineQuarantinedSourceKeys.delete(key)
+}
 
 const sourceTier: CardTier = 'expansion'
 export type VocabularyChoiceFamily = 'question' | 'sentence' | 'infinitive' | 'verb-form' | 'determiner' | 'interrogative-determiner' | 'noun' | 'noun-definite' | 'noun-indefinite' | 'pronoun' | 'subject-form' | 'contraction' | 'connector' | 'function' | 'weekday' | 'month' | 'sequence' | 'duration' | 'number-time' | 'adverb' | 'modifier' | 'expression' | 'math' | 'quantity' | 'time' | 'occupation' | 'proper-noun' | 'grammar-form' | 'material' | 'colour' | 'shape' | 'dimension' | 'condition'
@@ -962,7 +969,7 @@ const a04ColourFrench = /^(?:blanc|blanche|bleu|bleue|jaune|noir|noire|rouge|ver
 const a04ShapeFrench = /^(?:rond|ronde|carré|carrée|ovale|rectangulaire|triangulaire)$/iu
 const a04DimensionFrench = /^(?:long|longue|mince|épais|épaisse|bas|basse|haut|haute|petit|petite|gros|grosse|grand|grande|court|courte|étroit|étroite|large|profond|profonde)$/iu
 const a04ConditionFrench = /^(?:propre|sale|neuf|neuve|vieux|vieille|usagé|usagée|usé|usée|excellent|abîmé|abîmée|endommagé|endommagée)$/iu
-const occupationEnglish = /\b(?:librarian|head|leader|commissionaire|accountant|advisor|co-ordinator|coordinator|director general|member of parliament|manager|minister|receptionist|secretary|specialist|supervisor|technician|translator|auditor|chief|clerk|programmer|assistant|officer|lawyer|teacher|doctor|engineer|economist|analyst)\b/i
+const occupationEnglish = /\b(?:archivist|librarian|head|leader|commissionaire|accountant|advisor|co-ordinator|coordinator|director general|member of parliament|manager|minister|receptionist|secretary|specialist|supervisor|technician|translator|auditor|chief|clerk|programmer|assistant|officer|lawyer|teacher|doctor|engineer|economist|analyst)\b/i
 const grammarFrench = /^(?:quel(?:le)?s?|c['’]est|ce sont|passé composé|imparfait|futur simple|futur proche|le conditionnel passé|interrogation indirecte|style indirect|aimer au conditionnel)$/iu
 const grammarEnglish = /\b(?:masculine|feminine|plural|singular|perfect tense|imperfect tense|future tense|immediate future|conditional|indirect question|indirect speech)\b/i
 
@@ -980,6 +987,7 @@ export function vocabularyChoiceFamily(row: { french: string; answer: string; le
   if (grammarFrench.test(french) || grammarEnglish.test(english)) return 'grammar-form'
   if (timeFrench.test(french) || timeEnglish.test(english)) return 'time'
   if (quantityFrench.test(french) || quantityEnglish.test(english)) return 'quantity'
+  if (frenchLower === 'une condition' || englishLower === 'a condition') return 'condition'
   if (occupationEnglish.test(english)) return 'occupation'
   if (row.lessonId === 'a-04' && a04ColourFrench.test(french)) return 'colour'
   if (row.lessonId === 'a-04' && a04ShapeFrench.test(french)) return 'shape'
@@ -1019,6 +1027,7 @@ const fallbackAnswers: Partial<Record<VocabularyChoiceFamily, string[]>> = {
   time: ['yesterday', 'tomorrow', 'today', 'in the future', 'next week', 'later'],
   'grammar-form': ['present tense', 'past tense', 'future tense', 'direct speech'],
   material: ['wood', 'plastic', 'metal', 'paper', 'cardboard'],
+  condition: ['a decision', 'a result', 'a deadline'],
 }
 
 const fallbackFrench: Partial<Record<VocabularyChoiceFamily, Array<{ french: string; answer: string }>>> = {
@@ -1030,13 +1039,43 @@ const fallbackFrench: Partial<Record<VocabularyChoiceFamily, Array<{ french: str
   duration: [{ french: 'une heure d’avance', answer: 'one hour early' }, { french: 'deux jours de retard', answer: 'two days late' }, { french: 'trois semaines d’avance', answer: 'three weeks ahead' }, { french: 'quatre mois plus tard', answer: 'four months later' }],
   'number-time': [{ french: 'un', answer: 'one' }, { french: 'deux', answer: 'two' }, { french: 'trois', answer: 'three' }, { french: 'quatre', answer: 'four' }, { french: 'cinq', answer: 'five' }],
   math: [{ french: 'plus', answer: 'plus' }, { french: 'moins', answer: 'minus' }, { french: 'fois', answer: 'times' }, { french: 'multiplié par', answer: 'multiplied by' }, { french: 'divisé par', answer: 'divided by' }, { french: 'égal', answer: 'equals' }],
-  quantity: [{ french: 'beaucoup de', answer: 'a lot of' }, { french: 'peu de', answer: 'a little' }, { french: 'quelques', answer: 'a few' }, { french: 'plusieurs', answer: 'several' }, { french: 'une dizaine', answer: 'about ten' }, { french: 'une vingtaine', answer: 'about twenty' }],
+  quantity: [{ french: 'beaucoup de', answer: 'a lot of' }, { french: 'peu de', answer: 'little' }, { french: 'quelques', answer: 'a few' }, { french: 'plusieurs', answer: 'several' }, { french: 'une dizaine', answer: 'about ten' }, { french: 'une vingtaine', answer: 'about twenty' }],
   time: [{ french: 'hier', answer: 'yesterday' }, { french: 'demain', answer: 'tomorrow' }, { french: 'aujourd’hui', answer: 'today' }, { french: 'dans l’avenir', answer: 'in the future' }, { french: 'la semaine prochaine', answer: 'next week' }, { french: 'plus tard', answer: 'later' }],
   'grammar-form': [{ french: 'présent', answer: 'present tense' }, { french: 'passé composé', answer: 'past tense' }, { french: 'futur simple', answer: 'future tense' }, { french: 'style direct', answer: 'direct speech' }],
+  condition: [{ french: 'une décision', answer: 'a decision' }, { french: 'un résultat', answer: 'a result' }, { french: 'une échéance', answer: 'a deadline' }],
 }
 
 function normalize(value: string): string {
   return value.trim().toLocaleLowerCase('fr').replace(/[‘’]/g, "'").replace(/\s+/g, ' ')
+}
+
+type ReviewedEquivalence = {
+  answers: readonly string[]
+  french: readonly string[]
+}
+
+// These are reviewed learner-facing equivalents, kept per source row so a
+// broad synonym matcher cannot turn a useful distinction into a false match.
+const reviewedEquivalences: Record<string, ReviewedEquivalence> = {
+  ...reviewedVocabularyEquivalences,
+  'a-14|survenir': { answers: ['to happen, occur', 'to happen', 'to occur', 'to take place'], french: ['survenir', 'se produire', 'se passer', 'avoir lieu', 'se dérouler'] },
+  'a-02|le schéma': { answers: ['the diagram, sketch', 'the diagram', 'a sketch'], french: ['le schéma', 'le diagramme'] },
+  'a-15|décrocher': { answers: ['to get, land something', 'to get', 'to land something'], french: ['décrocher'] },
+  'a-22|pendant': { answers: ['during, for', 'during', 'for'], french: ['pendant', 'durant'] },
+  'a-26|de': { answers: ['from, of', 'from', 'of'], french: ['de'] },
+  'a-26|de la part de': { answers: ['from, on behalf of', 'from', 'on behalf of'], french: ['de la part de', 'en provenance de'] },
+  "a-26|l'origine": { answers: ['origin, beginning', 'origin', 'beginning'], french: ['l’origine', 'la source', 'la provenance'] },
+  'c-18|un obstacle': { answers: ['an obstacle, a barrier', 'an obstacle', 'a barrier'], french: ['un obstacle', 'une barrière'] },
+  'a-23|faire le bilan': { answers: ['to evaluate a project, take stock', 'to take stock', 'to evaluate a project'], french: ['faire le bilan', 'faire le point'] },
+}
+
+function equivalenceKey(row: { lessonId?: string; french: string }): string {
+  return `${row.lessonId ?? ''}|${normalize(row.french)}`
+}
+
+export function vocabularyEquivalentForms(row: { lessonId?: string; french: string; answer: string }): ReviewedEquivalence {
+  const entry = reviewedEquivalences[equivalenceKey(row)]
+  return entry ?? { answers: [row.answer], french: [row.french] }
 }
 
 const activeSourceRows = completeSourceRows.filter((row) => !isQuarantinedSourceKey(`${row.lessonId}|${normalize(row.french)}`))
@@ -1082,41 +1121,55 @@ const relatedFamilies: Partial<Record<VocabularyChoiceFamily, readonly Vocabular
 
 function familyCandidates(row: SourceRow, index: number): SourceRow[] {
   const family = vocabularyChoiceFamily(row)
-  const familyRows = activeRowsByFamily.get(family) ?? []
+  const isolatedCondition = family === 'condition' && normalize(row.french) === 'une condition'
+  const familyRows = isolatedCondition ? [] : activeRowsByFamily.get(family) ?? []
   const local = familyRows.filter((candidate) => candidate !== row && candidate.lessonId === row.lessonId)
   const related = activeSourceRows.filter((candidate) => candidate !== row
     && candidate.lessonId === row.lessonId
     && (relatedFamilies[family] ?? [family]).includes(vocabularyChoiceFamily(candidate))
     && !local.includes(candidate))
-  const sameLevel = familyRows.filter((candidate) => candidate.lessonId !== row.lessonId && candidate.lessonId[0] === row.lessonId[0])
-  const global = familyRows.filter((candidate) => candidate.lessonId[0] !== row.lessonId[0])
+  const sameLevel = isolatedCondition ? [] : familyRows.filter((candidate) => candidate.lessonId !== row.lessonId && candidate.lessonId[0] === row.lessonId[0])
+  const global = isolatedCondition ? [] : familyRows.filter((candidate) => candidate.lessonId[0] !== row.lessonId[0])
   return [...rotate(local, index), ...rotate(related, index), ...rotate(sameLevel, index), ...rotate(global, index)]
 }
 
 function answerChoices(row: SourceRow, index: number): [string, string, string] {
+  const reviewed = reviewedVocabularyChoices[equivalenceKey(row)]
+  if (reviewed) return reviewed.distractors
   const family = vocabularyChoiceFamily(row)
-  const candidates = [...familyCandidates(row, index).map((candidate) => candidate.answer), ...(fallbackAnswers[family] ?? [])]
-  const seen = new Set([normalize(row.answer)])
+  const targetEquivalents = new Set(vocabularyEquivalentForms(row).answers.map(normalize))
   const choices: string[] = []
-  for (const candidate of candidates) {
-    if (!candidate || seen.has(normalize(candidate))) continue
+  const seen = new Set(targetEquivalents)
+  const addChoice = (candidate: string, source?: SourceRow) => {
+    if (!candidate || seen.has(normalize(candidate))) return
+    if (source && vocabularyEquivalentForms(source).answers.some((answer) => targetEquivalents.has(normalize(answer)))) return
     seen.add(normalize(candidate))
     choices.push(candidate)
+  }
+  for (const candidate of familyCandidates(row, index)) {
+    addChoice(candidate.answer, candidate)
     if (choices.length === 3) break
+  }
+  for (const candidate of fallbackAnswers[family] ?? []) {
+    if (choices.length === 3) break
+    addChoice(candidate)
   }
   if (choices.length !== 3) throw new Error(`Source vocabulary needs three ${family} distractors: ${row.lessonId}/${row.french}`)
   return choices as [string, string, string]
 }
 
 function reverseChoices(row: SourceRow, index: number): [string, string, string] {
+  const reviewed = reviewedVocabularyChoices[equivalenceKey(row)]
+  if (reviewed) return reviewed.reverseDistractors
   const family = vocabularyChoiceFamily(row)
   const candidates = familyCandidates(row, index)
   const seen = new Set([normalize(row.french)])
   const answer = normalize(row.answer)
-  const equivalentFrench = equivalentFrenchByAnswer.get(answer) ?? new Set<string>()
+  const equivalentFrench = new Set(equivalentFrenchByAnswer.get(answer) ?? [])
+  vocabularyEquivalentForms(row).french.forEach((french) => equivalentFrench.add(normalize(french)))
   const choices: string[] = []
   for (const candidate of candidates) {
-    if (equivalentFrench.has(normalize(candidate.french)) || seen.has(normalize(candidate.french))) continue
+    if (equivalentFrench.has(normalize(candidate.french)) || seen.has(normalize(candidate.french)) || vocabularyEquivalentForms(candidate).french.some((french) => equivalentFrench.has(normalize(french)))) continue
     seen.add(normalize(candidate.french))
     choices.push(candidate.french)
     if (choices.length === 3) break

@@ -95,7 +95,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'a-02', french: 'le courrier', answer: 'the mail' },
   { lessonId: 'a-02', french: 'le courriel', answer: 'the e-mail' },
   { lessonId: 'a-02', french: 'la demande', answer: 'the request' },
-  { lessonId: 'a-02', french: 'le dépliant', answer: 'the folder' },
+  { lessonId: 'a-02', french: 'le dépliant', answer: "the brochure, leaflet" },
   { lessonId: 'a-02', french: 'le discours', answer: 'the speech' },
   { lessonId: 'a-02', french: 'le fichier', answer: 'the data file' },
   { lessonId: 'a-02', french: 'le formulaire', answer: 'the form' },
@@ -108,7 +108,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'a-02', french: 'le schéma', answer: 'the diagram, sketch' },
   { lessonId: 'a-02', french: 'l’exemplaire', answer: 'the copy' },
   { lessonId: 'a-02', french: 'la réédition', answer: 'the new edition' },
-  { lessonId: 'a-02', french: 'la réimpression', answer: 'the new edition' },
+  { lessonId: 'a-02', french: 'la réimpression', answer: "the reprint" },
   { lessonId: 'a-02', french: 'la traduction', answer: 'the translation' },
   { lessonId: 'a-02', french: 'le téléviseur', answer: 'the television set' },
   { lessonId: 'a-02', french: 'la chaise', answer: 'the chair' },
@@ -485,6 +485,23 @@ const englishEvidenceOverrides: Record<string, readonly string[]> = {
   'a-10|le pirate informatique': ['cracker', 'hacker'],
 }
 
+// The PDF proves these French forms, but the app's concise English wording is
+// reviewed rather than copied as a bilingual table translation.
+const reviewedTranslationKeys = new Set([
+  'a-02|le dépliant', 'a-02|la réimpression',
+  'a-01|le tréma',
+  'a-01|la minuscule',
+  'a-03|à + le = au',
+  'a-03|à + les = aux',
+  'a-03|de + le = du',
+  'a-03|de + les = des',
+  'a-04|la chute du e muet',
+])
+
+const sourceFragmentsOverrides: Record<string, readonly string[]> = {
+  'a-04|la chute du e muet': ['la chute du', 'mute'],
+}
+
 function evidenceFor(row: SourceSupplementRow) {
   if (row.lessonId === 'a-01') {
     if (a01SpellingTerms.has(row.french)) return { page: 66, lineRange: '2016-2050', section: '1.10 Stratégies de communication — spelling chart' }
@@ -518,6 +535,7 @@ function categoryFor(row: SourceSupplementRow): SourceEvidence['category'] {
 export const sourceSupplements: readonly SourceSupplement[] = sourceSupplementRows.map((row) => {
   const evidence = evidenceFor(row)
   const objectiveNumber = Number(row.lessonId.slice(2))
+  const key = `${row.lessonId}|${row.french}`
   return {
     ...row,
     evidence: {
@@ -527,6 +545,8 @@ export const sourceSupplements: readonly SourceSupplement[] = sourceSupplementRo
       section: evidence.section,
       category: categoryFor(row),
       evidenceType: 'source-table',
+      englishOrigin: reviewedTranslationKeys.has(key) ? 'reviewed-translation' : undefined,
+      sourceFragments: sourceFragmentsOverrides[key],
       englishFragments: englishEvidenceOverrides[`${row.lessonId}|${row.french}`] ?? englishEvidenceFragments(row.answer),
     },
   }

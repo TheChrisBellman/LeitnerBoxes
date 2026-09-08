@@ -10,6 +10,13 @@ import type {
 } from './types.ts'
 
 type ChoiceSet = [string, string, string]
+type ReviewedDistractors = {
+  bestResponse?: ChoiceSet
+  cloze?: ChoiceSet
+  reading?: ChoiceSet
+  transformation?: ChoiceSet
+  scenario?: ChoiceSet
+}
 
 export type UnitPackScaffold = {
   context: string
@@ -34,6 +41,8 @@ export type UnitPackSeed = {
   transformationSource: string
   transformationAnswer: string
   scaffold?: UnitPackScaffold
+  situation?: string
+  reviewedDistractors?: ReviewedDistractors
 }
 
 export type UnitPack = {
@@ -140,7 +149,7 @@ function alternativeSeeds(seed: UnitPackSeed, seeds: readonly UnitPackSeed[]): A
       if (level) return level
       const band = Number(difficultyBand(left.unitId) !== difficultyBand(seed.unitId)) - Number(difficultyBand(right.unitId) !== difficultyBand(seed.unitId))
       if (band) return band
-      const related = overlap(left) - overlap(right)
+      const related = overlap(right) - overlap(left)
       if (related) return related
       return distance(left) - distance(right) || left.unitId.localeCompare(right.unitId)
     })
@@ -149,7 +158,7 @@ function alternativeSeeds(seed: UnitPackSeed, seeds: readonly UnitPackSeed[]): A
 }
 
 export function createUnitPack(seed: UnitPackSeed, alternatives: AlternativeSeeds): UnitPack {
-  const { unitId, topic, goal, action, imperative, result, decision, correctionWrong, correctionRight, transformationSource, transformationAnswer, scaffold } = seed
+  const { unitId, topic, goal, action, imperative, result, decision, correctionWrong, correctionRight, transformationSource, transformationAnswer, scaffold, reviewedDistractors } = seed
   const band = difficultyBand(unitId)
   const [firstAlternative, secondAlternative, thirdAlternative] = alternatives
   const isScaffold = band === 'scaffold'
@@ -167,14 +176,14 @@ export function createUnitPack(seed: UnitPackSeed, alternatives: AlternativeSeed
         ? `au sujet ${withDe(topic)}`
         : `dans le cadre ${withDe(topic)}`
   const thirdPersonAction = narrativeAction(seed)
-  const bestSituation = scaffold?.context ?? (isFoundation
+  const bestSituation = seed.situation ?? scaffold?.context ?? (isFoundation
     ? `Au travail, vous devez ${goal}. Une collègue vous demande quoi faire ensuite.`
     : band === 'developing' || band === 'advanced'
-      ? `${sentenceStart(topicFrame)}, la prochaine étape est de ${thirdPersonAction}. Une collègue vous demande comment procéder.`
+      ? `${sentenceStart(topicFrame)}, vous devez ${goal}. Une collègue vous demande comment procéder.`
       : `${sentenceStart(topicFrame)}, vous devez ${goal}. Une collègue vous demande quelle sera la prochaine étape.`)
   const bestAnswer = `Je vais ${action}.`
-  const bestDistractors: ChoiceSet = alternatives.map((alternative) => `Je vais ${alternative.action}.`) as ChoiceSet
-  const clozeContext = scaffold?.context ?? (isFoundation
+  const bestDistractors: ChoiceSet = reviewedDistractors?.bestResponse ?? alternatives.map((alternative) => `Je vais ${alternative.action}.`) as ChoiceSet
+  const clozeContext = seed.situation ?? scaffold?.context ?? (isFoundation
     ? `Pour ${goal},`
     : band === 'developing'
       ? `Quand l’équipe doit ${goal},`
@@ -188,7 +197,7 @@ export function createUnitPack(seed: UnitPackSeed, alternatives: AlternativeSeed
     kind: 'best-response',
     ...(isScaffold ? { promptLanguage: 'en' as const, contextLanguage: 'en' as const } : {}),
     situation: bestSituation,
-    prompt: isScaffold ? 'What should you do next?' : `Quelle réponse répond à l’objectif « ${goal} »?`,
+    prompt: isScaffold ? 'What should you do next?' : seed.situation ? 'Quelle réponse correspond à la demande?' : `Quelle réponse répond à l’objectif « ${goal} »?`,
     answer: bestAnswer,
     distractors: bestDistractors,
     feedback: isScaffold
@@ -206,7 +215,7 @@ export function createUnitPack(seed: UnitPackSeed, alternatives: AlternativeSeed
     context: clozeContext,
     prompt: scaffold?.clozePrompt ?? `___ pour obtenir ${result}.`,
     answer: scaffold?.clozeAnswer ?? imperative,
-    distractors: scaffold?.clozeDistractors ?? alternatives.map((alternative) => alternative.imperative) as ChoiceSet,
+    distractors: reviewedDistractors?.cloze ?? scaffold?.clozeDistractors ?? alternatives.map((alternative) => alternative.imperative) as ChoiceSet,
     feedback: isScaffold
       ? `The missing word is « ${scaffold?.clozeAnswer} ».`
       : `L’impératif « ${imperative} » correspond à l’action attendue pour ${goal}.`,
@@ -243,7 +252,7 @@ export function createUnitPack(seed: UnitPackSeed, alternatives: AlternativeSeed
     passageId,
     prompt: isScaffold ? 'What does the team need to do?' : `Que doit faire l’équipe pour ${goal}?`,
     answer: sentenceStart(`Elle doit ${thirdPersonAction}.`),
-    distractors: alternatives.map((alternative) => `Elle doit ${narrativeAction(alternative)}.`) as ChoiceSet,
+    distractors: reviewedDistractors?.reading ?? alternatives.map((alternative) => `Elle doit ${narrativeAction(alternative)}.`) as ChoiceSet,
     feedback: isScaffold
       ? `The passage points to this action: « ${action} ».`
       : `Le passage associe l’objectif « ${goal} » à l’action « ${action} ».`,
@@ -256,25 +265,25 @@ export function createUnitPack(seed: UnitPackSeed, alternatives: AlternativeSeed
     kind: 'transformation',
     ...(isScaffold ? { promptLanguage: 'en' as const, contextLanguage: 'fr' as const } : {}),
     source: scaffold?.transformationSource ?? transformationSource,
-    prompt: isScaffold ? 'Choose the sentence with the same meaning.' : `Quelle reformulation conserve le sens de la tâche « ${goal} »?`,
+    prompt: isScaffold ? 'Choose the sentence with the same meaning.' : 'Quelle phrase a le même sens?',
     answer: scaffold?.transformationAnswer ?? transformationAnswer,
-    distractors: transformationDistractors,
+    distractors: reviewedDistractors?.transformation ?? transformationDistractors,
     feedback: isScaffold ? 'The second sentence keeps the same meaning.' : 'La reformulation conserve le sens et l’objectif de la phrase de départ.',
   }
   const scenarioAnswer = isScaffold ? `Je vais ${action}.` : `Je vais ${decision}.`
   const scenarioChoices: [string, string, string, string] = [
     scenarioAnswer,
-    `Je vais ${firstAlternative.decision}.`,
-    `Je vais ${secondAlternative.decision}.`,
-    `Je vais ${thirdAlternative.decision}.`,
+    ...(reviewedDistractors?.scenario ?? [
+      `Je vais ${firstAlternative.decision}.`,
+      `Je vais ${secondAlternative.decision}.`,
+      `Je vais ${thirdAlternative.decision}.`,
+    ]),
   ]
-  const scenarioSetup = scaffold?.context
-    ? scaffold.context.split(/(?<=[.!?])\s+/u)[0]
-    : isFoundation
+  const scenarioSetup = seed.situation ?? scaffold?.context ?? (isFoundation
       ? `Au travail, vous devez ${goal}. Le résultat attendu est ${result}.`
       : band === 'developing' || band === 'advanced'
-        ? `${sentenceStart(topicFrame)}, la prochaine étape est de ${thirdPersonAction}. Le résultat attendu est ${result}, mais un collègue propose de passer à l’étape suivante sans vérifier les informations.`
-        : `${sentenceStart(topicFrame)}, vous devez ${goal}. Le résultat attendu est ${result}, mais un collègue propose de passer à l’étape suivante sans vérifier les informations.`
+        ? `${sentenceStart(topicFrame)}, vous devez ${goal}. Le résultat attendu est ${result}, mais un collègue propose de passer à l’étape suivante sans vérifier les informations.`
+        : `${sentenceStart(topicFrame)}, vous devez ${goal}. Le résultat attendu est ${result}, mais un collègue propose de passer à l’étape suivante sans vérifier les informations.`)
   const scenario: Scenario = {
     id: scenarioId,
     unitId,
@@ -282,7 +291,7 @@ export function createUnitPack(seed: UnitPackSeed, alternatives: AlternativeSeed
     setup: scenarioSetup,
     nodes: [{
       id: 'next-step',
-      prompt: isScaffold ? 'What should you say next?' : `Que faites-vous ensuite pour ${goal}?`,
+      prompt: isScaffold ? 'What should you say next?' : seed.situation ? 'Quelle action répond à cette demande?' : `Que faites-vous ensuite pour ${goal}?`,
       choices: scenarioChoices,
       answer: scenarioAnswer,
       feedback: isScaffold ? 'Choose the action that helps with the task.' : `La réponse propose l’étape suivante nécessaire pour « ${goal} ».`,

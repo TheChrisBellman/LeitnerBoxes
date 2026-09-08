@@ -14,7 +14,7 @@ export const conjugationCatches: Record<string, string> = {
   'retenir|ils/elles': 'retenent',
   'prévenir|ils/elles': 'prévenent',
   'revenir|il/elle': 'revenit',
-  'se souvenir|il/elle': 'souvenit',
+  'se souvenir|il/elle': 'se souvenit',
   'convenir|il/elle': 'convenit',
   'maintenir|nous': 'maintienons',
   'obtenir|nous': 'obtenissons',
@@ -53,7 +53,7 @@ export const conjugationCatches: Record<string, string> = {
   'franchir|ils/elles': 'franchent',
   'appeler|je': 'appele',
   'coordonner|vous': 'coordonez',
-  'se débrouiller|ils/elles': 'débrouilent',
+  'se débrouiller|ils/elles': 'se débrouilent',
   'lutter|ils/elles': 'lutent',
 
   // Accent and y/i changes in the stem.
@@ -63,10 +63,19 @@ export const conjugationCatches: Record<string, string> = {
   'révéler|ils/elles': 'révélent',
   'interpréter|tu': 'interprétes',
   'relever|il/elle': 'releve',
-  's’intégrer|je': 'intégre',
+  's’intégrer|je': 'm’intégre',
   'envoyer|il/elle': 'envoye',
   'envoyer|vous': 'envoiez',
   'revoir|vous': 'revoiez',
   'prévoir|ils/elles': 'prévoyent',
   'déployer|je': 'déploye',
+}
+
+// Reviewed alternatives, not accent-insensitive or approximate grading.
+export const conjugationAlternatives: Record<string, readonly string[]> = {
+  'se relayer|ils/elles': ['ils se relayent', 'elles se relayent'],
+  'pouvoir|je': ['je puis'],
+  'maîtriser|il/elle': ['il maitrise', 'elle maitrise'],
+  'coûter|il/elle': ['il coute', 'elle coute'],
+  'entraîner|nous': ['nous entrainons'],
 }

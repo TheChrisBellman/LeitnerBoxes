@@ -42,7 +42,7 @@ const spellingExamples: Record<string, { answer: string; distractors: [string, s
     answer: 'été',
     distractors: ['père', 'forêt', 'Noël'],
     feedback: '« Été » uses the acute accent: é.',
-    help: 'The acute accent rises to the right and appears as ´ over a vowel.',
+    help: 'In French, the acute accent appears on e: é.',
   },
   'l’accent grave': {
     answer: 'père',
@@ -89,7 +89,7 @@ const spellingExamples: Record<string, { answer: string; distractors: [string, s
   'la minuscule': {
     answer: 'bureau',
     distractors: ['Paris', 'Nadia', 'Canada'],
-    feedback: '« Bureau » begins with a lowercase letter.',
+    feedback: 'In the example « bureau », b is a lowercase letter.',
     help: 'A lowercase letter is the ordinary small form used when a capital is not required.',
   },
 }
@@ -117,20 +117,20 @@ const phonetics: Record<string, { answer: string; distractors: [string, string, 
     help: 'It is the timing and beat pattern across a phrase.',
   },
   'la chute du e muet': {
-    answer: 'dropping a silent e in connected speech',
+    answer: 'omitting an unstressed e sound in connected speech',
     distractors: ['joining two words with a hyphen', 'stressing the final syllable', 'changing c to ç'],
-    feedback: 'The phrase describes leaving out a silent e when people speak naturally.',
+    feedback: 'The e called « e muet » can be pronounced or omitted; this phrase describes omitting its sound in connected speech.',
     help: 'It is a pronunciation change in connected speech, not a spelling mark.',
   },
   'l’assimilation': {
     answer: 'a sound becoming more like a neighboring sound',
-    distractors: ['the regular pattern of beats in speech', 'dropping a silent e', 'the rise and fall of the voice'],
+    distractors: ['the regular pattern of beats in speech', 'omitting an unstressed e sound', 'the rise and fall of the voice'],
     feedback: 'Assimilation occurs when one sound becomes more like a nearby sound.',
     help: 'Listen for neighboring sounds influencing one another.',
   },
   'la liaison': {
     answer: 'pronouncing a normally silent final consonant before a following vowel',
-    distractors: ['dropping a silent e in connected speech', 'stressing one syllable', 'joining two words with a hyphen'],
+    distractors: ['omitting an unstressed e sound in connected speech', 'stressing one syllable', 'joining two words with a hyphen'],
     feedback: 'A liaison links words by pronouncing a normally silent final consonant before a vowel sound.',
     help: 'It links spoken words; it is not the same thing as a written hyphen.',
   },
@@ -158,39 +158,40 @@ for (const lessonId of ['a-01', 'a-02']) {
   }
 }
 
-const articleExamples: Record<string, { phrase: string; forms: [string, string, string, string]; feedback: string }> = {
-  le: { phrase: 'rapport', forms: ['le', 'la', 'l’', 'les'], feedback: '« Rapport » is masculine singular, so the definite article is « le ».' },
-  la: { phrase: 'demande', forms: ['la', 'le', 'l’', 'les'], feedback: '« Demande » is feminine singular, so the definite article is « la ».' },
-  'l’': { phrase: 'ordre du jour', forms: ['l’', 'le', 'la', 'les'], feedback: 'Before a vowel sound, « le » or « la » becomes « l’ »: l’ordre du jour.' },
-  les: { phrase: 'documents', forms: ['les', 'le', 'la', 'l’'], feedback: '« Documents » is plural, so the definite article is « les ».' },
-  un: { phrase: 'rapport', forms: ['un', 'une', 'des', 'du'], feedback: '« Rapport » is masculine singular, so the indefinite article is « un ».' },
-  une: { phrase: 'demande', forms: ['une', 'un', 'des', 'du'], feedback: '« Demande » is feminine singular, so the indefinite article is « une ».' },
-  des: { phrase: 'documents', forms: ['des', 'du', 'de la', 'de l’'], feedback: 'For an unspecified plural quantity, « documents » takes « des ».' },
-  du: { phrase: 'matériel', forms: ['du', 'de la', 'de l’', 'des'], feedback: 'For an unspecified quantity of masculine « matériel », use « du ».' },
-  'de la': { phrase: 'documentation', forms: ['de la', 'du', 'de l’', 'des'], feedback: 'For an unspecified quantity of feminine « documentation », use « de la ».' },
-  'de l’': { phrase: 'information', forms: ['de l’', 'du', 'de la', 'des'], feedback: 'Before a vowel sound, « de la » becomes « de l’ »: de l’information.' },
-  'pas de': { phrase: 'documents', forms: ['pas de', 'des', 'du', 'de la'], feedback: 'After a negative expression, the indefinite or partitive article becomes « pas de ».' },
+const articleExamples: Record<string, { phrase: string; english: string; forms: [string, string, string, string]; feedback: string }> = {
+  le: { phrase: 'rapport', english: 'report', forms: ['le', 'la', 'l’', 'les'], feedback: '« Rapport » is masculine singular, so the definite article is « le ».' },
+  la: { phrase: 'demande', english: 'request', forms: ['la', 'le', 'l’', 'les'], feedback: '« Demande » is feminine singular, so the definite article is « la ».' },
+  'l’': { phrase: 'ordre du jour', english: 'agenda', forms: ['l’', 'le', 'la', 'les'], feedback: 'Before a vowel sound, « le » or « la » becomes « l’ »: l’ordre du jour.' },
+  les: { phrase: 'documents', english: 'documents', forms: ['les', 'le', 'la', 'l’'], feedback: '« Documents » is plural, so the definite article is « les ».' },
+  un: { phrase: 'rapport', english: 'report', forms: ['un', 'une', 'des', 'du'], feedback: '« Rapport » is masculine singular, so the indefinite article is « un ».' },
+  une: { phrase: 'demande', english: 'request', forms: ['une', 'un', 'des', 'du'], feedback: '« Demande » is feminine singular, so the indefinite article is « une ».' },
+  des: { phrase: 'documents', english: 'documents', forms: ['des', 'du', 'de la', 'de l’'], feedback: '« Des documents » means some documents. Use « des » with this plural noun.' },
+  du: { phrase: 'matériel', english: 'equipment', forms: ['du', 'de la', 'de l’', 'des'], feedback: 'In « Il faut du matériel », « du » introduces some equipment.' },
+  'de la': { phrase: 'documentation', english: 'documentation', forms: ['de la', 'du', 'de l’', 'des'], feedback: 'In « Il faut de la documentation », « de la » introduces some documentation.' },
+  'de l’': { phrase: 'information', english: 'information', forms: ['de l’', 'du', 'de la', 'des'], feedback: 'In « Il faut de l’information », « de l’ » comes before the vowel sound in « information ».' },
+  'pas de': { phrase: 'documents', english: 'documents', forms: ['pas de', 'des', 'du', 'de la'], feedback: 'In « Il n’y a pas de documents », « pas » makes the sentence negative and the article becomes « de ».' },
 }
 for (const lessonId of ['a-02', 'a-12']) {
   for (const [form, detail] of Object.entries(articleExamples)) {
     if (lessonId === 'a-02' && form === 'pas de') continue
     if (lessonId === 'a-12' && !['du', 'de la', 'des', 'pas de'].includes(form)) continue
-    const articleKind = ['le', 'la', 'l’', 'les'].includes(form)
-      ? 'definite'
+    const prompt = ['le', 'la', 'l’', 'les'].includes(form)
+      ? detail.phrase === 'documents'
+        ? `Complete: « ___ ${detail.phrase} sont ici. » (The ${detail.english} are here.)`
+        : `Complete: « ___ ${detail.phrase} est ici. » (The ${detail.english} is here.)`
       : ['un', 'une'].includes(form)
-        ? 'indefinite singular'
+        ? `How do you say “a ${detail.english}”? « ___ ${detail.phrase} »`
         : form === 'pas de'
-          ? 'negative'
-          : 'unspecified-quantity'
-    const prompt = form === 'pas de'
-      ? `Which negative form completes « Il n’y a ___ ${detail.phrase} »?`
-      : `Which ${articleKind} article completes « ___ ${detail.phrase} »?`
+          ? `Complete: « Il n’y a ___ ${detail.phrase}. » (There are no ${detail.english}.)`
+          : `Complete: « Il faut ___ ${detail.phrase}. » (We need some ${detail.english}.)`
     add(lessonId, form, recognition(
       prompt,
       form,
       detail.forms.filter((candidate) => candidate !== form).slice(0, 3) as [string, string, string],
       detail.feedback,
-      'Articles agree with the noun or express whether the quantity is definite, indefinite, or partitive.',
+      form === 'pas de'
+        ? 'After « pas », the article usually changes to « de »; the negative word comes first.'
+        : 'Look at the noun and whether the sentence says the, a, some, or none.',
     ))
   }
 }
@@ -261,14 +262,32 @@ const possessivePronouns: Record<string, { owner: string; noun: string; forms: s
   'la leur': { owner: 'theirs', noun: 'demande', forms: ['le leur', 'la leur', 'les leurs', 'la nôtre'] },
   'les leurs': { owner: 'theirs', noun: 'documents', forms: ['le leur', 'la leur', 'les leurs', 'les nôtres'] },
 }
+const possessiveOwnerContext: Record<string, string> = {
+  mine: 'à moi',
+  yours: 'à toi',
+  'yours (formal)': 'à vous',
+  'his, hers, or its': 'à Marc',
+  ours: 'à nous',
+  theirs: 'à Marc et Nadia',
+}
+const nounGender: Record<string, string> = {
+  dossier: 'masculine',
+  demande: 'feminine',
+  documents: 'masculine',
+  notes: 'feminine',
+}
 for (const [form, detail] of Object.entries(possessivePronouns)) {
-  const agreement = /^le\b/u.test(form) ? 'masculine singular' : /^la\b/u.test(form) ? 'feminine singular' : /miennes|tiennes|siennes\b/u.test(form) ? 'feminine plural' : 'plural'
+  const plural = /^les\b/u.test(form)
+  const demonstrative = plural ? 'Ces' : detail.noun === 'demande' ? 'Cette' : 'Ce'
+  const copula = plural ? 'Ce sont' : 'C’est'
+  const agreement = `${nounGender[detail.noun]} ${plural ? 'plural' : 'singular'}`
   add('a-04', form, recognition(
-    `Which form means “${detail.owner}” for a ${agreement} item?`,
+    `${demonstrative} ${detail.noun} ${plural ? 'sont' : 'est'} ${possessiveOwnerContext[detail.owner]}. ${copula} ___.`,
     form,
     detail.forms.filter((candidate) => candidate !== form).slice(0, 3) as [string, string, string],
-    `The possessive pronoun « ${form} » agrees with the item it replaces.`,
-    'Possessive pronouns replace a noun and agree with that noun in gender and number.',
+    `The noun « ${detail.noun} » is ${agreement}, so the matching possessive pronoun is « ${form} ».`,
+    'The possessive pronoun matches the item’s gender and number; the owner phrase tells you who it belongs to.',
+    { promptLanguage: 'fr' },
   ))
 }
 
@@ -277,7 +296,7 @@ const subjectForms: Array<{ lessonId: string; forms: string[]; verb: string; nou
     lessonId: 'a-01',
     forms: ['je suis', 'tu es', 'il est', 'elle est', 'on est', 'nous sommes', 'vous êtes', 'ils sont', 'elles sont'],
     verb: 'être',
-    noun: 'responsable',
+    noun: 'au bureau',
     subjects: { 'je suis': 'I', 'tu es': 'you (informal singular)', 'il est': 'he', 'elle est': 'she', 'on est': 'we (informal)', 'nous sommes': 'we', 'vous êtes': 'you (formal or plural)', 'ils sont': 'they (masculine or mixed)', 'elles sont': 'they (feminine)' },
   },
   {
@@ -306,28 +325,28 @@ const êtreCopula: Record<string, { phrase: string; subject: string }> = {
 }
 for (const [form, detail] of Object.entries(êtreCopula)) {
   add('a-01', form, recognition(
-    `Which form completes « ${detail.phrase} » for ${detail.subject}?`,
+    `In standard written French, which form completes « ${detail.phrase} » for ${detail.subject}?`,
     form,
     (Object.keys(êtreCopula).filter((candidate) => candidate !== form).concat(['je suis', 'tu es'])) as [string, string, string],
     `Use the ${detail.subject} form of être in the present tense.`,
     'The subject and the number of the item determine the present-tense form.',
   ))
   add('a-04', form, recognition(
-    `Which form completes « ${detail.phrase} » for ${detail.subject}?`,
+    `In standard written French, which form completes « ${detail.phrase} » for ${detail.subject}?`,
     form,
     (Object.keys(êtreCopula).filter((candidate) => candidate !== form).concat(['je suis', 'tu es'])) as [string, string, string],
     `Use the ${detail.subject} form of être in the present tense.`,
     'The subject and the number of the item determine the present-tense form.',
   ))
   add('a-02', form, recognition(
-    `Which form completes « ${detail.phrase} » for ${detail.subject}?`,
+    `In standard written French, which form completes « ${detail.phrase} » for ${detail.subject}?`,
     form,
     (Object.keys(êtreCopula).filter((candidate) => candidate !== form).concat(['je suis', 'tu es'])) as [string, string, string],
     `Use the ${detail.subject} form of être in the present tense.`,
     'The subject and the number of the item determine the present-tense form.',
   ))
   add('a-05', form, recognition(
-    `Which form completes « ${detail.phrase} » for ${detail.subject}?`,
+    `In standard written French, which form completes « ${detail.phrase} » for ${detail.subject}?`,
     form,
     (Object.keys(êtreCopula).filter((candidate) => candidate !== form).concat(['je suis', 'tu es'])) as [string, string, string],
     `Use the ${detail.subject} form of être in the present tense.`,
@@ -349,7 +368,7 @@ for (const [form, detail] of Object.entries(questionWords)) {
   ))
 }
 add('a-01', 'de la part de qui', recognition(
-  'Which phrase asks who is calling?',
+  'Which telephone phrase literally asks “on whose behalf” to identify the caller?',
   'de la part de qui',
   ['qui est-ce?', 'qu’est-ce que c’est?', 'où est-ce?'],
   '« De la part de qui? » asks who is calling or who sent someone.',
@@ -373,7 +392,7 @@ const shortPrepositions: Record<string, { lessonId: string; prompt: string; answ
     feedback: '« Je vais à la réunion » uses « à » for the destination or event.', help: 'This short preposition can mark a destination, place, or event.',
   },
   'a-26|à': {
-    lessonId: 'a-26', prompt: 'Which preposition fits « Je vais ___ Ottawa »?', answer: 'à', distractors: ['de', 'par', 'pour'],
+    lessonId: 'a-26', prompt: 'Ottawa is the destination. Which preposition completes « Je vais ___ Ottawa »?', answer: 'à', distractors: ['de', 'par', 'pour'],
     feedback: '« Je vais à Ottawa » uses the destination preposition before a city.', help: 'Before a city, use the destination preposition to mark where someone is going.',
   },
   'a-07|y': {
@@ -391,7 +410,7 @@ const shortPrepositions: Record<string, { lessonId: string; prompt: string; answ
 }
 for (const [key, detail] of Object.entries(shortPrepositions)) {
   const [, form] = key.split('|')
-  add(detail.lessonId, form, recognition(detail.prompt, detail.answer, detail.distractors, detail.feedback, detail.help))
+  add(detail.lessonId, form, recognition(detail.prompt, detail.answer, detail.distractors, detail.feedback, detail.help, { answerLanguage: form === 'y' ? 'en' : 'fr' }))
 }
 
 const timeExpressions: Array<{ lessonId: string; form: string; prompt: string; answer: string; distractors: [string, string, string]; feedback: string; help: string; answerLanguage?: 'fr' | 'en' }> = [
@@ -400,8 +419,8 @@ const timeExpressions: Array<{ lessonId: string; form: string; prompt: string; a
     feedback: '« Il y a un dossier » means that there is a file.', help: 'Use this phrase to say that something exists or is present.',
   },
   {
-    lessonId: 'a-13', form: 'il y a', prompt: 'In « Il y a deux heures », what does the phrase express?', answer: 'ago', distractors: ['there is or there are', 'it is', 'it has been'],
-    feedback: 'With a time period before it, « il y a » means ago.', help: 'A time expression can turn this phrase into a reference to the past.', answerLanguage: 'en',
+    lessonId: 'a-13', form: 'il y a', prompt: 'In « La réunion a commencé il y a deux heures », what does the phrase express?', answer: 'ago', distractors: ['there is or there are', 'it is', 'it has been'],
+    feedback: 'Here « il y a » comes before a duration and places the completed event that long ago.', help: 'Here the phrase places the completed action two hours in the past.', answerLanguage: 'en',
   },
   {
     lessonId: 'a-13', form: 'ça fait', prompt: 'In « Ça fait deux heures que nous travaillons », what does the phrase express?', answer: 'it has been', distractors: ['ago', 'there is or there are', 'it is'],
@@ -443,19 +462,29 @@ const demonstrativePronouns: Record<string, { description: string; noun: string 
   'celles-ci': { description: 'these feminine plural ones', noun: 'notes' },
   'celles-là': { description: 'those feminine plural ones', noun: 'notes' },
 }
+const demonstrativeContrasts: Record<string, [string, string, string]> = {
+  'celui-ci': ['celui-là', 'celle-ci', 'ceux-ci'],
+  'celui-là': ['celui-ci', 'celle-là', 'ceux-là'],
+  'celle-ci': ['celle-là', 'celui-ci', 'celles-ci'],
+  'celle-là': ['celle-ci', 'celui-là', 'celles-là'],
+  'ceux-ci': ['ceux-là', 'celles-ci', 'celui-ci'],
+  'ceux-là': ['ceux-ci', 'celles-là', 'celui-là'],
+  'celles-ci': ['celles-là', 'ceux-ci', 'celle-ci'],
+  'celles-là': ['celles-ci', 'ceux-là', 'celle-là'],
+}
 for (const [form, detail] of Object.entries(demonstrativePronouns)) {
   add('a-06', form, recognition(
     `Which form means “${detail.description}” when referring to ${detail.noun}?`,
     form,
-    (Object.keys(demonstrativePronouns).filter((candidate) => candidate !== form).slice(0, 3)) as [string, string, string],
+    demonstrativeContrasts[form],
     `« ${form} » matches the gender, number, and distance indicated by the prompt.`,
     'Demonstrative pronouns agree with the noun they replace; -ci is near and -là is farther away.',
   ))
 }
 const neutralDemonstratives: Record<string, { prompt: string; feedback: string }> = {
   ça: { prompt: 'Which informal neutral form appears in « ___ va »?', feedback: '« Ça » is the informal neutral demonstrative used in « Ça va ». ' },
-  ceci: { prompt: 'Which neutral form points to something being introduced: « ___ est important »?', feedback: '« Ceci » points forward to something being introduced.' },
-  cela: { prompt: 'Which neutral form refers back to something: « ___ est clair »?', feedback: '« Cela » commonly refers back to something already mentioned.' },
+  ceci: { prompt: 'In careful written French, which neutral pronoun announces what follows: « Retenez bien ___ : la date limite est vendredi »?', feedback: '« Ceci » conventionally announces what follows in careful written French.' },
+  cela: { prompt: 'Which full, uncontracted neutral pronoun refers back to the previous statement: « La date est confirmée. ___ nous rassure »?', feedback: '« Cela » refers back to the previous statement. « Ça » is its familiar shortened form.' },
 }
 for (const [form, detail] of Object.entries(neutralDemonstratives)) {
   add('a-06', form, recognition(
@@ -467,24 +496,23 @@ for (const [form, detail] of Object.entries(neutralDemonstratives)) {
   ))
 }
 
-const quantities: Record<string, { prompt: string; noun: string; feedback: string }> = {
-  'beaucoup de': { prompt: 'Which phrase describes a large quantity?', noun: 'dossiers', feedback: '« Beaucoup de » means a large quantity of dossiers.' },
-  'peu de': { prompt: 'Which phrase describes a small quantity?', noun: 'temps', feedback: '« Peu de » means a small quantity of time.' },
-  'un peu': { prompt: 'Which phrase means a small amount in « J’ai ___ de temps »?', noun: 'temps', feedback: '« Un peu » introduces a small amount.' },
-  'un peu de': { prompt: 'Which phrase means a small amount of something?', noun: 'temps', feedback: '« Un peu de » means a small amount of time.' },
-  'un bon nombre de': { prompt: 'Which phrase means a good number of items?', noun: 'dossiers', feedback: '« Un bon nombre de » means a good number of dossiers.' },
-  'un certain nombre de': { prompt: 'Which phrase means an unspecified number of items?', noun: 'dossiers', feedback: '« Un certain nombre de » means a number of dossiers without specifying the exact count.' },
-  'un grand nombre de': { prompt: 'Which phrase means a great number of items?', noun: 'dossiers', feedback: '« Un grand nombre de » means a great number of dossiers.' },
-  'une dizaine': { prompt: 'Which phrase means about ten?', noun: 'dossiers', feedback: '« Une dizaine » means about ten dossiers.' },
-  'une vingtaine': { prompt: 'Which phrase means about twenty?', noun: 'dossiers', feedback: '« Une vingtaine » means about twenty dossiers.' },
-  'une trentaine': { prompt: 'Which phrase means about thirty?', noun: 'dossiers', feedback: '« Une trentaine » means about thirty dossiers.' },
-  'une cinquantaine': { prompt: 'Which phrase means about fifty?', noun: 'dossiers', feedback: '« Une cinquantaine » means about fifty dossiers.' },
-  'un millier': { prompt: 'Which phrase means about one thousand?', noun: 'dossiers', feedback: '« Un millier » means about one thousand dossiers.' },
-  quelques: { prompt: 'Which word means a few?', noun: 'dossiers', feedback: '« Quelques » means a few dossiers and comes before a plural noun.' },
-  'quelques-uns': { prompt: 'Which pronoun means a few of them?', noun: 'dossiers', feedback: '« Quelques-uns » replaces a plural masculine or mixed group.' },
-  plusieurs: { prompt: 'Which word means several?', noun: 'dossiers', feedback: '« Plusieurs » means several dossiers.' },
+const quantities: Record<string, { prompt: string; distractors: [string, string, string]; feedback: string }> = {
+  'beaucoup de': { prompt: 'Complete: « Il y a ___ dossiers à traiter. » (There are many files to handle.)', distractors: ['peu de', 'une dizaine de', 'un millier de'], feedback: '« Beaucoup de dossiers » means many files.' },
+  'peu de': { prompt: 'Complete: « Il reste ___ temps avant la réunion. » (There is little time left.)', distractors: ['beaucoup de', 'une dizaine de', 'un millier de'], feedback: '« Peu de temps » means little time.' },
+  'un peu': { prompt: 'Complete: « J’ai ___ de temps pour répondre. » (I have a little time to answer.)', distractors: ['beaucoup', 'assez', 'trop'], feedback: '« Un peu de temps » means a little time.' },
+  'un peu de': { prompt: 'Complete: « Il faut ___ temps pour finir. » (We need a little time to finish.)', distractors: ['beaucoup de', 'une dizaine de', 'un millier de'], feedback: '« Un peu de temps » means a little time.' },
+  'un bon nombre de': { prompt: 'Complete: « ___ dossiers sont prêts. » (A good number of files are ready.)', distractors: ['peu de', 'une dizaine de', 'un millier de'], feedback: '« Un bon nombre de dossiers » means a good number of files.' },
+  'un certain nombre de': { prompt: 'Complete: « ___ dossiers restent à vérifier; le total n’est pas précisé. » (A number of files remain to be checked.)', distractors: ['peu de', 'une dizaine de', 'un millier de'], feedback: '« Un certain nombre de dossiers » gives a number without saying exactly how many.' },
+  'un grand nombre de': { prompt: 'Complete: « ___ dossiers ont été archivés cette année. » (A great number of files were archived this year.)', distractors: ['peu de', 'une dizaine de', 'un seul'], feedback: '« Un grand nombre de dossiers » means a great number of files.' },
+  'une dizaine': { prompt: 'Environ dix dossiers sont prêts. Il y en a ___. (About ten files are ready.)', distractors: ['une vingtaine', 'une trentaine', 'un millier'], feedback: '« Une dizaine » means about ten.' },
+  'une vingtaine': { prompt: 'Environ vingt dossiers sont prêts. Il y en a ___. (About twenty files are ready.)', distractors: ['une dizaine', 'une trentaine', 'un millier'], feedback: '« Une vingtaine » means about twenty.' },
+  'une trentaine': { prompt: 'Environ trente dossiers sont prêts. Il y en a ___. (About thirty files are ready.)', distractors: ['une dizaine', 'une vingtaine', 'une cinquantaine'], feedback: '« Une trentaine » means about thirty.' },
+  'une cinquantaine': { prompt: 'Environ cinquante dossiers sont prêts. Il y en a ___. (About fifty files are ready.)', distractors: ['une dizaine', 'une vingtaine', 'une trentaine'], feedback: '« Une cinquantaine » means about fifty.' },
+  'un millier': { prompt: 'Environ mille dossiers sont archivés. Il y en a ___. (About one thousand files are archived.)', distractors: ['une dizaine', 'une vingtaine', 'une cinquantaine'], feedback: '« Un millier » means about one thousand.' },
+  quelques: { prompt: 'Complete: « ___ dossiers sont urgents. » (A few files are urgent.)', distractors: ['beaucoup de', 'une dizaine de', 'un millier de'], feedback: '« Quelques dossiers » means a few files.' },
+  'quelques-uns': { prompt: 'Parmi les dossiers, ___ sont urgents. (A few of them are urgent.)', distractors: ['beaucoup', 'tous', 'la plupart'], feedback: '« Quelques-uns » means a few of them and replaces a masculine or mixed plural noun.' },
+  plusieurs: { prompt: 'Complete: « ___ dossiers doivent être vérifiés. » (Several files must be checked.)', distractors: ['peu de', 'une dizaine de', 'un millier de'], feedback: '« Plusieurs dossiers » means several files.' },
 }
-const quantityForms = Object.keys(quantities)
 for (const [form, detail] of Object.entries(quantities)) {
   const lessons = ['a-12', 'a-06', 'a-11', 'a-22'].filter((lessonId) => {
     if (lessonId === 'a-12') return ['beaucoup de', 'peu de', 'un bon nombre de', 'un certain nombre de', 'un grand nombre de', 'quelques', 'quelques-uns', 'plusieurs', 'un peu de'].includes(form)
@@ -495,9 +523,9 @@ for (const [form, detail] of Object.entries(quantities)) {
   lessons.forEach((lessonId) => add(lessonId, form, recognition(
     detail.prompt,
     form,
-    quantityForms.filter((candidate) => candidate !== form).slice(0, 3) as [string, string, string],
+    detail.distractors,
     detail.feedback,
-    'Quantity words tell how much or how many; check whether the noun is singular, plural, or omitted.',
+    'Use the sentence meaning and the noun or pronoun that follows the quantity expression.',
   )))
 }
 
@@ -549,14 +577,14 @@ add('a-08', 'près de', recognition(
   { answerLanguage: 'en' },
 ))
 add('a-08', 'vers', recognition(
-  'Which phrase fits « La réunion commence ___ trois heures »?',
+  'Complete: « La réunion commence ___ trois heures. » (It starts around three.)',
   'vers',
-  ['près de', 'à quelle heure', 'en quelle saison'],
+  ['à', 'dans', 'après'],
   '« Vers trois heures » means around three o’clock.',
   'For an approximate clock time, use the short preposition meaning around or about.'
 ))
 add('a-22', 'une tranche de', recognition(
-  'Which phrase means “a portion of” a report or budget?',
+  'Which phrase means “an instalment or portion of” a budget?',
   'une tranche de',
   ['une dizaine de', 'beaucoup de', 'peu de'],
   '« Une tranche de » means a portion or section of something.',

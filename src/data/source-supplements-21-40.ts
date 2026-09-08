@@ -373,7 +373,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'a-31', french: 'tenir à ce que', answer: 'to want someone to' },
   { lessonId: 'a-31', french: 'interrogation indirecte', answer: 'indirect question' },
   { lessonId: 'a-31', french: 'style indirect', answer: 'indirect speech' },
-  { lessonId: 'a-31', french: 'bribe de conversation', answer: 'snatch of conversation' },
+  { lessonId: 'a-31', french: 'bribe de conversation', answer: "snippet of conversation" },
 
   // SC102-2-32 — possibility, impossibility, and condition
   { lessonId: 'a-32', french: 'possible', answer: 'possible' },
@@ -382,7 +382,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'a-32', french: 'se pouvoir', answer: 'to be possible' },
   { lessonId: 'a-32', french: 'la possibilité', answer: 'possibility' },
   { lessonId: 'a-32', french: 'l’impossibilité', answer: 'impossibility' },
-  { lessonId: 'a-32', french: 'l’empêchement', answer: 'impediment' },
+  { lessonId: 'a-32', french: 'l’empêchement', answer: 'an impediment' },
   { lessonId: 'a-32', french: 'à condition de', answer: 'on condition of' },
   { lessonId: 'a-32', french: 'à condition que', answer: 'provided that' },
   { lessonId: 'a-32', french: 'si', answer: 'if' },
@@ -442,7 +442,7 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'b-35', french: 'probable', answer: 'probable' },
   { lessonId: 'b-35', french: 'probabilité', answer: 'probability' },
   { lessonId: 'b-35', french: 'prévisible', answer: 'predictable' },
-  { lessonId: 'b-35', french: 'éventuellement', answer: 'eventually' },
+  { lessonId: 'b-35', french: 'éventuellement', answer: 'possibly, potentially' },
   { lessonId: 'b-35', french: 'à la suite de', answer: 'following, as a result of' },
 
   // SC102-2-36 — research and discovery
@@ -523,18 +523,18 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'b-38', french: 'le résultat', answer: 'outcome, result' },
 
   // SC102-2-39 — knowledge, certainty, change
-  { lessonId: 'b-39', french: 'savoir', answer: 'to know' },
-  { lessonId: 'b-39', french: 'connaître', answer: 'to know, be acquainted with' },
-  { lessonId: 'b-39', french: 'entendre dire', answer: 'to hear said' },
+  { lessonId: 'b-39', french: 'savoir', answer: 'to know a fact' },
+  { lessonId: 'b-39', french: 'connaître', answer: 'to know or be acquainted with a person or place' },
+  { lessonId: 'b-39', french: 'entendre dire', answer: 'to hear that, by word of mouth' },
   { lessonId: 'b-39', french: 'parler de', answer: 'to speak about' },
   { lessonId: 'b-39', french: 'être au courant de', answer: 'to be aware of' },
-  { lessonId: 'b-39', french: 'averti de', answer: 'warned of' },
-  { lessonId: 'b-39', french: 'informé de', answer: 'informed of' },
-  { lessonId: 'b-39', french: 'prévenu de', answer: 'warned of' },
-  { lessonId: 'b-39', french: 'apprendre', answer: 'to learn' },
+  { lessonId: 'b-39', french: 'averti de', answer: 'warned about' },
+  { lessonId: 'b-39', french: 'informé de', answer: 'informed about' },
+  { lessonId: 'b-39', french: 'prévenu de', answer: 'warned about' },
+  { lessonId: 'b-39', french: 'apprendre', answer: 'to learn, find out' },
   { lessonId: 'b-39', french: 'ignorer', answer: 'to be unaware of' },
   { lessonId: 'b-39', french: 'se laisser dire', answer: 'to be told' },
-  { lessonId: 'b-39', french: 'tenir au courant de', answer: 'to keep informed of' },
+  { lessonId: 'b-39', french: 'tenir au courant de', answer: 'to keep informed about' },
   { lessonId: 'b-39', french: 'ne pas s’attendre à', answer: 'not to expect' },
   { lessonId: 'b-39', french: 'certain', answer: 'certain' },
   { lessonId: 'b-39', french: 'douteux', answer: 'doubtful' },
@@ -556,13 +556,13 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
 
   // SC102-2-40 — advice, suggestions, persuasion
   { lessonId: 'b-40', french: 'conseiller', answer: 'to advise' },
-  { lessonId: 'b-40', french: 'conseiller de', answer: 'to advise to' },
+  { lessonId: 'b-40', french: 'conseiller de', answer: 'to advise someone to do something' },
   { lessonId: 'b-40', french: 'demander conseil', answer: 'to ask for advice' },
   { lessonId: 'b-40', french: 'faire une objection', answer: 'to raise an objection' },
   { lessonId: 'b-40', french: 'influencer', answer: 'to influence' },
   { lessonId: 'b-40', french: 'maintenir que', answer: 'to maintain that' },
   { lessonId: 'b-40', french: 'suggérer', answer: 'to suggest' },
-  { lessonId: 'b-40', french: 'suggérer de', answer: 'to suggest to' },
+  { lessonId: 'b-40', french: 'suggérer de', answer: 'to suggest' },
   { lessonId: 'b-40', french: 'généralement', answer: 'generally' },
   { lessonId: 'b-40', french: 'normalement', answer: 'normally' },
   { lessonId: 'b-40', french: 'habituellement', answer: 'usually' },
@@ -584,6 +584,52 @@ const sourceSupplementRows: readonly SourceSupplementRow[] = [
   { lessonId: 'b-40', french: 'à mon avis', answer: 'in my opinion' },
   { lessonId: 'b-40', french: 'si tu veux mon avis', answer: 'if you want my opinion' },
 ]
+
+type ReviewedTranslationGroup = {
+  lessonId: string
+  terms: readonly string[]
+  page: number
+  lineRange: string
+  section: string
+  evidenceType?: SourceEvidence['evidenceType']
+  sourceFragments?: Readonly<Record<string, readonly string[]>>
+}
+
+/**
+ * These rows are French-only entries in named primary tables or practice
+ * tables. Their English is a reviewed learner gloss, not text claimed to be
+ * supplied by the PDF.
+ */
+const reviewedTranslationGroups: readonly ReviewedTranslationGroup[] = [
+  { lessonId: 'a-23', terms: ['coordination', 'élaborer', 'l’élaboration', 'évaluer', 'l’évaluation', 'financer', 'le financement', 'gérer', 'la gestion', 'modifier'], page: 11, lineRange: '141-166', section: '23.1 vocabulary related to project, word-family table' },
+  { lessonId: 'a-32', terms: ['possible', 'impossible', 'y avoir moyen', 'se pouvoir', 'la possibilité', 'l’impossibilité', 'l’empêchement'], page: 10, lineRange: '172-194', section: '32.1 indicators of possibility and impossibility table' },
+  { lessonId: 'a-32', terms: ['à condition de'], page: 13, lineRange: '263-268', section: '32.2 indicators of condition table', sourceFragments: { 'à condition de': ['à condition', 'd’avoir'] } },
+  { lessonId: 'a-32', terms: ['à condition que'], page: 13, lineRange: '265-269', section: '32.2 indicators of condition table', sourceFragments: { 'à condition que': ['à condition', 'que'] } },
+  { lessonId: 'a-32', terms: ['si'], page: 13, lineRange: '267-272', section: '32.2 indicators of condition table' },
+  { lessonId: 'b-33', terms: ['le choix', 'l’option', 'la sélection', 'choisir', 'faire un choix', 'offrir le choix', 'avoir le choix', 'laisser le choix', 'opter', 'sélectionner', 'optionnel', 'facultatif'], page: 11, lineRange: '188-205', section: '33.1 indicators of choice table' },
+  { lessonId: 'b-34', terms: ['si'], page: 9, lineRange: '114-160', section: '34.1 conditional phrases with si table' },
+  { lessonId: 'b-34', terms: ['au cas où', 'supposons que', 'mettons que', 'disons que', 'si jamais'], page: 23, lineRange: '584-597', section: '34.2 formulating suppositions and hypotheses table', sourceFragments: { 'mettons que': ['mettons', 'qu’'] } },
+  { lessonId: 'b-34', terms: ['se décider', 'se dépêcher', 'se désister'], page: 10, lineRange: '197-241', section: '34.1 conditional practice substitutions', evidenceType: 'source-example' },
+  { lessonId: 'b-35', terms: ['il se peut que', 'il y a des chances que', 'ça se pourrait', 'probable'], page: 8, lineRange: '88-107', section: '35.1 expressing possibility and probability table' },
+  { lessonId: 'b-35', terms: ['prévoir', 'à la suite de'], page: 12, lineRange: '224-230', section: '35.2 expressing forecasts table', sourceFragments: { prévoir: ['prévoit', 'prévu'] } },
+  { lessonId: 'b-35', terms: ['probabilité'], page: 11, lineRange: '204-214', section: '35.1 probability practice prompt', evidenceType: 'source-example' },
+  { lessonId: 'b-35', terms: ['prévisible'], page: 5, lineRange: '55-61', section: '35 objective indicators of predictability' },
+  { lessonId: 'b-35', terms: ['éventuellement'], page: 9, lineRange: '148-164', section: '35.1 possibility example', evidenceType: 'source-example' },
+  { lessonId: 'b-36', terms: ['constater', 'dépister', 'expérimenter', 'repérer', 'sonder', 'tester', 'l’examen', 'l’étude', 'l’analyse', 'la recherche'], page: 13, lineRange: '348-360', section: '36.1 research and discovery indicators practice table', sourceFragments: { 'l’examen': ['examen'], 'l’étude': ['étude'], 'l’analyse': ['analyse'], 'la recherche': ['recherche'] } },
+  { lessonId: 'b-37', terms: ['faire face à', 'procéder à', 'se baser sur', 'se référer à'], page: 40, lineRange: '1220-1232', section: '37.3 project procedure verb series', evidenceType: 'source-example' },
+  { lessonId: 'b-37', terms: ['les contraintes', 'les crédits', 'la durée', 'le délai', 'les équivalents temps plein', 'les effectifs'], page: 21, lineRange: '599-640', section: '37.4 project realization conditions table' },
+  { lessonId: 'b-39', terms: ['savoir', 'connaître', 'entendre dire', 'parler de', 'être au courant de', 'averti de', 'informé de', 'prévenu de', 'apprendre', 'ignorer', 'tenir au courant de', 'ne pas s’attendre à'], page: 11, lineRange: '213-231', section: '39.1 indicators of knowledge and ignorance table', sourceFragments: { 'être au courant de': ['être au courant', '(de)'], 'averti de': ['averti', '(de)'], 'prévenu de': ['prévenu', '(de)'], 'tenir au courant de': ['tenir au courant', '(de)'] } },
+  { lessonId: 'b-40', terms: ['conseiller', 'conseiller de', 'demander conseil', 'suggérer', 'suggérer de', 'si j’étais toi', 'à votre place', 'je vous conseille de', 'je vous suggère de', 'pourquoi ne pas', 'si tu veux un conseil', 'à mon avis'], page: 18, lineRange: '397-437', section: '40.2 asking for and giving advice table', sourceFragments: { conseiller: ['conseille'], 'conseiller de': ['conseille', 'de'], 'demander conseil': ['demande', 'conseil'], suggérer: ['suggère'], 'suggérer de': ['suggère', 'de'], 'je vous conseille de': ['conseille', 'de'], 'je vous suggère de': ['suggère', 'de'] } },
+]
+
+const reviewedTranslationEvidence = new Map(
+  reviewedTranslationGroups.flatMap((group) => group.terms.map((french) => [
+    `${group.lessonId}|${french}`.replace(/[‘’]/g, "'").toLocaleLowerCase('fr'),
+    group,
+  ])),
+)
+
+export const reviewedTranslationKeys = new Set(reviewedTranslationEvidence.keys())
 
 const objectiveEvidence: Record<string, { page: number; lineRange: string; section: string }> = {
   'a-21': { page: 8, lineRange: '1-1590', section: '21.1-21.4 standards, measurement, and inclusion charts' },
@@ -618,15 +664,18 @@ function categoryFor(row: SourceSupplementRow): SourceEvidence['category'] {
 export const sourceSupplements2140: readonly SourceSupplement[] = sourceSupplementRows.map((row) => {
   const evidence = objectiveEvidence[row.lessonId]
   const objectiveNumber = Number(row.lessonId.slice(2))
+  const reviewed = reviewedTranslationEvidence.get(`${row.lessonId}|${row.french}`.replace(/[‘’]/g, "'").toLocaleLowerCase('fr'))
   return {
     ...row,
     evidence: {
       pdf: `SC102-2-${objectiveNumber}-2005-fra.pdf`,
-      page: evidence.page,
-      lineRange: evidence.lineRange,
-      section: evidence.section,
+      page: reviewed?.page ?? evidence.page,
+      lineRange: reviewed?.lineRange ?? evidence.lineRange,
+      section: reviewed?.section ?? evidence.section,
       category: categoryFor(row),
-      evidenceType: 'source-table',
+      evidenceType: reviewed?.evidenceType ?? 'source-table',
+      ...(reviewed || (row.lessonId === 'a-31' && row.french === 'bribe de conversation') ? { englishOrigin: 'reviewed-translation' as const } : {}),
+      ...(reviewed?.sourceFragments?.[row.french] ? { sourceFragments: reviewed.sourceFragments[row.french] } : {}),
       englishFragments: englishEvidenceFragments(row.answer),
     },
   }

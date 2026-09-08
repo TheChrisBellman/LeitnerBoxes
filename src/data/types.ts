@@ -72,6 +72,7 @@ export type ExerciseKind =
 
 export const ACTIVITY_TYPES = [
   'vocabulary',
+  'grammar',
   'conjugation',
   'best-response',
   'contextual-cloze',

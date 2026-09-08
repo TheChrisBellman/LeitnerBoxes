@@ -10,6 +10,8 @@ export type SourceEvidence = {
   section: string
   category: SourceCategory
   evidenceType: SourceEvidenceType
+  /** English gloss supplied by the PDF table, or reviewed for a French-only table row. */
+  englishOrigin?: 'pdf-table' | 'reviewed-translation'
   /** Terms that are split across adjacent table cells rather than contiguous text. */
   sourceFragments?: readonly string[]
   /** English gloss pieces used when the source wraps alternatives across lines. */

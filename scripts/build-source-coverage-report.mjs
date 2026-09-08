@@ -204,16 +204,17 @@ const baselineEvidence = baselineSourceRows.map((row) => ({ ...row, evidence: su
 const baselineWithoutEvidence = baselineEvidence.filter((row) => !row.evidence)
 const baselineAnswerKeyOnly = baselineEvidence.filter((row) => row.evidence?.evidenceType === 'answer-key-confirmation')
 const baselineBilingualEvidence = baselineEvidence.map((row) => {
-  if (!row.evidence) return { ...row, frenchPrimaryMatch: false, englishPrimaryMatch: false, primaryEvidenceMatch: false, primaryRangeMatch: false }
+  if (!row.evidence) return { ...row, reviewedTranslation: false, frenchPrimaryMatch: false, englishPrimaryMatch: false, englishActualMatch: false, englishRangeMatch: false, englishActualRangeMatch: false, primaryEvidenceMatch: false, primaryRangeMatch: false }
   const data = pdfData(row.evidence.pdf.replace(/\.pdf$/i, '.txt'))
   const [rangeStart, rangeEnd] = row.evidence.lineRange.split('-').map((value) => Number(value))
   const primaryText = data.normalizedLines.slice(Math.max(0, (rangeStart || 1) - 1), rangeEnd || data.normalizedLines.length).join(' ')
-  const frenchPrimaryMatch = sequenceIncludes(row.french, data.primaryText)
-  const frenchRangeMatch = sequenceIncludes(row.french, primaryText)
+  const frenchPrimaryMatch = sequenceIncludes(row.french, data.primaryText) || (row.evidence.sourceFragments?.length > 0 && row.evidence.sourceFragments.every((fragment) => sequenceIncludes(fragment, data.primaryText)))
+  const frenchRangeMatch = sequenceIncludes(row.french, primaryText) || (row.evidence.sourceFragments?.length > 0 && row.evidence.sourceFragments.every((fragment) => sequenceIncludes(fragment, primaryText)))
   const englishFragments = englishEvidenceFragmentsFor(row)
-  const englishPrimaryMatch = englishFragments.length > 0 && englishFragments.every((fragment) => sequenceIncludes(fragment, data.primaryText))
-  const englishRangeMatch = englishFragments.length > 0 && englishFragments.every((fragment) => sequenceIncludes(fragment, primaryText))
-  return { ...row, frenchPrimaryMatch, frenchRangeMatch, englishPrimaryMatch, englishRangeMatch, primaryEvidenceMatch: frenchPrimaryMatch && englishPrimaryMatch, primaryRangeMatch: frenchRangeMatch && englishRangeMatch }
+  const reviewedTranslation = row.evidence.englishOrigin === 'reviewed-translation'
+  const englishActualMatch = englishFragments.length > 0 && englishFragments.every((fragment) => sequenceIncludes(fragment, data.primaryText))
+  const englishActualRangeMatch = englishFragments.length > 0 && englishFragments.every((fragment) => sequenceIncludes(fragment, primaryText))
+  return { ...row, reviewedTranslation, frenchPrimaryMatch, frenchRangeMatch, englishPrimaryMatch: englishActualMatch, englishActualMatch, englishRangeMatch: englishActualRangeMatch, englishActualRangeMatch, primaryEvidenceMatch: frenchPrimaryMatch && (reviewedTranslation || englishActualMatch), primaryRangeMatch: frenchRangeMatch && (reviewedTranslation || englishActualRangeMatch) }
 })
 const baselineBilingualMismatchesAll = baselineBilingualEvidence.filter((row) => !row.primaryEvidenceMatch)
 const baselineBilingualRangeMismatchesAll = baselineBilingualEvidence.filter((row) => !row.primaryRangeMatch)
@@ -256,10 +257,11 @@ const sourceSupplementEvidence = supplementRows.map((row) => {
   const frenchPrimaryMatch = normalizedFrench && (sequenceIncludes(normalizedFrench, data.primaryText) || (row.evidence.sourceFragments?.length > 0 && row.evidence.sourceFragments.every((fragment) => sequenceIncludes(fragment, data.primaryText))))
   const frenchRangeMatch = normalizedFrench && (sequenceIncludes(normalizedFrench, primaryText) || (row.evidence.sourceFragments?.length > 0 && row.evidence.sourceFragments.every((fragment) => sequenceIncludes(fragment, primaryText))))
   const englishFragments = row.evidence.englishFragments ?? []
-  const englishPrimaryMatch = englishFragments.length > 0 && englishFragments.every((fragment) => sequenceIncludes(fragment, data.primaryText))
-  const englishRangeMatch = englishFragments.length > 0 && englishFragments.every((fragment) => sequenceIncludes(fragment, primaryText))
-  const primaryEvidenceMatch = frenchPrimaryMatch && englishPrimaryMatch
-  const primaryRangeMatch = frenchRangeMatch && englishRangeMatch
+  const reviewedTranslation = row.evidence.englishOrigin === 'reviewed-translation'
+  const englishActualMatch = englishFragments.length > 0 && englishFragments.every((fragment) => sequenceIncludes(fragment, data.primaryText))
+  const englishActualRangeMatch = englishFragments.length > 0 && englishFragments.every((fragment) => sequenceIncludes(fragment, primaryText))
+  const primaryEvidenceMatch = frenchPrimaryMatch && (reviewedTranslation || englishActualMatch)
+  const primaryRangeMatch = frenchRangeMatch && (reviewedTranslation || englishActualRangeMatch)
   const secondaryEvidence = []
   const answerKeyStart = data.keyStart >= 0 ? data.keyStart : lines.length
   lines.forEach((record, index) => {
@@ -269,11 +271,14 @@ const sourceSupplementEvidence = supplementRows.map((row) => {
       secondaryEvidence.push({ pdf: row.evidence.pdf, page: record.page, line: record.line, evidenceType: 'answer-key-confirmation' })
     }
   })
-  return { lessonId: row.lessonId, french: row.french, answer: row.answer, primaryEvidence: row.evidence, primaryEvidenceMatch, primaryRangeMatch, frenchPrimaryMatch, frenchRangeMatch, englishPrimaryMatch, englishRangeMatch, secondaryEvidence }
+  return { lessonId: row.lessonId, french: row.french, answer: row.answer, primaryEvidence: row.evidence, reviewedTranslation, primaryEvidenceMatch, primaryRangeMatch, frenchPrimaryMatch, frenchRangeMatch, englishPrimaryMatch: englishActualMatch, englishActualMatch, englishRangeMatch: englishActualRangeMatch, englishActualRangeMatch, secondaryEvidence }
 })
 const secondaryEvidenceCount = sourceSupplementEvidence.filter((row) => row.secondaryEvidence.length > 0).length
 const primaryEvidenceMismatches = sourceSupplementEvidence.filter((row) => !row.primaryEvidenceMatch)
 const primaryEvidenceRangeMismatches = sourceSupplementEvidence.filter((row) => !row.primaryRangeMatch)
+const sparseReviewedLessonIds = new Set(['a-23', 'a-32', 'b-33', 'b-34', 'b-35', 'b-36', 'b-37', 'b-39', 'b-40'])
+const sparseReviewedTranslationRows = sourceSupplementEvidence.filter((row) => row.reviewedTranslation && sparseReviewedLessonIds.has(row.lessonId))
+const otherReviewedTranslationRows = sourceSupplementEvidence.filter((row) => row.reviewedTranslation && !sparseReviewedLessonIds.has(row.lessonId))
 const malformed = sourceVocabulary.filter((row) => /[\\/()]/.test(`${row.french}${row.answer}`))
 const duplicatePrompts = sourceVocabulary.length - sourceKeys.size
 const duplicateSourceIds = sourceVocabulary.length - sourceIds.size
@@ -339,6 +344,7 @@ const report = {
     textSource: '.tmp/pdf-text/*.txt generated from the supplied PDFs',
     pageEvidence: 'Every candidate retains PDF text line and extracted page numbers; sections are tracked from objective headings.',
     primarySources: 'Named bilingual vocabulary, lexicon, grammar, spelling, function, and phonetics tables.',
+    reviewedTranslations: 'Sparse A/B rows and editorially clarified glosses retain French proof from named primary tables. English wording that is not a direct PDF match is marked reviewed-translation; the counts below distinguish sparse and other reviewed rows.',
     crossChecks: 'Answer keys, corrections, and transcriptions are inventoried but excluded from primary candidate generation.',
     exclusions: 'Incidental prose, source exercises, recordings, and answer-key-only sentences are not turned into cards.',
   },
@@ -346,6 +352,9 @@ const report = {
   dispositions,
   answerKeyBearingPdfs: answerKeyBearingPdfs.length,
   answerKeyMarkerCount: files.reduce((sum, file) => sum + file.answerKeyMarkers.length, 0),
+  reviewedTranslationRows: sourceSupplementEvidence.filter((row) => row.reviewedTranslation).length,
+  sparseReviewedTranslationRows: sparseReviewedTranslationRows.length,
+  otherReviewedTranslationRows: otherReviewedTranslationRows.length,
   sourceCards: sourceVocabulary.length,
   sourceUnits: sourceUnits.length,
   emptySourceUnits: units.filter((unit) => !afterByUnit[unit]?.length),
@@ -374,10 +383,14 @@ const report = {
     supplementCategories,
     supplementEvidenceRows: sourceSupplementEvidence.length,
     supplementRowsWithAnswerKeyConfirmation: secondaryEvidenceCount,
+    reviewedTranslationRows: sourceSupplementEvidence.filter((row) => row.reviewedTranslation).length,
+    sparseReviewedTranslationRows: sparseReviewedTranslationRows.length,
+    otherReviewedTranslationRows: otherReviewedTranslationRows.length,
+    pdfSuppliedEnglishRows: sourceSupplementEvidence.filter((row) => !row.reviewedTranslation && row.primaryEvidence.evidenceType === 'source-table').length,
     primaryEvidenceMismatches: primaryEvidenceMismatches.length,
     primaryEvidenceRangeMismatches: primaryEvidenceRangeMismatches.length,
-    primaryEnglishEvidenceMismatches: sourceSupplementEvidence.filter((row) => !row.englishPrimaryMatch).length,
-    primaryEnglishRangeMismatches: sourceSupplementEvidence.filter((row) => !row.englishRangeMatch).length,
+    primaryEnglishEvidenceMismatches: sourceSupplementEvidence.filter((row) => !row.reviewedTranslation && !row.englishActualMatch).length,
+    primaryEnglishRangeMismatches: sourceSupplementEvidence.filter((row) => !row.reviewedTranslation && !row.englishActualRangeMatch).length,
     baselineBilingualFailures: baselineBilingualMismatchesAll.length,
     baselineBilingualRangeFailures: baselineBilingualRangeMismatchesAll.length,
     baselineBilingualMismatches: baselineBilingualMismatches.length,
