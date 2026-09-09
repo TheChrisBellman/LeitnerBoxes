@@ -58,7 +58,7 @@ type MissedAnswer = {
   explanation?: string
 }
 
-type PracticePreset = 'word-meanings' | 'verb-forms' | 'grammar-usage' | 'custom'
+type PracticePreset = 'noun-gender' | 'word-meanings' | 'verb-forms' | 'grammar-usage' | 'custom'
 
 type ShelfMotion = {
   from: Box
@@ -85,6 +85,7 @@ const levelDescriptions: Record<Level, string> = {
 }
 
 const activityOptions: { type: ActivityType; label: string; description: string }[] = [
+  { type: 'noun-gender', label: 'Noun gender', description: 'Choose masculine or feminine.' },
   { type: 'vocabulary', label: 'Vocabulary', description: 'Match French words and meanings.' },
   { type: 'conjugation', label: 'Conjugation', description: 'Present-tense form recall.' },
   { type: 'grammar', label: 'Grammar', description: 'Use French forms in context.' },
@@ -99,6 +100,7 @@ const activityOptions: { type: ActivityType; label: string; description: string 
 ]
 
 const presetOptions: { id: Exclude<PracticePreset, 'custom'>; label: string; description: string; mode: PracticeMode; types: readonly ActivityType[] }[] = [
+  { id: 'noun-gender', label: 'Noun gender', description: 'Masculine or feminine?', mode: 'vocabulary', types: ['noun-gender'] },
   { id: 'word-meanings', label: 'Word meanings', description: 'Meanings, ordering, and typing.', mode: 'vocabulary', types: ['vocabulary', 'ordered', 'typed'] },
   { id: 'verb-forms', label: 'Verb forms', description: 'Present-tense conjugation recall.', mode: 'conjugation', types: ['conjugation', 'typed'] },
   { id: 'grammar-usage', label: 'Grammar & usage', description: 'Forms, context, corrections, and workplace choices.', mode: 'mixed', types: ['grammar', 'contextual-cloze', 'correction', 'transformation', 'best-response', 'scenario'] },
@@ -122,6 +124,7 @@ function practicePresetForSettings(mode: PracticeMode, types: readonly ActivityT
 }
 
 function activityTypeForQuestion(question: PracticeQuestion): ActivityType {
+  if (question.vocabularyPractice === 'noun-gender') return 'noun-gender'
   if (question.exercise) return question.exercise.kind
   if (question.vocabularyPractice === 'recognition') return 'grammar'
   if (question.format === 'typed') return 'typed'
@@ -182,6 +185,7 @@ function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
 }
 
 function choicesFor(question: PracticeQuestion): string[] {
+  if (question.vocabularyPractice === 'noun-gender') return ['Masculine', 'Feminine']
   if (question.exercise?.kind === 'correction') {
     return [...question.exercise.segments.map((segment) => segment.id), ...(question.exercise.allowNoCorrection ? ['none'] : [])]
   }
@@ -986,7 +990,7 @@ function QuizScreen({
     else if (question.format === 'choice' || question.format === 'cloze' || question.format === 'correction') firstChoiceRef.current?.focus({ preventScroll: true })
   }, [question.card.id, question.format, question.tokens, repairing])
 
-  const questionLabel = exerciseLabel(question) ?? (question.vocabularyPractice === 'recognition'
+  const questionLabel = question.vocabularyPractice === 'noun-gender' ? 'Noun gender' : exerciseLabel(question) ?? (question.vocabularyPractice === 'recognition'
     ? 'Grammar · Recognition'
     : question.format === 'typed'
       ? question.kind === 'conjugation' ? 'Conjugation · Typed recall' : 'Vocabulary · Typed recall'
@@ -997,7 +1001,7 @@ function QuizScreen({
           : question.direction === 'english-to-french'
             ? 'Vocabulary · English → French'
             : 'Vocabulary · French → English')
-  const questionInstruction = question.vocabularyPractice === 'recognition'
+  const questionInstruction = question.vocabularyPractice === 'noun-gender' ? 'Is this noun masculine or feminine?' : question.vocabularyPractice === 'recognition'
     ? 'Choose the best answer.'
     : question.exercise?.kind === 'correction'
       ? 'Read the full text, then choose the underlined part that contains the error.'
@@ -1022,7 +1026,7 @@ function QuizScreen({
                       : question.direction === 'english-to-french'
                         ? 'How do you say this in French?'
                         : 'What does it mean in English?'
-  const answerGroupLabel = question.vocabularyPractice === 'recognition'
+  const answerGroupLabel = question.vocabularyPractice === 'noun-gender' ? 'Choose the noun gender' : question.vocabularyPractice === 'recognition'
     ? 'Choose the best answer'
     : question.exercise?.kind === 'correction'
       ? 'Choose the segment to correct'

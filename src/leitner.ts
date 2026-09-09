@@ -1,6 +1,6 @@
 import { conjugationAlternatives, conjugationCatches } from './data/conjugation-catches.ts'
 import { allExercises, dialoguesById, exercisesByTargetId, passagesById, scenariosById } from './data/pilot-exercises.ts'
-import { vocabularyEquivalentForms } from './data/source-vocabulary.ts'
+import { sourceVocabulary, vocabularyEquivalentForms } from './data/source-vocabulary.ts'
 import { ACTIVITY_TYPES, type ActivityType, type AuthoredExercise, type CardKind, type CardTier, type ConjugationCard, type ExerciseLanguage, type ExerciseTarget, type PracticeCard, type PracticeTarget, type QuestionHelp, type VocabularyCard } from './data/types.ts'
 
 export type Box = 1 | 2 | 3 | 4 | 5
@@ -194,7 +194,7 @@ export type PracticeQuestion = {
   tokens?: string[]
   acceptedAnswers?: string[]
   exercise?: AuthoredExercise
-  vocabularyPractice?: 'recognition'
+  vocabularyPractice?: 'recognition' | 'noun-gender'
   answerExplanation?: string
   answerDisplay?: string
   choiceLabels?: Record<string, string>
@@ -636,6 +636,23 @@ function buildExerciseQuestion(
   }
 }
 
+// Elided/plural articles and nouns recorded with both genders are excluded.
+const variableGenderNouns = new Set(['bibliothécaire', 'comptable', 'gestionnaire', 'commis', 'destinataire', 'leader', 'aide'])
+const nounGenders = new Map<string, 'Masculine' | 'Feminine' | null>()
+for (const card of sourceVocabulary) {
+  const match = /^(le|la|un|une) ([\p{L}-]+)$/u.exec(card.french)
+  if (!match || card.practice || variableGenderNouns.has(match[2])) continue
+  const gender = match[1] === 'le' || match[1] === 'un' ? 'Masculine' : 'Feminine'
+  const previous = nounGenders.get(match[2])
+  nounGenders.set(match[2], previous === undefined || previous === gender ? gender : null)
+}
+
+export function nounGenderFor(french: string) {
+  const match = /^(le|la|un|une) ([\p{L}-]+)$/u.exec(french)
+  const answer = match && nounGenders.get(match[2])
+  return match && answer ? { noun: match[2], answer } : undefined
+}
+
 export function buildSessionQuestions(
   cards: readonly PracticeTarget[],
   progress: Record<string, CardProgress> = {},
@@ -686,6 +703,17 @@ export function buildSessionQuestions(
       }
     }
 
+    if (selectedActivity === 'noun-gender') {
+      const gender = nounGenderFor(card.french)!
+      return {
+        card, kind: card.kind, direction: 'french-to-english', format: 'choice',
+        prompt: gender.noun, promptLanguage: 'fr', answer: gender.answer,
+        answerLanguage: 'en', distractors: [gender.answer === 'Masculine' ? 'Feminine' : 'Masculine'],
+        vocabularyPractice: 'noun-gender',
+        help: { label: 'Gender help', text: 'Recall the noun with its article: le or un is masculine; la or une is feminine.' },
+        answerExplanation: `« ${card.french} » is ${gender.answer.toLowerCase()}.`,
+      }
+    }
     const reverse = vocabularyOrdinal++ % 2 === 1 || box >= 3
     if (selectedActivity === 'typed') {
       const question = buildVocabularyQuestion(card, true, vocabularyPool)
@@ -717,6 +745,7 @@ function chooseActivityType(
   if (supported.length === 0) return undefined
   if (supported.length === 1) return supported[0]
   if (random) return supported[Math.floor(random() * supported.length)] ?? supported[0]
+  if (supported.includes('noun-gender') && ordinal % 2 === 1) return 'noun-gender'
   if (card.kind === 'vocabulary' && supported.includes('vocabulary')) {
     if (box >= 3 && supported.includes('typed')) return 'typed'
     if (box >= 2 && supported.includes('ordered')) return 'ordered'
@@ -737,6 +766,7 @@ export function activityTypesForTarget(card: SchedulableCard): ActivityType[] {
   const types: ActivityType[] = ['vocabulary']
   const french = 'french' in card && typeof card.french === 'string' ? card.french : undefined
   if (!french) return types
+  if (nounGenderFor(french)) types.push('noun-gender')
   if (isFrenchTypedAnswer(french)) types.push('typed')
   if (arrangementTokens(french)) types.push('ordered')
   return types
