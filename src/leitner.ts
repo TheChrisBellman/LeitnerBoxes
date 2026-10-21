@@ -226,9 +226,10 @@ export function responseIsCorrect(question: PracticeQuestion, value: string): bo
     : question.format === 'typed'
       ? normalizeTypedAnswer
       : undefined
-  return normalize
-    ? acceptedAnswers.some((answer) => normalize(value) === normalize(answer))
-    : acceptedAnswers.includes(value)
+  if (normalize) return acceptedAnswers.some((answer) => normalize(value) === normalize(answer))
+  // Tiles carry no hyphens, so « quarante-trois » and « quarante trois » are the same arranged answer.
+  const unhyphenate = (text: string) => question.format === 'arrange' ? text.replace(/-/g, ' ') : text
+  return acceptedAnswers.some((answer) => unhyphenate(answer) === unhyphenate(value))
 }
 
 export type VocabularyResponseForm = 'question' | 'full-sentence' | 'infinitive' | 'fragment'
@@ -680,7 +681,7 @@ function buildNumberQuestion(card: NumberCard, random: () => number): PracticeQu
     answer: tokens.join(' '), answerLanguage: 'fr',
     distractors: [], tokens: shuffle([...tokens, ...numberTrapTiles(tokens, random)], random),
     // The answer shows as tiles so it can always be rebuilt; the hyphenated spelling follows as a note.
-    answerExplanation: spelled === tokens.join(' ') ? undefined : `Written with hyphens: ${spelled}.`,
+    answerExplanation: spelled === tokens.join(' ') ? undefined : `Tiles need no hyphens. In writing: ${spelled}.`,
     help: { label: 'Number help', text: 'Vingt and cent take -s only at the end of a number or before million: quatre-vingts, deux cents, but quatre-vingt-un and deux cent mille. Mille never changes.' },
   }
 }
