@@ -26,7 +26,7 @@ import { clearStoredState, completeStreak, defaultState, loadState, saveState, t
 
 type Screen = 'today' | 'curriculum' | 'quiz' | 'results' | 'sprint'
 type ViewMode = 'normal' | 'presentation'
-type IconName = 'menu' | 'close' | 'settings' | 'expand' | 'minimize' | 'arrow' | 'arrowLeft' | 'check' | 'chevron' | 'calendar' | 'book' | 'progress' | 'practice' | 'spark' | 'clock' | 'cards'
+type IconName = 'menu' | 'close' | 'settings' | 'expand' | 'minimize' | 'arrow' | 'arrowLeft' | 'check' | 'chevron' | 'calendar' | 'book' | 'progress' | 'practice' | 'spark' | 'clock' | 'cards' | 'half' | 'cycle' | 'chat' | 'sliders'
 
 type ActiveQuestion = PracticeQuestion & {
   choices: string[]
@@ -61,12 +61,6 @@ type MissedAnswer = {
 
 type PracticePreset = 'noun-gender' | 'word-meanings' | 'verb-forms' | 'grammar-usage' | 'custom'
 
-type ShelfMotion = {
-  from: Box
-  to: Box
-  token: number
-}
-
 const CORRECT_AUTO_ADVANCE_MS = 1600
 const CORRECTION_AUTO_ADVANCE_MS = 4800
 const MENU_CLOSE_MS = 200
@@ -100,11 +94,11 @@ const activityOptions: { type: ActivityType; label: string; description: string 
   { type: 'typed', label: 'Spelling & typing', description: 'Type and spell the French answer.' },
 ]
 
-const presetOptions: { id: Exclude<PracticePreset, 'custom'>; label: string; description: string; mode: PracticeMode; types: readonly ActivityType[] }[] = [
-  { id: 'noun-gender', label: 'Noun gender', description: 'Masculine or feminine?', mode: 'vocabulary', types: ['noun-gender'] },
-  { id: 'word-meanings', label: 'Word meanings', description: 'Meanings, ordering, and typing.', mode: 'vocabulary', types: ['vocabulary', 'ordered', 'typed'] },
-  { id: 'verb-forms', label: 'Verb forms', description: 'Present-tense conjugation recall.', mode: 'conjugation', types: ['conjugation', 'typed'] },
-  { id: 'grammar-usage', label: 'Grammar & usage', description: 'Forms, context, corrections, and workplace choices.', mode: 'mixed', types: ['grammar', 'contextual-cloze', 'correction', 'transformation', 'best-response', 'scenario'] },
+const presetOptions: { id: Exclude<PracticePreset, 'custom'>; label: string; icon: IconName; mode: PracticeMode; types: readonly ActivityType[] }[] = [
+  { id: 'noun-gender', label: 'Noun gender', icon: 'half', mode: 'vocabulary', types: ['noun-gender'] },
+  { id: 'word-meanings', label: 'Word meanings', icon: 'book', mode: 'vocabulary', types: ['vocabulary', 'ordered', 'typed'] },
+  { id: 'verb-forms', label: 'Verb forms', icon: 'cycle', mode: 'conjugation', types: ['conjugation', 'typed'] },
+  { id: 'grammar-usage', label: 'Grammar & usage', icon: 'chat', mode: 'mixed', types: ['grammar', 'contextual-cloze', 'correction', 'transformation', 'best-response', 'scenario'] },
 ]
 
 function activityTypesForMode(mode: PracticeMode): ActivityType[] {
@@ -175,6 +169,10 @@ const iconPaths: Record<IconName, string> = {
   spark: 'm12 3 1.4 5.6L19 10l-5.6 1.4L12 17l-1.4-5.6L5 10l5.6-1.4z',
   clock: 'M12 7v5l3 2m6-2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z',
   cards: 'M5 4h11a1 1 0 0 1 1 1v11H6a1 1 0 0 1-1-1zm3 3h6m-6 3h6m-6 3h4M8 19h10a1 1 0 0 0 1-1V8',
+  half: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zm0 0v18M12 7a5 5 0 0 1 0 10',
+  cycle: 'M4 12a8 8 0 0 1 13.7-5.7M20 12a8 8 0 0 1-13.7 5.7M17 3v4h-4M7 21v-4h4',
+  chat: 'M4 5h16v11H9l-5 4zM8 9h8m-8 3h5',
+  sliders: 'M4 7h9m5 0h2M4 17h3m5 0h8M15 5v4M9 15v4',
 }
 
 function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
@@ -313,10 +311,10 @@ function MobileHeader({ onMenu, menuOpen, triggerRef, screen, onNavigate }: { on
     <header className="mobile-header">
       <button type="button" className="brand-name" aria-label="Workplace French — Practice" onClick={() => onNavigate('today')}>Workplace French</button>
       <nav className="desktop-nav" aria-label="Primary navigation">
-        <button type="button" className={practiceActive ? 'is-active' : ''} aria-current={practiceActive ? 'page' : undefined} onClick={() => onNavigate('today')}>Practice</button>
-        <button type="button" className={screen === 'curriculum' ? 'is-active' : ''} aria-current={screen === 'curriculum' ? 'page' : undefined} onClick={() => onNavigate('curriculum')}>Material</button>
-        <button type="button" className={screen === 'sprint' ? 'is-active' : ''} aria-current={screen === 'sprint' ? 'page' : undefined} onClick={() => onNavigate('sprint')}>Sprint</button>
-        <button type="button" className={screen === 'results' ? 'is-active' : ''} aria-current={screen === 'results' ? 'page' : undefined} onClick={() => onNavigate('results')}>Progress</button>
+        <button type="button" className={practiceActive ? 'is-active' : ''} aria-current={practiceActive ? 'page' : undefined} onClick={() => onNavigate('today')}><Icon name="practice" size={16} />Practice</button>
+        <button type="button" className={screen === 'curriculum' ? 'is-active' : ''} aria-current={screen === 'curriculum' ? 'page' : undefined} onClick={() => onNavigate('curriculum')}><Icon name="cards" size={16} />Material</button>
+        <button type="button" className={screen === 'sprint' ? 'is-active' : ''} aria-current={screen === 'sprint' ? 'page' : undefined} onClick={() => onNavigate('sprint')}><Icon name="clock" size={16} />Sprint</button>
+        <button type="button" className={screen === 'results' ? 'is-active' : ''} aria-current={screen === 'results' ? 'page' : undefined} onClick={() => onNavigate('results')}><Icon name="progress" size={16} />Progress</button>
       </nav>
       <button ref={triggerRef} type="button" className="menu-button" onClick={onMenu} aria-label="Open menu" aria-haspopup="dialog" aria-expanded={menuOpen} aria-controls="app-menu">
         <Icon name="menu" size={20} />
@@ -411,6 +409,10 @@ function MenuSheet({
             </select>
           </div>
         </section>
+        <section className="menu-group" aria-labelledby="menu-how-heading">
+          <h3 id="menu-how-heading">How it works</h3>
+          <p className="menu-helper">Every card sits in one of five boxes. A right answer moves it forward and spaces the next review further out; a missed card steps back. Due cards come first, then new cards fill the session.</p>
+        </section>
         <section className="menu-group" aria-labelledby="menu-appearance-heading">
           <h3 id="menu-appearance-heading">Appearance</h3>
           <div className="menu-setting menu-theme-setting">
@@ -439,7 +441,7 @@ function MenuSheet({
 function ScreenHeader({ title, description, onBack }: { title: string; description: string; onBack?: () => void }) {
   return (
     <div className="screen-header">
-      {onBack && <button type="button" className="back-button" onClick={onBack}><Icon name="arrowLeft" size={17} /> Back to practice</button>}
+      {onBack && <button type="button" className="back-button" onClick={onBack} aria-label="Back to practice"><Icon name="arrowLeft" size={20} /></button>}
       <h1 tabIndex={-1}>{title}</h1>
       <p>{description}</p>
     </div>
@@ -456,7 +458,7 @@ function StatBlock({ icon, value, label, accent = '' }: { icon: IconName; value:
   )
 }
 
-function MemoryShelf({ counts, motion, showHint = true }: { counts: Record<Box, number>; motion?: ShelfMotion | null; showHint?: boolean }) {
+function MemoryShelf({ counts, showHint = true }: { counts: Record<Box, number>; showHint?: boolean }) {
   return (
     <section className="memory-shelf" aria-label="Five-box memory shelf">
       <div className="shelf-heading">
@@ -466,10 +468,8 @@ function MemoryShelf({ counts, motion, showHint = true }: { counts: Record<Box, 
       <div className="shelf-compartments">
         {BOXES.map((box) => {
           const count = counts[box]
-          const isTarget = motion?.to === box
-          const isSource = motion?.from === box && motion.to !== box
           return (
-            <div className={`shelf-compartment ${isTarget ? 'is-target' : ''} ${isSource ? 'is-source' : ''}`} key={box}>
+            <div className="shelf-compartment" key={box}>
               <div className="compartment-copy">
                 <span className="compartment-label">Box {box}</span>
                 <strong aria-label={`${count} ${count === 1 ? 'card' : 'cards'}`}>{count}</strong>
@@ -478,7 +478,6 @@ function MemoryShelf({ counts, motion, showHint = true }: { counts: Record<Box, 
               <div className="compartment-meter">
                 <span className="compartment-cadence">{box === 1 ? 'New' : box === 2 ? '1-day review' : box === 3 ? '2-day review' : box === 4 ? '4-day review' : '14+ day review'}</span>
               </div>
-              {isTarget && <span className="shelf-arrow" aria-hidden="true"><Icon name="arrow" size={15} /></span>}
             </div>
           )
         })}
@@ -502,7 +501,6 @@ function TodayScreen({
   readyCardCount,
   onStart,
   notice,
-  motion,
   onChooseCurriculum,
   onActivityTypesChange,
   onPresetChange,
@@ -521,7 +519,6 @@ function TodayScreen({
   readyCardCount: number
   onStart: () => void
   notice: string | null
-  motion: ShelfMotion | null
   onChooseCurriculum: () => void
   onActivityTypesChange: (value: ActivityType[]) => void
   onPresetChange: (preset: PracticePreset) => void
@@ -547,36 +544,22 @@ function TodayScreen({
     }
   }, [])
 
-  const dueCount = queueCounts.overdue + queueCounts.due
   const sessionSize = readyCardCount
   const hasCards = readyCardCount > 0
   const hasFutureCards = queueCounts.future > 0
   const modeDescription = practiceMode === 'conjugation' ? 'conjugation cards' : practiceMode === 'vocabulary' ? 'vocabulary cards' : 'cards'
-  const missDescription = missMode === 'step-back' ? 'Missed cards step back one box.' : 'Missed cards return to Box 1.'
   const masteredOnly = activeUnits.length === 0 && masteredSelectedCount > 0
   const selectedUnitCount = activeUnits.length + masteredSelectedCount
   return (
     <section className="page today-page">
-      <header className="today-header">
-        <div>
-          <span className="today-kicker">Practice tool</span>
-          <h1 tabIndex={-1}>Choose and practice.</h1>
-        </div>
-        <div className="today-summary" aria-label="Practice queue summary">
-          <span><strong>{dueCount}</strong> due</span><span className="summary-divider" aria-hidden="true" /><span><strong>{queueCounts.newCards}</strong> new</span>
-        </div>
-      </header>
+      <h1 className="visually-hidden" tabIndex={-1}>Practice</h1>
       <section className="today-focus-panel">
         <div className="today-study-column">
-          <section className="practice-setup surface-panel" aria-labelledby="practice-setup-heading">
-            <div className="setup-heading">
-              <span className="today-kicker">Practice setup</span>
-              <h2 id="practice-setup-heading">Choose a practice style.</h2>
-            </div>
+          <section className="practice-setup surface-panel" aria-label="Practice setup">
             <section className="setup-section" aria-labelledby="curriculum-step-heading">
               <div className="setup-section-heading">
                 <span className="setup-step" aria-hidden="true">1</span>
-                <div><span className="setup-label">Material</span><h3 id="curriculum-step-heading">Which material should appear?</h3></div>
+                <h3 id="curriculum-step-heading">Material</h3>
               </div>
               <button type="button" className="selection-control" onClick={onChooseCurriculum}>
                 <span className="selection-control-copy">
@@ -589,19 +572,18 @@ function TodayScreen({
             <fieldset className="setup-section home-activity-picker" disabled={selectedUnitCount === 0}>
               <legend className="setup-section-heading">
                 <span className="setup-step" aria-hidden="true">2</span>
-                <span><span className="setup-label">Practice style</span><span className="setup-legend-title">What should we practise?</span></span>
+                <span className="setup-legend-title">Practice style</span>
               </legend>
-              <p className="setup-helper">{selectedUnitCount === 0 ? 'Choose material first.' : 'Presets keep practice focused. Custom lets you choose individual activities.'}</p>
               <div className="practice-presets" role="group" aria-label="Practice styles">
                 {presetOptions.map((preset) => (
                   <button type="button" key={preset.id} className={`practice-preset ${activePreset === preset.id && !customOpen ? 'is-selected' : ''}`} aria-pressed={activePreset === preset.id && !customOpen} onClick={() => { setCustomOpen(false); onPresetChange(preset.id) }}>
+                    <Icon name={preset.icon} size={20} />
                     <strong>{preset.label}</strong>
-                    <small>{preset.description}</small>
                   </button>
                 ))}
                 <button type="button" className={`practice-preset ${activePreset === 'custom' || customOpen ? 'is-selected' : ''}`} aria-pressed={activePreset === 'custom' || customOpen} onClick={() => setCustomOpen(true)}>
+                  <Icon name="sliders" size={20} />
                   <strong>Custom</strong>
-                  <small>Choose individual activities.</small>
                 </button>
               </div>
               {(activePreset === 'custom' || customOpen) && <div className="custom-activity-options">
@@ -621,19 +603,6 @@ function TodayScreen({
               </div>}
             </fieldset>
           </section>
-          {selectedUnitCount > 0 && <MemoryShelf counts={counts} motion={motion} showHint={false} />}
-          <div className="today-disclosures">
-            <details className="context-disclosure">
-              <summary><span>How it works</span><Icon name="chevron" size={16} /></summary>
-              <p>The Leitner system keeps every card in one of five boxes. Correct answers move it forward and schedule it farther into the future, so familiar cards appear less often. {missDescription}</p>
-              <p>This tool brings cards back when they are due, adds new practice items when there is room, and saves each card’s place in this browser.</p>
-            </details>
-            <details className="context-disclosure">
-              <summary><span>Session details</span><Icon name="chevron" size={16} /></summary>
-              <p>Selected material: {activeUnits.length > 0 ? <ActiveCurriculumLabel units={activeUnits} /> : masteredOnly ? `${masteredSelectedCount} mastered unit${masteredSelectedCount === 1 ? '' : 's'} on refresh` : 'No material selected'}. Mode: {practiceModeLabel(practiceMode)}. Session limit: up to {dailyGoal} cards.</p>
-              <p>Due cards come first, then new cards fill any open spots. A session may be shorter when fewer cards are ready.</p>
-            </details>
-          </div>
           {notice && <p className="inline-notice today-message" role="alert">{notice}</p>}
           {!hasCards && !notice && activeUnits.length > 0 && <p className="quiet-note today-message">{selectedCardCount === 0 ? `No ${modeDescription} are authored for the selected units yet. Switch practice mode or choose A-01–A-03.` : hasFutureCards ? 'No cards are due right now. Come back when the next review is ready.' : 'No cards are available right now.'}</p>}
           {!hasCards && !notice && masteredOnly && <p className="quiet-note today-message">Mastered objectives return for occasional refreshes. {hasFutureCards ? 'The next refresh is scheduled.' : 'No refresh is due right now.'}</p>}
@@ -641,7 +610,6 @@ function TodayScreen({
         </div>
         <section ref={actionPanelRef} className="next-card-panel">
           <div className="next-card-copy">
-            <span className="focus-kicker">Start practicing</span>
             <h2>{masteredOnly ? hasCards ? `${sessionSize} refresh item${sessionSize === 1 ? '' : 's'} ready` : 'All caught up' : activeUnits.length === 0 ? 'Choose your material.' : selectedCardCount === 0 ? `No ${modeDescription} here yet` : hasCards ? `${sessionSize} practice item${sessionSize === 1 ? '' : 's'} ready` : 'All caught up'}</h2>
             {hasCards && <p>{enabledActivityTypes.length} activit{enabledActivityTypes.length === 1 ? 'y' : 'ies'} selected · up to {dailyGoal} items</p>}
           </div>
@@ -756,41 +724,13 @@ function CurriculumScreen({
   )
 }
 
-function BoxJourney({ feedback }: { feedback: Feedback }) {
-  const distance = Math.abs(feedback.nextBox - feedback.previousBox)
-  const direction = feedback.nextBox > feedback.previousBox ? 'forward' : feedback.nextBox < feedback.previousBox ? 'back' : 'same'
-  const fromStep = feedback.previousBox - 1
-  const toStep = feedback.nextBox - 1
-  const journeyStyle = {
-    '--journey-from': `calc(${fromStep * 100}% + ${fromStep * 6}px)`,
-    '--journey-to': `calc(${toStep * 100}% + ${toStep * 6}px)`,
-  } as CSSProperties
-  const movementLabel = direction === 'same'
-    ? `Card stays in Box ${feedback.nextBox}`
-    : `Card moves ${direction} from Box ${feedback.previousBox} to Box ${feedback.nextBox}`
-
-  return (
-    <div className={`box-journey is-${feedback.correct ? 'correct' : 'incorrect'} is-${direction} ${distance > 1 ? 'is-long' : ''}`} style={journeyStyle} role="img" aria-label={movementLabel}>
-      <div className="box-journey-track" aria-hidden="true">
-        {BOXES.map((box) => (
-          <div className={`journey-box ${box === feedback.previousBox ? 'is-source' : ''} ${box === feedback.nextBox ? 'is-target' : ''}`} key={box}>
-            <span>Box</span>
-            <strong>{box}</strong>
-          </div>
-        ))}
-        <div className="journey-card-wrap"><span className="journey-card"><i /><i /></span></div>
-      </div>
-      <span className="box-journey-label">Box {feedback.previousBox} <span aria-hidden="true">→</span> Box {feedback.nextBox}</span>
-    </div>
-  )
-}
-
-function SuccessOverlay({
+function FeedbackPanel({
   question,
   feedback,
   index,
   total,
   advanceMode,
+  onStartRepair,
   onContinue,
 }: {
   question: ActiveQuestion
@@ -798,17 +738,13 @@ function SuccessOverlay({
   index: number
   total: number
   advanceMode: CorrectAdvanceMode
+  onStartRepair: () => void
   onContinue: () => void
 }) {
   const actionRef = useRef<HTMLButtonElement>(null)
   const continueRef = useRef(onContinue)
-  const shouldAutoAdvance = feedback.stage === 'first' && advanceMode === 'automatic'
+  const shouldAutoAdvance = feedback.correct && feedback.stage === 'first' && advanceMode === 'automatic'
   const autoAdvanceDelay = question.exercise?.kind === 'correction' ? CORRECTION_AUTO_ADVANCE_MS : CORRECT_AUTO_ADVANCE_MS
-  const fullAnswer = answerDisplayFor(question, feedback.answer)
-  const movement = feedback.stage === 'repair'
-    ? 'This retry is practice; the shelf changes only on the original answer.'
-    : feedback.previousBox === feedback.nextBox ? `Stay in Box ${feedback.nextBox}.` : `Move to Box ${feedback.nextBox}.`
-  const title = feedback.stage === 'repair' ? 'Correct on retry' : 'Correct'
 
   useEffect(() => {
     continueRef.current = onContinue
@@ -821,117 +757,38 @@ function SuccessOverlay({
     }
     const timer = window.setTimeout(() => continueRef.current(), autoAdvanceDelay)
     return () => window.clearTimeout(timer)
-  }, [autoAdvanceDelay, question.card.id, shouldAutoAdvance])
-
-  return (
-    <div className="success-overlay">
-      <div className="success-panel" role={shouldAutoAdvance ? undefined : 'dialog'} aria-modal={shouldAutoAdvance ? undefined : true} aria-labelledby={shouldAutoAdvance ? undefined : 'success-title'}>
-        <div className="success-mark" aria-hidden="true"><Icon name="check" size={56} /></div>
-        {feedback.stage === 'first' && <BoxJourney feedback={feedback} />}
-        <div className="success-copy" role="status" aria-live="polite" aria-labelledby="success-title" aria-atomic="true">
-          <strong id="success-title">{title}</strong>
-          <span className="success-answer" lang={question.answerLanguage}>{fullAnswer}</span>
-          {(question.exercise?.feedback ?? question.answerExplanation) && <span className="success-explanation">{question.exercise?.feedback ?? question.answerExplanation}</span>}
-          <span className="success-movement">{movement}</span>
-          {shouldAutoAdvance && <span className="success-next">Next card…</span>}
-        </div>
-        {!shouldAutoAdvance && <button ref={actionRef} type="button" className="button button-primary success-next-button" onClick={onContinue}>{index + 1 === total ? 'Results' : 'Next'} <Icon name="arrow" size={15} /></button>}
-      </div>
-    </div>
-  )
-}
-
-function FeedbackPanel({
-  question,
-  feedback,
-  index,
-  total,
-  onStartRepair,
-  onContinue,
-}: {
-  question: ActiveQuestion
-  feedback: Feedback
-  index: number
-  total: number
-  onStartRepair: () => void
-  onContinue: () => void
-}) {
-  const actionRef = useRef<HTMLButtonElement>(null)
-
-  useEffect(() => {
-    actionRef.current?.focus()
-  }, [feedback.correct, feedback.stage])
+  }, [autoAdvanceDelay, feedback.correct, feedback.stage, question.card.id, shouldAutoAdvance])
 
   const fullAnswer = answerDisplayFor(question, feedback.answer)
   const selectedAnswer = answerDisplayFor(question, feedback.selectedChoice)
-  const authoredExplanation = question.exercise?.feedback ?? question.answerExplanation
-  const fallbackExplanation = !feedback.correct
-    ? question.format === 'typed'
-      ? 'Check the spelling, then type the answer again.'
-      : question.format === 'arrange'
-        ? 'Review the word order, then build it again.'
-        : question.format === 'correction'
-          ? 'Review the marked segments and choose the one that needs attention.'
-          : question.format === 'cloze'
-            ? `The blank needs the ${question.card.kind === 'conjugation' ? question.card.person : 'matching'} form.`
-            : question.card.kind === 'conjugation'
-              ? `The prompt asks for ${question.card.person}.`
-              : 'Read the prompt again, then try once more.'
-    : question.format === 'typed'
-      ? 'You recalled the answer without choices.'
-    : question.format === 'arrange'
-      ? 'You built the French answer in the correct order.'
-    : question.format === 'correction'
-        ? 'You identified the segment that needs attention.'
-        : question.format === 'cloze'
-          ? 'You chose the form that completes the sentence.'
-          : question.card.kind === 'conjugation'
-            ? `You matched the ${question.card.person} form.`
-            : question.direction === 'english-to-french'
-              ? 'You matched the English meaning to its French form.'
-              : 'You matched the French phrase to its English meaning.'
-  const explanation = !feedback.correct && feedback.stage === 'first'
-    ? question.exercise ? 'Use the context and try again; the explanation appears after your retry.' : fallbackExplanation
-    : authoredExplanation ?? fallbackExplanation
-  const retryNote = question.format === 'typed'
-    ? 'Type it again without looking at the correction.'
-    : question.format === 'arrange'
-      ? 'Build it again without looking at the correction.'
-      : 'Take another shot — the choices are waiting for you.'
-  const movement = feedback.stage === 'first'
-    ? feedback.correct
-      ? feedback.previousBox === feedback.nextBox ? `Stay in Box ${feedback.nextBox}.` : `Move to Box ${feedback.nextBox}.`
-      : 'You get one more try before moving on.'
-    : 'This retry is practice; the shelf changes only on the original answer.'
+  const revealed = feedback.correct || feedback.stage === 'repair'
+  const explanation = revealed ? question.exercise?.feedback ?? question.answerExplanation : undefined
   const title = feedback.stage === 'repair'
     ? feedback.correct ? 'Correct on retry' : 'Still not quite'
     : feedback.correct ? 'Correct' : 'Not quite'
+  const moved = feedback.previousBox !== feedback.nextBox
 
   return (
-    <div className={`feedback-panel ${feedback.correct ? 'is-correct' : 'is-incorrect'} ${feedback.stage === 'repair' && !feedback.correct ? 'is-repair' : ''}`}>
-      {feedback.stage === 'first' && <BoxJourney feedback={feedback} />}
-      <div className="feedback-mark" aria-hidden="true"><Icon name={feedback.correct ? 'check' : 'close'} size={30} /></div>
-      <div className="feedback-copy" role={feedback.correct ? 'status' : 'alert'} aria-live={feedback.correct ? 'polite' : 'assertive'} aria-labelledby="feedback-title" aria-atomic="true">
-        <strong id="feedback-title">{title}</strong>
-        {feedback.stage === 'repair' && !feedback.correct && <div className="feedback-comparison">
-          <div><span>You chose</span><strong lang={question.answerLanguage}>{selectedAnswer}</strong></div>
-          <div><span>Correct</span><strong lang={question.answerLanguage}>{fullAnswer}</strong></div>
-        </div>}
-        {feedback.correct && <span className="feedback-answer" lang={question.answerLanguage}>{fullAnswer}</span>}
-        {feedback.stage === 'first' && !feedback.correct && <span className="feedback-retry-note">{retryNote}</span>}
-        <span className="feedback-explanation">{explanation}</span>
-        <span className="feedback-movement">{movement}</span>
+    <div className={`feedback-panel ${feedback.correct ? 'is-correct' : 'is-incorrect'}`}>
+      <div className="feedback-mark" aria-hidden="true"><Icon name={feedback.correct ? 'check' : 'close'} size={22} /></div>
+      <div className="feedback-copy" role={feedback.correct ? 'status' : 'alert'} aria-live={feedback.correct ? 'polite' : 'assertive'} aria-atomic="true">
+        <strong>{title}</strong>
+        {revealed && <span className="feedback-answer" lang={question.answerLanguage}>{fullAnswer}</span>}
+        {feedback.stage === 'repair' && !feedback.correct && <span className="feedback-chosen">You chose <strong lang={question.answerLanguage}>{selectedAnswer}</strong></span>}
+        {explanation && <span className="feedback-explanation">{explanation}</span>}
       </div>
+      {feedback.stage === 'first' && <span className="feedback-box-chip" aria-label={moved ? `Box ${feedback.previousBox} to Box ${feedback.nextBox}` : `Stays in Box ${feedback.nextBox}`}>
+        {moved ? <>Box {feedback.previousBox} <Icon name="arrow" size={12} /> {feedback.nextBox}</> : `Box ${feedback.nextBox}`}
+      </span>}
       {!feedback.correct && feedback.stage === 'first'
         ? <button ref={actionRef} type="button" className="button button-primary feedback-next" onClick={onStartRepair}>Try again</button>
-        : <button ref={actionRef} type="button" className="button button-primary feedback-next" onClick={onContinue}>{index + 1 === total ? 'Results' : 'Next'} <Icon name="arrow" size={15} /></button>}
+        : !shouldAutoAdvance && <button ref={actionRef} type="button" className="button button-primary feedback-next" onClick={onContinue}>{index + 1 === total ? 'Results' : 'Next'} <Icon name="arrow" size={15} /></button>}
     </div>
   )
 }
 
 function QuizScreen({
   question,
-  unit,
   currentBox,
   index,
   total,
@@ -940,6 +797,7 @@ function QuizScreen({
   onAnswer,
   onStartRepair,
   onContinue,
+  advanceMode,
   onSkip,
   onExit,
   onMenu,
@@ -949,7 +807,6 @@ function QuizScreen({
   onTogglePresentation,
 }: {
   question: ActiveQuestion
-  unit?: CurriculumUnit
   currentBox: Box
   index: number
   total: number
@@ -958,6 +815,7 @@ function QuizScreen({
   onAnswer: (choice: string) => void
   onStartRepair: () => void
   onContinue: () => void
+  advanceMode: CorrectAdvanceMode
   onSkip: () => void
   onExit: () => void
   onMenu: () => void
@@ -1121,11 +979,9 @@ function QuizScreen({
   return (
     <section className="page quiz-page">
       <div className={`quiz-topline ${viewMode === 'presentation' ? 'is-presentation' : ''}`}>
-        <button type="button" className="back-button" onClick={onExit}><Icon name="arrowLeft" size={17} /> Back to practice</button>
+        <button type="button" className="back-button" onClick={onExit} aria-label="Back to practice"><Icon name="arrowLeft" size={20} /></button>
         <div className="quiz-context">
-          <span>Level {unit?.level ?? question.card.level}</span>
-          {unit && <span>{unit.id.toUpperCase()}</span>}
-          <span className="quiz-progress-label">Card {index + 1} of {total}</span>
+          <span className="quiz-progress-label">Card {index + 1} of {total} <span className="quiz-box-chip">Box {currentBox}</span></span>
           <progress className="quiz-progress-bar" max={total} value={index + 1} aria-label={`Session progress: card ${index + 1} of ${total}`} />
         </div>
         <div className="quiz-topline-actions">
@@ -1138,20 +994,11 @@ function QuizScreen({
           </button>}
         </div>
       </div>
-      <ol className="quiz-box-rail" aria-label={`Memory path. Current position: Box ${currentBox}`}>
-        {BOXES.map((box) => (
-          <li key={box} aria-current={box === currentBox ? 'step' : undefined}>
-            <span>Box</span>
-            <strong>{box}</strong>
-          </li>
-        ))}
-      </ol>
       <div className="quiz-workspace">
         <div className="quiz-prompt-column">
           <div key={question.card.id} className={`prompt-card question-type-${question.kind} exercise-format-${question.format} exercise-kind-${question.exercise?.kind ?? 'none'}`}>
             <div className="question-meta">
               <span className="question-type-label">{questionLabel}</span>
-              {unit && <span className="question-unit-context"><strong>{unit.id.toUpperCase()}</strong><span lang="fr">{unit.title}</span></span>}
             </div>
             <ExerciseContext question={question} />
             <div className="prompt-copy">
@@ -1160,13 +1007,12 @@ function QuizScreen({
                 <h1 ref={questionHeadingRef} tabIndex={-1} lang={question.promptLanguage}>{question.prompt}</h1>
                 {question.card.kind === 'conjugation' && question.format !== 'cloze' && <span className="conjugation-person">{question.card.person}</span>}
               </div>
-              {question.exercise?.kind !== 'scenario' && <p>{questionInstruction}</p>}
+              {question.exercise?.kind !== 'scenario' && question.format !== 'typed' && question.format !== 'arrange' && <p>{questionInstruction}</p>}
             </div>
           </div>
         </div>
         <div className="quiz-answer-column">
           {repairing && <div className="repair-prompt" role="status" aria-live="polite">
-            <strong>Try it again</strong>
             <span>{question.format === 'typed'
               ? 'Type the answer again without looking at the correction.'
               : question.format === 'arrange'
@@ -1200,7 +1046,7 @@ function QuizScreen({
           {question.format === 'typed' && <div className="question-help-area">
             <form className="typed-answer-form" onSubmit={submitTypedAnswer}>
               <label htmlFor="typed-answer">Your answer</label>
-              <input ref={typedInputRef} id="typed-answer" className="typed-answer-input" value={typedAnswer} onChange={(event) => setTypedAnswer(event.target.value)} onSelect={captureAccentSelection} onBlur={captureAccentSelection} lang={question.answerLanguage} inputMode="text" enterKeyHint="done" autoComplete="off" autoCapitalize="none" spellCheck={false} disabled={Boolean(feedback)} />
+              <input ref={typedInputRef} id="typed-answer" className="typed-answer-input" value={typedAnswer} onChange={(event) => setTypedAnswer(event.target.value)} onSelect={captureAccentSelection} onBlur={captureAccentSelection} lang={question.answerLanguage} placeholder={question.kind === 'conjugation' ? 'Present-tense form' : 'French answer'} inputMode="text" enterKeyHint="done" autoComplete="off" autoCapitalize="none" spellCheck={false} disabled={Boolean(feedback)} />
               <div className="accent-palette" role="group" aria-label="French accented characters">
                 <span className="accent-palette-label">French accents</span>
                 {FRENCH_ACCENTS.map((character) => <button key={character} type="button" className="accent-button" aria-label={`Insert ${character}`} onPointerDown={(event) => handleAccentPointerDown(event, character)} onMouseDown={handleAccentMouseDown} onClick={() => handleAccentClick(character)} disabled={Boolean(feedback)}>{character}</button>)}
@@ -1227,7 +1073,7 @@ function QuizScreen({
             </div>
             {answerHint && answerHintId && <AnswerHintPopover hint={answerHint} id={answerHintId} open={phraseHelpOpen} onToggle={() => setPhraseHelpOpen((open) => !open)} />}
           </div>}
-          {feedback && !feedback.correct && <FeedbackPanel question={question} feedback={feedback} index={index} total={total} onStartRepair={onStartRepair} onContinue={onContinue} />}
+          {feedback && <FeedbackPanel question={question} feedback={feedback} index={index} total={total} advanceMode={advanceMode} onStartRepair={onStartRepair} onContinue={onContinue} />}
         </div>
       </div>
     </section>
@@ -1307,7 +1153,6 @@ export default function App() {
   const [results, setResults] = useState<(SessionStats & { box5Count: number; missedAnswers: MissedAnswer[] }) | null>(null)
   const [missedAnswers, setMissedAnswers] = useState<MissedAnswer[]>([])
   const [notice, setNotice] = useState<string | null>(null)
-  const [shelfMotion, setShelfMotion] = useState<ShelfMotion | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('normal')
   const presentationFullscreen = useRef(false)
   const menuTriggerRef = useRef<HTMLButtonElement>(null)
@@ -1398,7 +1243,6 @@ export default function App() {
   const sessionShelf = useMemo(() => shelfCounts(state.progress, focusedSession && sessionLessonIds.length > 0 ? sessionLessonIds : sessionSelection.active, allTargets, displayMode, sessionActivityTypes), [displayMode, focusedSession, sessionActivityTypes, sessionLessonIds, sessionSelection.active, state.progress])
   const currentQuestion = session[sessionIndex]
   const currentChoices = currentQuestion?.choices ?? []
-  const currentUnit = currentQuestion ? levelForLesson(currentQuestion.card.lessonId) : undefined
 
   function commitState(next: StoredState) {
     setState(next)
@@ -1498,7 +1342,6 @@ export default function App() {
     setMissedAnswers([])
     setViewMode('normal')
     setNotice(null)
-    setShelfMotion(null)
     setScreen('quiz')
     closeMenuImmediately()
   }
@@ -1546,7 +1389,6 @@ export default function App() {
       answerLanguage: currentQuestion.answerLanguage,
       explanation: currentQuestion.exercise?.feedback ?? currentQuestion.answerExplanation,
     }])
-    setShelfMotion({ from: result.previousBox, to: result.nextBox, token: Date.now() })
     setSessionStats((current) => ({ ...current, correct: current.correct + (correct ? 1 : 0), promotions: current.promotions + (result.promoted ? 1 : 0), misses: current.misses + (result.missed ? 1 : 0) }))
   }
 
@@ -1595,7 +1437,6 @@ export default function App() {
       setFeedback(null)
       setRepairing(false)
       setRepairContext(null)
-      setShelfMotion(null)
       return
     }
     finishSession(sessionStats)
@@ -1608,7 +1449,6 @@ export default function App() {
     setFeedback(null)
     setRepairing(false)
     setRepairContext(null)
-    setShelfMotion(null)
     if (sessionIndex + 1 < session.length) {
       setSession((current) => current.filter((_, index) => index !== sessionIndex))
       return
@@ -1690,7 +1530,6 @@ export default function App() {
     setMissedAnswers([])
     setResults(null)
     setNotice(null)
-    setShelfMotion(null)
   }
 
   function toggleLesson(lessonId: string) {
@@ -1754,21 +1593,20 @@ export default function App() {
   function renderScreen() {
     const hasMoreCards = sessionQueueCounts.overdue + sessionQueueCounts.due + sessionQueueCounts.newCards > 0
     if (screen === 'curriculum') return <CurriculumScreen selectedIds={activeLessonIds} masteredIds={masteredLessonIds} masteredSelectedCount={masteredSelectedLessonIds.size} selectedCardCount={selectedCardCount} practiceMode={state.practiceMode} unitCardCounts={unitCardCounts} onToggleLesson={toggleLesson} onToggleLevel={toggleLevel} onBack={() => setScreen('today')} />
-    if (screen === 'quiz' && currentQuestion) return <QuizScreen question={currentQuestion} unit={currentUnit} currentBox={state.progress[currentQuestion.card.id]?.box ?? 1} index={sessionIndex} total={session.length} feedback={feedback} repairing={repairing} onAnswer={handleAnswer} onStartRepair={beginRepair} onContinue={continueSession} onSkip={skipCurrentCard} onExit={exitSession} onMenu={openMenu} menuOpen={menuOpen} menuTriggerRef={menuTriggerRef} viewMode={viewMode} onTogglePresentation={togglePresentationMode} />
+    if (screen === 'quiz' && currentQuestion) return <QuizScreen question={currentQuestion} currentBox={state.progress[currentQuestion.card.id]?.box ?? 1} index={sessionIndex} total={session.length} feedback={feedback} repairing={repairing} onAnswer={handleAnswer} onStartRepair={beginRepair} onContinue={continueSession} advanceMode={state.correctAdvanceMode} onSkip={skipCurrentCard} onExit={exitSession} onMenu={openMenu} menuOpen={menuOpen} menuTriggerRef={menuTriggerRef} viewMode={viewMode} onTogglePresentation={togglePresentationMode} />
     if (screen === 'sprint') return <SprintScreen selectedCards={sprintCards} onExit={() => navigate('today')} />
     if (screen === 'results') return results ? <ResultsScreen results={results} shelf={sessionShelf} hasMoreCards={hasMoreCards} onDone={() => setScreen('today')} onKeepGoing={() => startSession(sessionLessonIds)} /> : <ProgressionOverviewScreen state={state} shelf={shelf} activeUnits={activeUnits} onToday={() => setScreen('today')} onCurriculum={() => setScreen('curriculum')} />
-    return <TodayScreen counts={shelf} queueCounts={queueCounts} activeUnits={activeUnits} masteredSelectedCount={masteredSelectedLessonIds.size} dailyGoal={state.dailyGoal} practiceMode={state.practiceMode} activePreset={activePreset} missMode={state.missMode} enabledActivityTypes={state.enabledActivityTypes} activityCounts={activityCounts} selectedCardCount={selectedCardCount} readyCardCount={readyCardCount} onStart={() => startSession()} notice={notice} motion={shelfMotion} onChooseCurriculum={() => setScreen('curriculum')} onActivityTypesChange={updateActivityTypes} onPresetChange={updatePreset} />
+    return <TodayScreen counts={shelf} queueCounts={queueCounts} activeUnits={activeUnits} masteredSelectedCount={masteredSelectedLessonIds.size} dailyGoal={state.dailyGoal} practiceMode={state.practiceMode} activePreset={activePreset} missMode={state.missMode} enabledActivityTypes={state.enabledActivityTypes} activityCounts={activityCounts} selectedCardCount={selectedCardCount} readyCardCount={readyCardCount} onStart={() => startSession()} notice={notice} onChooseCurriculum={() => setScreen('curriculum')} onActivityTypesChange={updateActivityTypes} onPresetChange={updatePreset} />
   }
 
   return (
     <div className={`app-shell ${screen === 'quiz' ? 'is-quiz' : ''} ${viewMode === 'presentation' && screen === 'quiz' ? 'is-presentation' : ''}`}>
-      <div className="app-view" inert={menuOpen || Boolean(feedback?.correct)}>
+      <div className="app-view" inert={menuOpen}>
         <a className="skip-link" href="#main-content">Skip to practice</a>
         {screen !== 'quiz' && <MobileHeader onMenu={openMenu} menuOpen={menuOpen} triggerRef={menuTriggerRef} screen={screen} onNavigate={navigate} />}
         <main id="main-content" className={`app-content ${screen === 'quiz' ? 'is-quiz' : ''}`} tabIndex={-1}>{renderScreen()}</main>
       </div>
       {menuOpen && <MenuSheet screen={screen} dailyGoal={state.dailyGoal} missMode={state.missMode} correctAdvanceMode={state.correctAdvanceMode} theme={state.theme} onDailyGoalChange={updateDailyGoal} onMissModeChange={updateMissMode} onCorrectAdvanceModeChange={updateCorrectAdvanceMode} onThemeChange={updateTheme} onResetLocalData={resetLocalData} onNavigate={navigate} closing={menuClosing} onClose={closeMenu} />}
-      {screen === 'quiz' && currentQuestion && feedback?.correct && <SuccessOverlay question={currentQuestion} feedback={feedback} index={sessionIndex} total={session.length} advanceMode={state.correctAdvanceMode} onContinue={continueSession} />}
     </div>
   )
 }
