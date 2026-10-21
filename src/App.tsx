@@ -872,7 +872,7 @@ function FeedbackPanel({
     ? question.format === 'typed'
       ? 'Check the spelling, then type the answer again.'
       : question.format === 'arrange'
-        ? question.kind === 'number' ? 'Check each word and any -s on vingt or cent, then build it again.' : 'Review the word order, then build it again.'
+        ? question.kind === 'number' ? 'Compare each tile with the correct answer, including any -s on vingt, cent or million, then build it again.' : 'Review the word order, then build it again.'
         : question.format === 'correction'
           ? 'Review the marked segments and choose the one that needs attention.'
           : question.format === 'cloze'

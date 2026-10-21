@@ -677,8 +677,10 @@ function buildNumberQuestion(card: NumberCard, random: () => number): PracticeQu
   return {
     card, kind: card.kind, direction: 'english-to-french', format: 'arrange',
     prompt: value.toLocaleString('fr-CA'), promptLanguage: 'fr',
-    answer: tokens.join(' '), answerLanguage: 'fr', answerDisplay: spelled,
+    answer: tokens.join(' '), answerLanguage: 'fr',
     distractors: [], tokens: shuffle([...tokens, ...numberTrapTiles(tokens, random)], random),
+    // The answer shows as tiles so it can always be rebuilt; the hyphenated spelling follows as a note.
+    answerExplanation: spelled === tokens.join(' ') ? undefined : `Written with hyphens: ${spelled}.`,
     help: { label: 'Number help', text: 'Vingt and cent take -s only at the end of a number or before million: quatre-vingts, deux cents, but quatre-vingt-un and deux cent mille. Mille never changes.' },
   }
 }
