@@ -637,7 +637,7 @@ function buildExerciseQuestion(
 }
 
 // Elided/plural articles and nouns recorded with both genders are excluded.
-const variableGenderNouns = new Set(['bibliothécaire', 'comptable', 'gestionnaire', 'commis', 'destinataire', 'leader', 'aide'])
+const variableGenderNouns = new Set(['bibliothécaire', 'comptable', 'gestionnaire', 'commis', 'destinataire', 'leader', 'aide', 'ministre', 'sous-ministre', 'secrétaire', 'spécialiste', 'réceptionniste', 'commissionnaire'])
 const nounGenders = new Map<string, 'Masculine' | 'Feminine' | null>()
 for (const card of sourceVocabulary) {
   const match = /^(le|la|un|une) ([\p{L}-]+)$/u.exec(card.french)
