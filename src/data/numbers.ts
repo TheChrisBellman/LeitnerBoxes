@@ -98,3 +98,45 @@ export const numberCards: NumberCard[] = patterns.map(({ id, label }, order) => 
 export function pickNumber(card: NumberCard, random: () => number = Math.random): number {
   return patterns.find((pattern) => pattern.id === card.id)!.pick(random)
 }
+
+// Teens that sound like a unit or a decade: treize/trois/trente, seize/six/soixante.
+const soundAlikePairs: [number, number][] = [[2, 12], [3, 13], [4, 14], [5, 15], [6, 16], [3, 30], [4, 40], [5, 50], [6, 60], [13, 30], [14, 40], [15, 50], [16, 60]]
+
+/** Wrong numbers a learner might pick for n, most tempting first: sound-alikes, the 70s/90s mix-up, swapped digits, then neighbours. */
+export function numberLookalikes(n: number): number[] {
+  const size = Math.abs(n)
+  const sign = Math.sign(n) || 1
+  const swapped = size >= TEN && size < HUNDRED ? (size % TEN) * TEN + Math.floor(size / TEN) : size
+  const step = size >= HUNDRED ? 10 ** Math.floor(Math.log10(size)) : TEN
+  const near = [
+    ...soundAlikePairs.flatMap(([a, b]) => size === a ? [b] : size === b ? [a] : []),
+    // soixante-douze and quatre-vingt-douze both end in douze.
+    ...(size >= SEVENTY && size < EIGHTY ? [size + TWENTY] : size >= EIGHTY + TEN && size < HUNDRED ? [size - TWENTY] : []),
+    swapped,
+    ...(size >= HUNDRED ? [size * TEN, size / TEN] : []),
+    size + step, size + 1, size - step, size - 1,
+  ]
+  return [...new Set([...(n < 0 ? [size] : []), ...near.map((value) => value * sign)])]
+    .filter((value) => Number.isInteger(value) && value !== n && (n < 0 || value > 0 || (n === 0 && value >= 0)))
+}
+
+const teenUnits: Record<string, string> = { onze: 'un', douze: 'deux', treize: 'trois', quatorze: 'quatre', quinze: 'cinq', seize: 'six' }
+
+/** Common misspellings of n: plural -s on the wrong vingt or cent, a missing or extra « et », « dix-six » for seize. Never just a hyphen change. */
+export function frenchNumberMisspellings(n: number): string[] {
+  const spelled = spellFrenchNumber(n)
+  const loose = (text: string) => text.replace(/-/g, ' ')
+  const wrong = [
+    spelled.replace(/\b(vingt|cent)s\b/, '$1'),
+    spelled.replace(/\b(vingt|cent)\b(?=[ -])/, '$1s'),
+    spelled.replace(/ mille\b/, ' milles'),
+    spelled.replace(' et ', '-'),
+    spelled.replace(/-(un|onze)$/, ' et $1'),
+    spelled.replace(/\b(onze|douze|treize|quatorze|quinze|seize)\b/, (teen) => `dix-${teenUnits[teen]}`).replace(' et dix', '-dix'),
+  ]
+  return [...new Set(wrong)].filter((text) => loose(text) !== loose(spelled))
+}
+
+const DIGIT_GROUP = /\B(?=(\d{3})+(?!\d))/g
+/** Writes an integer the way the course does: thin groups of three, « 10 000 ». */
+export const groupDigits = (n: number) => String(n).replace(DIGIT_GROUP, ' ')

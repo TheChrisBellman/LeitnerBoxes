@@ -1,6 +1,8 @@
 import { curriculumUnits } from '../src/data/curriculum.ts'
-import { sourceVocabulary } from '../src/data/source-vocabulary.ts'
+import { sameChoiceShape, sourceVocabulary } from '../src/data/source-vocabulary.ts'
 import { allCards, allWords } from '../src/data/words.ts'
+import { buildVocabularyQuestion } from '../src/leitner.ts'
+import { buildSprintQuestions, SPRINT_CATEGORIES } from '../src/sprint.ts'
 
 const expectedSourceCards = 2337
 const expectedCurriculumUnits = 61
@@ -28,6 +30,14 @@ if (unexpectedRuntimeIds.length > 0) failures.push(`runtime contains non-source 
 if (missingRuntimeIds.length > 0) failures.push(`runtime is missing source vocabulary: ${missingRuntimeIds.slice(0, 5).join(', ')}`)
 if (missingUnits.length > 0) failures.push(`source vocabulary is missing curriculum units: ${missingUnits.join(', ')}`)
 if (unexpectedSourceUnits.length > 0) failures.push(`source vocabulary contains unknown curriculum units: ${unexpectedSourceUnits.join(', ')}`)
+
+// Every choice set must look alike, so the answer never stands out as the only number or the only question.
+const choiceSets = [
+  ...runtimeVocabulary.flatMap((card) => [false, true].map((reverse) => buildVocabularyQuestion(card, reverse, allCards)).map((question) => [question.answer, ...question.distractors])),
+  ...SPRINT_CATEGORIES.flatMap((category) => buildSprintQuestions(category, allCards).map((question) => question.choices)),
+]
+const mixedChoiceSets = choiceSets.filter(([answer, ...distractors]) => distractors.some((distractor) => !sameChoiceShape(distractor, answer)))
+if (mixedChoiceSets.length > 0) failures.push(`${mixedChoiceSets.length} choice sets mix digits or questions with plain words, e.g. ${mixedChoiceSets.slice(0, 3).map((choices) => choices.join(' / ')).join('; ')}`)
 
 const sourceLevelCounts = Object.fromEntries(Object.entries(Object.groupBy(sourceVocabulary, (card) => card.level)).map(([level, cards]) => [level, cards.length]))
 

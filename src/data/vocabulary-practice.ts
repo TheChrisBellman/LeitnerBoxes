@@ -370,14 +370,14 @@ for (const [form, detail] of Object.entries(questionWords)) {
 add('a-01', 'de la part de qui', recognition(
   'Which telephone phrase literally asks “on whose behalf” to identify the caller?',
   'de la part de qui',
-  ['qui est-ce?', 'qu’est-ce que c’est?', 'où est-ce?'],
+  ['qui est-ce', 'qu’est-ce que c’est', 'où est-ce'],
   '« De la part de qui? » asks who is calling or who sent someone.',
   'This phone phrase asks for the caller’s identity.',
 ))
 add('a-02', 'ça s’appelle', recognition(
   'Which phrase says “it is called” before a name?',
   'ça s’appelle',
-  ['c’est', 'ce sont', 'qu’est-ce que c’est?'],
+  ['c’est', 'ce sont', 'voici'],
   '« Ça s’appelle » introduces the name of something.',
   'Use this phrase to name or identify something, not simply to say what it is.',
 ))

@@ -194,14 +194,14 @@ export const reviewedVocabularyChoices: Record<string, { distractors: [string, s
   },
   "a-28|à quoi ça sert": {
     "distractors": [
-      "why is it necessary?",
-      "what is it about?",
-      "where is it?"
+      "why is it necessary",
+      "what is it about",
+      "where is it"
     ],
     "reverseDistractors": [
-      "pourquoi est-ce nécessaire?",
-      "de quoi s’agit-il?",
-      "où est-ce?"
+      "pourquoi est-ce nécessaire",
+      "de quoi s’agit-il",
+      "où est-ce"
     ]
   },
   "a-32|une condition": {

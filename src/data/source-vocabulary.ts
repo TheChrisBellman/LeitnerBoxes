@@ -4,6 +4,7 @@ import { reviewedTranslationKeys, sourceSupplements2140 } from './source-supplem
 import { sourceSupplementsC } from './source-supplements-c.ts'
 import { sourceSupplementsFollowup } from './source-supplements-followup.ts'
 import { sourceSupplementsReview } from './source-supplements-review.ts'
+import { frenchNumberMisspellings, groupDigits, numberLookalikes, spellFrenchNumber } from './numbers.ts'
 import { englishEvidenceFragments, type SourceEvidence, type SourceSupplement } from './source-evidence.ts'
 import { vocabularyPracticeFor } from './vocabulary-practice.ts'
 import { reviewedVocabularyChoices, reviewedVocabularyEquivalences } from './vocabulary-reviewed-choices.ts'
@@ -1160,8 +1161,8 @@ const mathFrench = /^(?:plus|moins|fois|multiplié par|divisé par|égal|combien
 const mathEnglish = /^(?:plus|minus|times|multiplied by|divided by|equals|how many)$/i
 const timeFrench = /(?:^|\s)(?:hier|demain|après-demain|avant-hier|avenir|moment|matin|soir|semaine|mois|année|veille|lendemain|midi|saison|prochain|précédent|dernier|passé|présent|plus tôt|plus tard|près de)(?=\s|$)/iu
 const timeEnglish = /^(?:yesterday|tomorrow|today|in the future|at the moment|this morning|this afternoon|last night|two hours ago|next|next (?:week|month|year|tuesday)|in \w+ (?:hours?|days?|weeks?|months?)|the day before|the next day|last year|earlier|later|around|almost|close to)\b/i
-const quantityFrench = /^(?:beaucoup de|peu de|un peu(?: de)?|quelques(?:-uns)?|plusieurs|la plupart de|un bon nombre de|un certain nombre de|un grand nombre de|une dizaine|une vingtaine|une trentaine|une cinquantaine|un millier)$/iu
-const quantityEnglish = /^(?:a lot|a little|a few|some|several|the majority|a good number|a number|a great number|about (?:ten|twenty|thirty|fifty|one thousand)|many)\b/i
+const quantityFrench = /^(?:beaucoup de|peu de|un peu(?: de)?|quelques(?:-uns)?|plusieurs|la plupart de|un bon nombre de|un certain nombre de|un grand nombre de|une (?:dizaine|douzaine|quinzaine|vingtaine|trentaine|quarantaine|cinquantaine|soixantaine|centaine)|un millier)$/iu
+const quantityEnglish = /^(?:a lot|a little|a few|some|several|the majority|a good number|a number|a great number|about (?:ten|fifteen|twenty|thirty|forty|fifty|sixty|one thousand)|many)\b/i
 const materialFrench = /^(?:en bois|en plastique|en laine|en métal|en carton|en papier|en brique?s?|en cuir)$/iu
 // A-04 practises describing office objects. Keep choices within the property
 // named by the prompt so a colour is never the only plausible option.
@@ -1333,6 +1334,50 @@ function familyCandidates(row: SourceRow, index: number): SourceRow[] {
   return [...rotate(local, index), ...rotate(related, index), ...rotate(sameLevel, index), ...rotate(global, index)]
 }
 
+// Choices must look alike: one answer with digits or a question mark among plain words gives itself away.
+const hasDigit = (text: string) => /\d/.test(text)
+const isQuestion = (text: string) => text.trim().endsWith('?')
+export const sameChoiceShape = (a: string, b: string) => hasDigit(a) === hasDigit(b) && isQuestion(a) === isQuestion(b)
+
+const englishNumberWords: [number, string][] = [
+  ...['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'].map((word, n): [number, string] => [n, word]),
+  ...['twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'].map((word, n): [number, string] => [(n + 2) * 10, word]),
+  [100, 'one hundred'], [1000, 'one thousand'], [1_000_000, 'one million'],
+]
+const englishNumberWord = new Map(englishNumberWords)
+const englishNumberValue = new Map(englishNumberWords.map(([n, word]) => [word, n]))
+// First number in « 1 000e », « -5 ºC » or « 75 % »; a space only groups thousands, so « 3 1/2 » gives 3.
+// https://regex101.com/?regex=-%3F%5Cd%7B1%2C3%7D(%3F%3A%20%5Cd%7B3%7D)%2B%7C-%3F%5Cd%2B&testString=1%20000e%0A-5%20%C2%BAC%0A75%20%25%0A3%201%2F2
+const numberInAnswer = /-?\d{1,3}(?: \d{3})+|-?\d+/
+const closeness = (a: number, b: number) => Math.abs(Math.log((a + 1) / (b + 1)))
+
+// Number answers get look-alike numbers written the same way: « sixteen » faces six and sixty, « 72 » faces 92.
+function numberAnswerChoices(answer: string): string[] {
+  const [, about = '', word = ''] = normalize(answer).match(/^(about )?(.*)$/) ?? []
+  const english = englishNumberValue.get(word)
+  if (english !== undefined) {
+    const nearest = englishNumberWords.map(([n]) => n).sort((a, b) => closeness(a, english) - closeness(b, english))
+    return [...numberLookalikes(english), ...nearest].filter((n) => englishNumberWord.has(n)).map((n) => about + englishNumberWord.get(n)!)
+  }
+  const written = answer.match(numberInAnswer)?.[0]
+  if (!written) return []
+  return numberLookalikes(Number(written.replace(/ /g, ''))).map((n) => answer.replace(written, groupDigits(n)))
+}
+
+// « trente grammes » is no stand-in for « y compris »; « une quinzaine » still is for « une douzaine » (12).
+const numberTermForWord = (candidate: { answer: string }, row: SourceRow) => hasDigit(candidate.answer) && !hasDigit(row.answer)
+const ordinal = (cardinal: string) => cardinal.replace(/s$/, '').replace(/e$/, '').replace(/cinq$/, 'cinqu').replace(/neuf$/, 'neuv') + 'ième'
+
+// A spelled-out number gets a common misspelling of itself, then look-alike numbers spelled correctly.
+function numberFrenchChoices(row: SourceRow): string[] {
+  const digits = row.answer.trim().match(/^(\d[\d ]*)(e?)$/)
+  const value = englishNumberValue.get(normalize(row.answer)) ?? (digits ? Number(digits[1].replace(/ /g, '')) : undefined)
+  if (value === undefined) return []
+  if (digits?.[2]) return normalize(row.french) === ordinal(spellFrenchNumber(value)) ? numberLookalikes(value).map((n) => ordinal(spellFrenchNumber(n))) : []
+  if (normalize(row.french) !== spellFrenchNumber(value)) return []
+  return [...frenchNumberMisspellings(value).slice(0, 1), ...numberLookalikes(value).map(spellFrenchNumber)]
+}
+
 function answerChoices(row: SourceRow, index: number): [string, string, string] {
   const reviewed = reviewedVocabularyChoices[equivalenceKey(row)]
   if (reviewed) return reviewed.distractors
@@ -1341,14 +1386,18 @@ function answerChoices(row: SourceRow, index: number): [string, string, string] 
   const choices: string[] = []
   const seen = new Set(targetEquivalents)
   const addChoice = (candidate: string, source?: SourceRow) => {
-    if (!candidate || seen.has(normalize(candidate))) return
+    if (!candidate || seen.has(normalize(candidate)) || !sameChoiceShape(candidate, row.answer)) return
     if (source && vocabularyEquivalentForms(source).answers.some((answer) => targetEquivalents.has(normalize(answer)))) return
     seen.add(normalize(candidate))
     choices.push(candidate)
   }
-  for (const candidate of familyCandidates(row, index)) {
-    addChoice(candidate.answer, candidate)
+  for (const candidate of numberAnswerChoices(row.answer)) {
     if (choices.length === 3) break
+    addChoice(candidate)
+  }
+  for (const candidate of familyCandidates(row, index)) {
+    if (choices.length === 3) break
+    addChoice(candidate.answer, candidate)
   }
   for (const candidate of fallbackAnswers[family] ?? []) {
     if (choices.length === 3) break
@@ -1362,21 +1411,28 @@ function reverseChoices(row: SourceRow, index: number): [string, string, string]
   const reviewed = reviewedVocabularyChoices[equivalenceKey(row)]
   if (reviewed) return reviewed.reverseDistractors
   const family = vocabularyChoiceFamily(row)
-  const candidates = familyCandidates(row, index)
+  // Stable sort: terms whose English is written like the answer (digits or words) come first.
+  const candidates = familyCandidates(row, index).sort((a, b) => Number(hasDigit(a.answer) !== hasDigit(row.answer)) - Number(hasDigit(b.answer) !== hasDigit(row.answer)))
   const seen = new Set([normalize(row.french)])
   const answer = normalize(row.answer)
   const equivalentFrench = new Set(equivalentFrenchByAnswer.get(answer) ?? [])
   vocabularyEquivalentForms(row).french.forEach((french) => equivalentFrench.add(normalize(french)))
   const choices: string[] = []
+  for (const french of numberFrenchChoices(row)) {
+    if (choices.length === 3) break
+    if (seen.has(normalize(french))) continue
+    seen.add(normalize(french))
+    choices.push(french)
+  }
   for (const candidate of candidates) {
-    if (equivalentFrench.has(normalize(candidate.french)) || seen.has(normalize(candidate.french)) || vocabularyEquivalentForms(candidate).french.some((french) => equivalentFrench.has(normalize(french)))) continue
+    if (choices.length === 3) break
+    if (!sameChoiceShape(candidate.french, row.french) || numberTermForWord(candidate, row) || equivalentFrench.has(normalize(candidate.french)) || seen.has(normalize(candidate.french)) || vocabularyEquivalentForms(candidate).french.some((french) => equivalentFrench.has(normalize(french)))) continue
     seen.add(normalize(candidate.french))
     choices.push(candidate.french)
-    if (choices.length === 3) break
   }
   for (const candidate of fallbackFrench[family] ?? []) {
     if (choices.length === 3) break
-    if (normalize(candidate.answer) === answer || equivalentFrench.has(normalize(candidate.french)) || seen.has(normalize(candidate.french))) continue
+    if (!sameChoiceShape(candidate.french, row.french) || numberTermForWord(candidate, row) || normalize(candidate.answer) === answer || equivalentFrench.has(normalize(candidate.french)) || seen.has(normalize(candidate.french))) continue
     seen.add(normalize(candidate.french))
     choices.push(candidate.french)
   }

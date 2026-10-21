@@ -1,4 +1,4 @@
-import { frenchNumbers } from './data/numbers.ts'
+import { frenchNumberMisspellings, frenchNumbers, numberLookalikes } from './data/numbers.ts'
 import type { ConjugationCard, ExerciseLanguage, PracticeCard, VocabularyCard } from './data/types.ts'
 import { buildSessionQuestions, buildVocabularyQuestion, nounGenderFor, shuffle } from './leitner.ts'
 
@@ -10,6 +10,9 @@ const DIGIT_BASE = 10
 const ONE_STEP = 1
 const TWO_STEPS = ONE_STEP + ONE_STEP
 const NUMBER_NEIGHBOUR_OFFSETS = [ONE_STEP, TWO_STEPS, DIGIT_BASE, DIGIT_BASE * TWO_STEPS].flatMap((offset) => [offset, -offset])
+const TEMPTING_COUNT = 4
+// Half the spelled-out questions that have a classic misspelling (quatre-vingt, soixante-onze) show it as a choice.
+const MISSPELLING_CHANCE = 0.5
 
 export const SPRINT_CATEGORIES = ['noun-gender', 'french-to-english', 'english-to-french', 'verb-forms', 'numbers'] as const
 export type SprintCategory = typeof SPRINT_CATEGORIES[number]
@@ -53,24 +56,23 @@ function withChoices(answer: string, distractors: readonly string[], random: () 
   return shuffle([answer, ...new Set(distractors.filter((item) => item && item !== answer))].slice(0, CHOICE_COUNT), random)
 }
 
-function numberDistractors(n: number, random: () => number): string[] {
-  const swapped = (n % DIGIT_BASE) * DIGIT_BASE + Math.floor(n / DIGIT_BASE)
-  const neighbours = shuffle([...NUMBER_NEIGHBOUR_OFFSETS.map((offset) => n + offset), swapped], random)
+function numberDistractors(n: number, random: () => number): number[] {
+  const tempting = shuffle(numberLookalikes(n).slice(0, TEMPTING_COUNT), random)
+  const neighbours = shuffle(NUMBER_NEIGHBOUR_OFFSETS.map((offset) => n + offset), random)
   const fallback = shuffle(frenchNumbers.map((_, value) => value), random)
-  return [...new Set([...neighbours, ...fallback].filter((value) => value >= 0 && value < frenchNumbers.length && value !== n))]
+  return [...new Set([...tempting, ...neighbours, ...fallback].filter((value) => value >= 0 && value < frenchNumbers.length && value !== n))]
     .slice(0, CHOICE_COUNT - 1)
-    .map((value) => frenchNumbers[value])
 }
 
 /** Builds the full shuffled question pool for one category. Progress and due dates are ignored. */
 export function buildSprintQuestions(category: SprintCategory, cards: readonly PracticeCard[], random: () => number = Math.random): SprintQuestion[] {
   if (category === 'numbers') {
     return shuffle(frenchNumbers.map((word, n) => {
-      const choices = withChoices(word, numberDistractors(n, random), random)
+      const distractors = numberDistractors(n, random)
       const reverse = Math.round(random()) === 1
-      return reverse
-        ? { id: `n-${n}-r`, prompt: word, promptLanguage: 'fr' as const, answer: String(n), answerLanguage: 'en' as const, choices: choices.map((choice) => String(frenchNumbers.indexOf(choice))) }
-        : { id: `n-${n}`, prompt: String(n), promptLanguage: 'en' as const, answer: word, answerLanguage: 'fr' as const, choices }
+      if (reverse) return { id: `n-${n}-r`, prompt: word, promptLanguage: 'fr' as const, answer: String(n), answerLanguage: 'en' as const, choices: withChoices(String(n), distractors.map(String), random) }
+      const misspelling = random() < MISSPELLING_CHANCE ? frenchNumberMisspellings(n).slice(0, 1) : []
+      return { id: `n-${n}`, prompt: String(n), promptLanguage: 'en' as const, answer: word, answerLanguage: 'fr' as const, choices: withChoices(word, [...misspelling, ...distractors.map((value) => frenchNumbers[value])], random) }
     }), random)
   }
   if (category === 'verb-forms') {
