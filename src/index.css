@@ -1886,6 +1886,16 @@ button:disabled {
   min-width: 0;
 }
 
+.prompt-card.question-type-number .prompt-copy {
+  text-align: center;
+}
+
+.prompt-card.question-type-number h1 {
+  font-size: clamp(2.6rem, 13cqw, 4rem);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .prompt-headline.is-conjugation {
   display: grid;
   min-width: 0;
@@ -2297,6 +2307,18 @@ button:disabled {
 
 .word-token:disabled {
   cursor: default;
+}
+
+.word-token:not(:disabled) {
+  touch-action: none;
+}
+
+.word-token.is-dragging {
+  position: relative;
+  z-index: 2;
+  cursor: grabbing;
+  transition: none;
+  box-shadow: 0 6px 18px rgba(16, 33, 61, 0.18);
 }
 
 .arrange-check {

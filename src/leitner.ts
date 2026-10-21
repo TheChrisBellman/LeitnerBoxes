@@ -1,7 +1,8 @@
 import { conjugationAlternatives, conjugationCatches } from './data/conjugation-catches.ts'
 import { allExercises, dialoguesById, exercisesByTargetId, passagesById, scenariosById } from './data/pilot-exercises.ts'
 import { sourceVocabulary, vocabularyEquivalentForms } from './data/source-vocabulary.ts'
-import { ACTIVITY_TYPES, type ActivityType, type AuthoredExercise, type CardKind, type CardTier, type ConjugationCard, type ExerciseLanguage, type ExerciseTarget, type PracticeCard, type PracticeTarget, type QuestionHelp, type VocabularyCard } from './data/types.ts'
+import { frenchNumberTokens, pickNumber, spellFrenchNumber } from './data/numbers.ts'
+import { ACTIVITY_TYPES, type ActivityType, type AuthoredExercise, type CardKind, type CardTier, type ConjugationCard, type ExerciseLanguage, type ExerciseTarget, type NumberCard, type PracticeCard, type PracticeTarget, type QuestionHelp, type VocabularyCard } from './data/types.ts'
 
 export type Box = 1 | 2 | 3 | 4 | 5
 export type PracticeMode = 'mixed' | 'vocabulary' | 'conjugation'
@@ -637,7 +638,7 @@ function buildExerciseQuestion(
 }
 
 // Elided/plural articles and nouns recorded with both genders are excluded.
-const variableGenderNouns = new Set(['bibliothécaire', 'comptable', 'gestionnaire', 'commis', 'destinataire', 'leader', 'aide'])
+const variableGenderNouns = new Set(['bibliothécaire', 'comptable', 'gestionnaire', 'commis', 'destinataire', 'leader', 'aide', 'ministre', 'sous-ministre', 'secrétaire', 'spécialiste', 'réceptionniste', 'commissionnaire'])
 const nounGenders = new Map<string, 'Masculine' | 'Feminine' | null>()
 for (const card of sourceVocabulary) {
   const match = /^(le|la|un|une) ([\p{L}-]+)$/u.exec(card.french)
@@ -651,6 +652,35 @@ export function nounGenderFor(french: string) {
   const match = /^(le|la|un|une) ([\p{L}-]+)$/u.exec(french)
   const answer = match && nounGenders.get(match[2])
   return match && answer ? { noun: match[2], answer } : undefined
+}
+
+const numberFlips: Record<string, string> = { cent: 'cents', cents: 'cent', vingt: 'vingts', vingts: 'vingt', million: 'millions', millions: 'million', mille: 'milles' }
+// No dix or teens as filler: with them 1100–1999 could be built as « onze cents », a valid spelling the grader would reject.
+const numberFillers = ['deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf', 'trente', 'quarante', 'cinquante', 'soixante']
+const NUMBER_TRAP_COUNT = 3
+
+// Wrong-but-tempting tiles: agreement flips, a stray « et », « un » before mille, then plain filler.
+export function numberTrapTiles(tokens: readonly string[], random: () => number = Math.random): string[] {
+  const traps = [...new Set([
+    ...tokens.flatMap((token) => numberFlips[token] ?? []),
+    ...(tokens.includes('et') ? [] : ['et']),
+    ...(tokens.includes('mille') && !tokens.includes('un') ? ['un'] : []),
+  ])]
+  const fillers = numberFillers.filter((filler) => !tokens.includes(filler))
+  return [...shuffle(traps, random), ...shuffle(fillers, random)].slice(0, NUMBER_TRAP_COUNT)
+}
+
+function buildNumberQuestion(card: NumberCard, random: () => number): PracticeQuestion {
+  const value = pickNumber(card, random)
+  const tokens = frenchNumberTokens(value)
+  const spelled = spellFrenchNumber(value)
+  return {
+    card, kind: card.kind, direction: 'english-to-french', format: 'arrange',
+    prompt: value.toLocaleString('fr-CA'), promptLanguage: 'fr',
+    answer: tokens.join(' '), answerLanguage: 'fr', answerDisplay: spelled,
+    distractors: [], tokens: shuffle([...tokens, ...numberTrapTiles(tokens, random)], random),
+    help: { label: 'Number help', text: 'Vingt and cent take -s only at the end of a number or before million: quatre-vingts, deux cents, but quatre-vingt-un and deux cent mille. Mille never changes.' },
+  }
 }
 
 export function buildSessionQuestions(
@@ -684,6 +714,7 @@ export function buildSessionQuestions(
       }
     }
 
+    if (card.kind === 'number') return buildNumberQuestion(card, randomActivity ?? Math.random)
     const box = progress[card.id]?.box ?? 1
     const selectedActivity = chooseActivityType(card, enabledActivityTypes, box, activityOrdinal++, randomActivity)
     if (card.kind === 'conjugation') {
@@ -762,6 +793,7 @@ export function activityTypesForTarget(card: SchedulableCard): ActivityType[] {
     const answer = 'answer' in card && typeof card.answer === 'string' ? card.answer : undefined
     return ['conjugation', ...(answer && isFrenchTypedAnswer(normalizeConjugationForm(answer)) ? ['typed' as const] : [])]
   }
+  if (card.kind === 'number') return ['numbers']
   if (card.kind === 'vocabulary' && 'practice' in card && card.practice) return ['grammar']
   const types: ActivityType[] = ['vocabulary']
   const french = 'french' in card && typeof card.french === 'string' ? card.french : undefined

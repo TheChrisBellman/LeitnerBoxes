@@ -26,7 +26,7 @@ import { clearStoredState, completeStreak, defaultState, loadState, saveState, t
 
 type Screen = 'today' | 'curriculum' | 'quiz' | 'results' | 'sprint'
 type ViewMode = 'normal' | 'presentation'
-type IconName = 'menu' | 'close' | 'settings' | 'expand' | 'minimize' | 'arrow' | 'arrowLeft' | 'check' | 'chevron' | 'calendar' | 'book' | 'progress' | 'practice' | 'spark' | 'clock' | 'cards' | 'half' | 'cycle' | 'chat' | 'sliders'
+type IconName = 'menu' | 'close' | 'settings' | 'expand' | 'minimize' | 'arrow' | 'arrowLeft' | 'check' | 'chevron' | 'calendar' | 'book' | 'progress' | 'practice' | 'spark' | 'clock' | 'cards' | 'half' | 'cycle' | 'chat' | 'sliders' | 'hash'
 
 type ActiveQuestion = PracticeQuestion & {
   choices: string[]
@@ -59,7 +59,7 @@ type MissedAnswer = {
   explanation?: string
 }
 
-type PracticePreset = 'noun-gender' | 'word-meanings' | 'verb-forms' | 'grammar-usage' | 'custom'
+type PracticePreset = 'noun-gender' | 'numbers' | 'word-meanings' | 'verb-forms' | 'grammar-usage' | 'custom'
 
 const CORRECT_AUTO_ADVANCE_MS = 1600
 const CORRECTION_AUTO_ADVANCE_MS = 4800
@@ -81,6 +81,7 @@ const levelDescriptions: Record<Level, string> = {
 
 const activityOptions: { type: ActivityType; label: string; description: string }[] = [
   { type: 'noun-gender', label: 'Noun gender', description: 'Choose masculine or feminine.' },
+  { type: 'numbers', label: 'Numbers', description: 'Build French numbers from word tiles.' },
   { type: 'vocabulary', label: 'Vocabulary', description: 'Match French words and meanings.' },
   { type: 'conjugation', label: 'Conjugation', description: 'Present-tense form recall.' },
   { type: 'grammar', label: 'Grammar', description: 'Use French forms in context.' },
@@ -96,10 +97,14 @@ const activityOptions: { type: ActivityType; label: string; description: string 
 
 const presetOptions: { id: Exclude<PracticePreset, 'custom'>; label: string; icon: IconName; mode: PracticeMode; types: readonly ActivityType[] }[] = [
   { id: 'noun-gender', label: 'Noun gender', icon: 'half', mode: 'vocabulary', types: ['noun-gender'] },
+  { id: 'numbers', label: 'Numbers', icon: 'hash', mode: 'mixed', types: ['numbers'] },
   { id: 'word-meanings', label: 'Word meanings', icon: 'book', mode: 'vocabulary', types: ['vocabulary', 'ordered', 'typed'] },
   { id: 'verb-forms', label: 'Verb forms', icon: 'cycle', mode: 'conjugation', types: ['conjugation', 'typed'] },
   { id: 'grammar-usage', label: 'Grammar & usage', icon: 'chat', mode: 'mixed', types: ['grammar', 'contextual-cloze', 'correction', 'transformation', 'best-response', 'scenario'] },
 ]
+
+// Pointer travel (px) before a press on a tile becomes a drag instead of a tap.
+const TOKEN_DRAG_THRESHOLD = 6
 
 function activityTypesForMode(mode: PracticeMode): ActivityType[] {
   if (mode === 'mixed') return [...ACTIVITY_TYPES]
@@ -119,6 +124,7 @@ function practicePresetForSettings(mode: PracticeMode, types: readonly ActivityT
 }
 
 function activityTypeForQuestion(question: PracticeQuestion): ActivityType {
+  if (question.kind === 'number') return 'numbers'
   if (question.vocabularyPractice === 'noun-gender') return 'noun-gender'
   if (question.exercise) return question.exercise.kind
   if (question.vocabularyPractice === 'recognition') return 'grammar'
@@ -172,6 +178,7 @@ const iconPaths: Record<IconName, string> = {
   half: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zm0 0v18M12 7a5 5 0 0 1 0 10',
   cycle: 'M4 12a8 8 0 0 1 13.7-5.7M20 12a8 8 0 0 1-13.7 5.7M17 3v4h-4M7 21v-4h4',
   chat: 'M4 5h16v11H9l-5 4zM8 9h8m-8 3h5',
+  hash: 'M5 9h14M5 15h14M10 4l-2 16M16 4l-2 16',
   sliders: 'M4 7h9m5 0h2M4 17h3m5 0h8M15 5v4M9 15v4',
 }
 
@@ -832,6 +839,10 @@ function QuizScreen({
   const accentPointerHandledRef = useRef(false)
   const [selectedTokenIndexes, setSelectedTokenIndexes] = useState<number[]>([])
   const [tokenOrder, setTokenOrder] = useState<number[]>([])
+  const answerRowRef = useRef<HTMLDivElement>(null)
+  const tokenDragRef = useRef<{ tokenIndex: number; startX: number; startY: number; moved: boolean } | null>(null)
+  const suppressTokenClickRef = useRef(false)
+  const [draggedToken, setDraggedToken] = useState<{ tokenIndex: number; x: number; y: number } | null>(null)
   const [phraseHelpOpen, setPhraseHelpOpen] = useState(false)
 
   useEffect(() => {
@@ -851,7 +862,7 @@ function QuizScreen({
     else if (question.format === 'choice' || question.format === 'cloze' || question.format === 'correction') firstChoiceRef.current?.focus({ preventScroll: true })
   }, [question.card.id, question.format, question.tokens, repairing])
 
-  const questionLabel = question.vocabularyPractice === 'noun-gender' ? 'Noun gender' : exerciseLabel(question) ?? (question.vocabularyPractice === 'recognition'
+  const questionLabel = question.kind === 'number' ? 'Numbers · Build the number' : question.vocabularyPractice === 'noun-gender' ? 'Noun gender' : exerciseLabel(question) ?? (question.vocabularyPractice === 'recognition'
     ? 'Grammar · Recognition'
     : question.format === 'typed'
       ? question.kind === 'conjugation' ? 'Conjugation · Typed recall' : 'Vocabulary · Typed recall'
@@ -862,7 +873,7 @@ function QuizScreen({
           : question.direction === 'english-to-french'
             ? 'Vocabulary · English → French'
             : 'Vocabulary · French → English')
-  const questionInstruction = question.vocabularyPractice === 'noun-gender' ? 'Is this noun masculine or feminine?' : question.vocabularyPractice === 'recognition'
+  const questionInstruction = question.kind === 'number' ? 'Build this number in French. Not every tile is needed.' : question.vocabularyPractice === 'noun-gender' ? 'Is this noun masculine or feminine?' : question.vocabularyPractice === 'recognition'
     ? 'Choose the best answer.'
     : question.exercise?.kind === 'correction'
       ? 'Read the full text, then choose the underlined part that contains the error.'
@@ -877,11 +888,11 @@ function QuizScreen({
             : question.exercise?.kind === 'contextual-cloze'
               ? 'Try each option in the blank. Choose the one that makes the French sentence complete.'
               : question.exercise?.kind === 'ordered'
-                ? 'Tap the words to build the directive.'
+                ? 'Drag or tap the words to build the directive.'
                 : question.format === 'typed'
                   ? question.kind === 'conjugation' ? 'Type the present-tense form. Add accents if they belong.' : 'Type the French answer. Use the accent buttons if needed.'
                   : question.format === 'arrange'
-                    ? 'Tap the words to build the French answer.'
+                    ? 'Drag or tap the words to build the French answer.'
                     : question.format === 'cloze'
                       ? 'Choose the present-tense form that completes the sentence.'
                       : question.direction === 'english-to-french'
@@ -900,6 +911,8 @@ function QuizScreen({
           : 'Choose the English translation'
   const arrangedAnswer = selectedTokenIndexes.map((tokenIndex) => question.tokens?.[tokenIndex] ?? '').join(' ')
   const remainingTokenIndexes = tokenOrder.filter((tokenIndex) => !selectedTokenIndexes.includes(tokenIndex))
+  // Number banks include trap tiles, so only some tiles are needed.
+  const canCheckArranged = !feedback && (question.kind === 'number' ? selectedTokenIndexes.length > 0 : remainingTokenIndexes.length === 0)
   const answerHint = question.help
   const answerHintId = answerHint ? `question-help-${question.card.id}` : undefined
 
@@ -928,7 +941,68 @@ function QuizScreen({
   }
 
   function submitArrangedAnswer() {
-    if (remainingTokenIndexes.length === 0 && !feedback) onAnswer(arrangedAnswer)
+    if (canCheckArranged) onAnswer(arrangedAnswer)
+  }
+
+  function handleTokenPointerDown(event: React.PointerEvent<HTMLButtonElement>, tokenIndex: number) {
+    if (feedback || event.button !== 0) return
+    event.currentTarget.setPointerCapture(event.pointerId)
+    tokenDragRef.current = { tokenIndex, startX: event.clientX, startY: event.clientY, moved: false }
+  }
+
+  function handleTokenPointerMove(event: React.PointerEvent<HTMLButtonElement>) {
+    const drag = tokenDragRef.current
+    if (!drag) return
+    const x = event.clientX - drag.startX
+    const y = event.clientY - drag.startY
+    if (!drag.moved && Math.hypot(x, y) < TOKEN_DRAG_THRESHOLD) return
+    drag.moved = true
+    setDraggedToken({ tokenIndex: drag.tokenIndex, x, y })
+  }
+
+  // A drop in the answer row goes before the first tile below or right of the pointer; anywhere else returns the tile to the bank.
+  function handleTokenPointerUp(event: React.PointerEvent<HTMLButtonElement>) {
+    const drag = tokenDragRef.current
+    cancelTokenDrag()
+    if (!drag?.moved) return
+    suppressTokenClickRef.current = true
+    window.setTimeout(() => { suppressTokenClickRef.current = false }, 0)
+    const row = answerRowRef.current
+    const bounds = row?.getBoundingClientRect()
+    const rest = selectedTokenIndexes.filter((tokenIndex) => tokenIndex !== drag.tokenIndex)
+    if (!row || !bounds || event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) {
+      setSelectedTokenIndexes(rest)
+      return
+    }
+    const tiles = [...row.querySelectorAll<HTMLElement>('[data-token-index]')].filter((tile) => Number(tile.dataset.tokenIndex) !== drag.tokenIndex)
+    const found = tiles.findIndex((tile) => {
+      const box = tile.getBoundingClientRect()
+      return event.clientY < box.top || (event.clientY <= box.bottom && event.clientX < box.left + box.width / 2)
+    })
+    const insertAt = found < 0 ? rest.length : found
+    setSelectedTokenIndexes([...rest.slice(0, insertAt), drag.tokenIndex, ...rest.slice(insertAt)])
+  }
+
+  function cancelTokenDrag() {
+    tokenDragRef.current = null
+    setDraggedToken(null)
+  }
+
+  function tokenDragProps(tokenIndex: number) {
+    const offset = draggedToken?.tokenIndex === tokenIndex ? draggedToken : null
+    return {
+      'data-token-index': tokenIndex,
+      onPointerDown: (event: React.PointerEvent<HTMLButtonElement>) => handleTokenPointerDown(event, tokenIndex),
+      onPointerMove: handleTokenPointerMove,
+      onPointerUp: handleTokenPointerUp,
+      onPointerCancel: cancelTokenDrag,
+      style: offset ? { transform: `translate(${offset.x}px, ${offset.y}px)` } : undefined,
+    }
+  }
+
+  function toggleToken(tokenIndex: number) {
+    if (suppressTokenClickRef.current) return
+    setSelectedTokenIndexes((current) => current.includes(tokenIndex) ? current.filter((indexToKeep) => indexToKeep !== tokenIndex) : [...current, tokenIndex])
   }
 
   function captureAccentSelection() {
@@ -1056,14 +1130,14 @@ function QuizScreen({
           </div>}
           {question.format === 'arrange' && <div className="question-help-area arrange-help-area">
             <div className="arrange-answer">
-              <div className="arranged-sentence" aria-label="Your arranged answer" lang={question.answerLanguage}>
-                {selectedTokenIndexes.length === 0 && <span>Tap words below to build the answer.</span>}
-                {selectedTokenIndexes.map((tokenIndex) => <button type="button" className="word-token is-selected" key={tokenIndex} onClick={() => setSelectedTokenIndexes((current) => current.filter((indexToKeep) => indexToKeep !== tokenIndex))} disabled={Boolean(feedback)} aria-label={`Remove ${question.tokens?.[tokenIndex]}`}>{question.tokens?.[tokenIndex]}</button>)}
+              <div ref={answerRowRef} className="arranged-sentence" aria-label="Your arranged answer" lang={question.answerLanguage}>
+                {selectedTokenIndexes.length === 0 && <span>Drag or tap tiles below to build the answer.</span>}
+                {selectedTokenIndexes.map((tokenIndex) => <button type="button" className={`word-token is-selected ${draggedToken?.tokenIndex === tokenIndex ? 'is-dragging' : ''}`} key={tokenIndex} {...tokenDragProps(tokenIndex)} onClick={() => toggleToken(tokenIndex)} disabled={Boolean(feedback)} aria-label={`Remove ${question.tokens?.[tokenIndex]}`}>{question.tokens?.[tokenIndex]}</button>)}
               </div>
               <div className="token-bank" aria-label="Available words">
-                {remainingTokenIndexes.map((tokenIndex) => <button type="button" className="word-token" key={tokenIndex} onClick={() => setSelectedTokenIndexes((current) => [...current, tokenIndex])} disabled={Boolean(feedback)}>{question.tokens?.[tokenIndex]}</button>)}
+                {remainingTokenIndexes.map((tokenIndex) => <button type="button" className={`word-token ${draggedToken?.tokenIndex === tokenIndex ? 'is-dragging' : ''}`} key={tokenIndex} {...tokenDragProps(tokenIndex)} onClick={() => toggleToken(tokenIndex)} disabled={Boolean(feedback)}>{question.tokens?.[tokenIndex]}</button>)}
               </div>
-              <button type="button" className="button button-primary arrange-check" onClick={submitArrangedAnswer} disabled={remainingTokenIndexes.length > 0 || Boolean(feedback)}>Check answer</button>
+              <button type="button" className="button button-primary arrange-check" onClick={submitArrangedAnswer} disabled={!canCheckArranged}>Check answer</button>
             </div>
           </div>}
           {!feedback && !repairing && <div className="quiz-support-actions">
