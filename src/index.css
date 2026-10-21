@@ -2194,6 +2194,16 @@ button:disabled {
   min-width: 0;
 }
 
+.prompt-card.question-type-number .prompt-copy {
+  text-align: center;
+}
+
+.prompt-card.question-type-number h1 {
+  font-size: clamp(2.6rem, 13cqw, 4rem);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .prompt-headline.is-conjugation {
   display: grid;
   min-width: 0;
