@@ -119,6 +119,8 @@ const pdfLineRecords = (pdf) => {
   return records
 }
 const pdfNames = fs.readdirSync('.tmp/pdf-text').filter((name) => name.endsWith('.txt')).sort()
+const sourceId = (name) => name.split('-').slice(0, 3).join('-')
+const textFileFor = (source) => pdfNames.find((name) => sourceId(name) === source) ?? `${source}.txt`
 const pdfDataCache = new Map()
 const pdfData = (pdf) => {
   if (pdfDataCache.has(pdf)) return pdfDataCache.get(pdf)
@@ -148,7 +150,7 @@ const findLineEvidence = (pdf, query, section, category, evidenceType = 'source-
     const window = data.normalizedLines.slice(index, Math.min(data.records.length, index + 4)).join(' ')
     if (sequenceIncludes(query, window)) {
       const record = data.records[index]
-      return { pdf: pdf.replace(/\.txt$/i, '.pdf'), page: record.page, lineRange: `${record.line}-${record.line + 3}`, section, category, evidenceType }
+      return { source: sourceId(pdf), page: record.page, lineRange: `${record.line}-${record.line + 3}`, section, category, evidenceType }
     }
   }
   return undefined
@@ -174,14 +176,14 @@ const findPrimaryEvidence = (row) => {
       const end = Math.min(primaryEnd, index + 24)
       const evidenceWindow = data.normalizedLines.slice(start, end).join(' ')
       if (englishMatches(row, evidenceWindow)) {
-        return { pdf: pdf.replace(/\.txt$/i, '.pdf'), page: records[index].page, lineRange: `${records[start].line}-${records[end - 1].line}`, section: 'previously reviewed source candidate', category: 'vocabulary', evidenceType: 'source-table' }
+        return { source: sourceId(pdf), page: records[index].page, lineRange: `${records[start].line}-${records[end - 1].line}`, section: 'previously reviewed source candidate', category: 'vocabulary', evidenceType: 'source-table' }
       }
     }
     for (let index = 0; index < primaryEnd; index += 1) {
       const window = data.normalizedLines.slice(index, Math.min(primaryEnd, index + 4)).join(' ')
       if (sequenceIncludes(row.french, window)) {
         const record = records[index]
-        return { pdf: pdf.replace(/\.txt$/i, '.pdf'), page: record.page, lineRange: `${record.line}-${records[Math.min(primaryEnd - 1, index + 3)].line}`, section: 'previously reviewed source candidate', category: 'vocabulary', evidenceType: 'source-table' }
+        return { source: sourceId(pdf), page: record.page, lineRange: `${record.line}-${records[Math.min(primaryEnd - 1, index + 3)].line}`, section: 'previously reviewed source candidate', category: 'vocabulary', evidenceType: 'source-table' }
       }
     }
     if (keyStart >= 0) {
@@ -189,7 +191,7 @@ const findPrimaryEvidence = (row) => {
         const window = data.normalizedLines.slice(index, Math.min(records.length, index + 4)).join(' ')
         if (sequenceIncludes(row.french, window)) {
           const record = records[index]
-          return { pdf: pdf.replace(/\.txt$/i, '.pdf'), page: record.page, lineRange: `${record.line}-${record.line + 3}`, section: 'answer-key cross-check only', category: 'vocabulary', evidenceType: 'answer-key-confirmation' }
+          return { source: sourceId(pdf), page: record.page, lineRange: `${record.line}-${record.line + 3}`, section: 'answer-key cross-check only', category: 'vocabulary', evidenceType: 'answer-key-confirmation' }
         }
       }
     }
@@ -205,7 +207,7 @@ const baselineWithoutEvidence = baselineEvidence.filter((row) => !row.evidence)
 const baselineAnswerKeyOnly = baselineEvidence.filter((row) => row.evidence?.evidenceType === 'answer-key-confirmation')
 const baselineBilingualEvidence = baselineEvidence.map((row) => {
   if (!row.evidence) return { ...row, reviewedTranslation: false, frenchPrimaryMatch: false, englishPrimaryMatch: false, englishActualMatch: false, englishRangeMatch: false, englishActualRangeMatch: false, primaryEvidenceMatch: false, primaryRangeMatch: false }
-  const data = pdfData(row.evidence.pdf.replace(/\.pdf$/i, '.txt'))
+  const data = pdfData(textFileFor(row.evidence.source))
   const [rangeStart, rangeEnd] = row.evidence.lineRange.split('-').map((value) => Number(value))
   const primaryText = data.normalizedLines.slice(Math.max(0, (rangeStart || 1) - 1), rangeEnd || data.normalizedLines.length).join(' ')
   const frenchPrimaryMatch = sequenceIncludes(row.french, data.primaryText) || (row.evidence.sourceFragments?.length > 0 && row.evidence.sourceFragments.every((fragment) => sequenceIncludes(fragment, data.primaryText)))
@@ -246,10 +248,10 @@ const evidenceKeys = new Set([...baselineEvidence, ...supplementRows].map((row) 
 const sourceCardsWithoutEvidence = sourceVocabulary.filter((row) => !evidenceKeys.has(sourceKey(row.lessonId, row.french)))
 const baselineAligned = baselineEvidence.filter((row) => sourceKeys.has(sourceKey(row.lessonId, row.french)))
 const baselineAnswerKeyOnlyAligned = baselineAligned.filter((row) => row.evidence?.evidenceType === 'answer-key-confirmation')
-const supplementMissingEvidence = supplementRows.filter((row) => !row.evidence || !row.evidence.pdf || !row.evidence.page || !row.evidence.lineRange || !row.evidence.section || !row.evidence.category || !row.evidence.evidenceType || !row.evidence.englishFragments?.length)
+const supplementMissingEvidence = supplementRows.filter((row) => !row.evidence || !row.evidence.source || !row.evidence.page || !row.evidence.lineRange || !row.evidence.section || !row.evidence.category || !row.evidence.evidenceType || !row.evidence.englishFragments?.length)
 const supplementCategories = Object.fromEntries(Object.entries(Object.groupBy(supplementRows, (row) => row.evidence.category)).map(([key, value]) => [key, value.length]))
 const sourceSupplementEvidence = supplementRows.map((row) => {
-  const data = pdfData(row.evidence.pdf.replace(/\.pdf$/i, '.txt'))
+  const data = pdfData(textFileFor(row.evidence.source))
   const lines = data.records
   const normalizedFrench = norm(row.french)
   const [rangeStart, rangeEnd] = row.evidence.lineRange.split('-').map((value) => Number(value))
@@ -268,7 +270,7 @@ const sourceSupplementEvidence = supplementRows.map((row) => {
     if (index < answerKeyStart) return
     const normalizedLine = data.normalizedLines[index]
     if (normalizedFrench && sequenceIncludes(normalizedFrench, normalizedLine)) {
-      secondaryEvidence.push({ pdf: row.evidence.pdf, page: record.page, line: record.line, evidenceType: 'answer-key-confirmation' })
+      secondaryEvidence.push({ source: row.evidence.source, page: record.page, line: record.line, evidenceType: 'answer-key-confirmation' })
     }
   })
   return { lessonId: row.lessonId, french: row.french, answer: row.answer, primaryEvidence: row.evidence, reviewedTranslation, primaryEvidenceMatch, primaryRangeMatch, frenchPrimaryMatch, frenchRangeMatch, englishPrimaryMatch: englishActualMatch, englishActualMatch, englishRangeMatch: englishActualRangeMatch, englishActualRangeMatch, secondaryEvidence }

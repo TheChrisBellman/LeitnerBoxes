@@ -450,7 +450,7 @@ export const sourceSupplements1120: readonly SourceSupplement[] = sourceSuppleme
   return {
     ...row,
     evidence: {
-      pdf: `SC102-2-${objectiveNumber}-2005-fra.pdf`,
+      source: `SC102-2-${objectiveNumber}`,
       page: evidence.page,
       lineRange: evidence.lineRange,
       section: evidence.section,

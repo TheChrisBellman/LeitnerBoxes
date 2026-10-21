@@ -796,7 +796,7 @@ export const sourceSupplementsC: readonly SourceSupplement[] = sourceSupplementR
   return {
     ...row,
     evidence: {
-      pdf: 'SC102-1-6-2006-fra.pdf',
+      source: 'SC102-1-6',
       page: evidence.page,
       lineRange: evidence.lineRange,
       section: evidence.section,

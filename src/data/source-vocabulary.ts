@@ -677,7 +677,7 @@ export const a04SourceSupplements: readonly SourceSupplement[] = a04FormGroups.f
     french,
     answer,
     evidence: {
-      pdf: 'SC102-2-4-2005-fra.pdf',
+      source: 'SC102-2-4',
       page: phonetics ? 60 : placement ? 50 : avoirGrammar ? 24 : condition ? 11 : physical ? 10 : 3,
       lineRange: phonetics ? '1985-2050' : placement ? '1648-1670' : avoirGrammar ? '712-1210' : condition ? '443-458' : physical ? '371-458' : '192-253',
       section: phonetics ? '4.8 Phonétique' : placement ? '4.4 Grammaire' : grammar ? '4.1 and 4.3 Grammaire' : physical ? '4.2 Notions and 4.4 Grammaire' : '4.1 Notions',

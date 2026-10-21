@@ -1,6 +1,6 @@
 import { englishEvidenceFragments, type SourceEvidence, type SourceSupplement, type SourceSupplementRow } from './source-evidence.ts'
 
-type EvidenceSpec = Pick<SourceEvidence, 'pdf' | 'page' | 'lineRange' | 'section' | 'category'>
+type EvidenceSpec = Pick<SourceEvidence, 'source' | 'page' | 'lineRange' | 'section' | 'category'>
 
 const a01OrganizationRows: readonly SourceSupplementRow[] = [
   { lessonId: 'a-01', french: 'Agriculture et Agroalimentaire Canada', answer: 'Agriculture and Agri-Food Canada' },
@@ -94,39 +94,39 @@ const withEvidence = (rows: readonly SourceSupplementRow[], spec: EvidenceSpec):
 
 export const sourceSupplementsFollowup: readonly SourceSupplement[] = [
   ...withEvidence(a01OrganizationRows.slice(0, 13), {
-    pdf: 'SC102-2-1-2005-fra.pdf', page: 15, lineRange: '370-396',
+    source: 'SC102-2-1', page: 15, lineRange: '370-396',
     section: '1.1 Notions — partial list of ministries and organizations (similar names)', category: 'expression',
   }),
   ...withEvidence(a01OrganizationRows.slice(13, 23), {
-    pdf: 'SC102-2-1-2005-fra.pdf', page: 16, lineRange: '404-423',
+    source: 'SC102-2-1', page: 16, lineRange: '404-423',
     section: '1.1 Notions — partial list of ministries and organizations (different names)', category: 'expression',
   }),
   ...withEvidence(a01OrganizationRows.slice(23), {
-    pdf: 'SC102-2-1-2005-fra.pdf', page: 16, lineRange: '427-453',
+    source: 'SC102-2-1', page: 16, lineRange: '427-453',
     section: '1.1 Notions — frequently used acronyms and organizations', category: 'expression',
   }),
   ...withEvidence(a02DocumentRows.slice(0, 5), {
-    pdf: 'SC102-2-2-2005-fra.pdf', page: 20, lineRange: '424-436',
+    source: 'SC102-2-2', page: 20, lineRange: '424-436',
     section: '2.1 Notions — document classification', category: 'vocabulary',
   }),
   ...withEvidence(a02DocumentRows.slice(5), {
-    pdf: 'SC102-2-2-2005-fra.pdf', page: 20, lineRange: '464-474',
+    source: 'SC102-2-2', page: 20, lineRange: '464-474',
     section: '2.1 Notions — illustrated documents', category: 'vocabulary',
   }),
   ...withEvidence(a02GrammarRows, {
-    pdf: 'SC102-2-2-2005-fra.pdf', page: 26, lineRange: '656-670',
+    source: 'SC102-2-2', page: 26, lineRange: '656-670',
     section: '2.2 Grammaire — noun gender chart', category: 'grammar',
   }),
   ...withEvidence(a15ObtainingRows, {
-    pdf: 'SC102-2-15-2005-fra.pdf', page: 12, lineRange: '272-314',
+    source: 'SC102-2-15', page: 12, lineRange: '272-314',
     section: '15.1 Notions — obtaining indicators', category: 'verb/form',
   }),
   ...withEvidence(a19QualityRows, {
-    pdf: 'SC102-2-19-2005-fra.pdf', page: 18, lineRange: '382-413',
+    source: 'SC102-2-19', page: 18, lineRange: '382-413',
     section: '19.1 Notions — quality indicators', category: 'spelling',
   }),
   ...withEvidence(a19OpinionRows, {
-    pdf: 'SC102-2-19-2005-fra.pdf', page: 76, lineRange: '2293-2318',
+    source: 'SC102-2-19', page: 76, lineRange: '2293-2318',
     section: '19.7 Notions — opinion, agreement, and disagreement indicators', category: 'expression',
   }),
 ]

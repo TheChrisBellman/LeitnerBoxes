@@ -4,7 +4,8 @@ export type SourceCategory = 'vocabulary' | 'expression' | 'verb/form' | 'gramma
 export type SourceEvidenceType = 'source-table' | 'source-example' | 'answer-key-confirmation'
 
 export type SourceEvidence = {
-  pdf: string
+  /** Course-unit-objective id of the source document, e.g. SC102-2-21; file names stay local. */
+  source: string
   page: number
   lineRange: string
   section: string
