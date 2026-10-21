@@ -704,7 +704,7 @@ function CurriculumScreen({
                                   <span className="custom-check" aria-hidden="true"><Icon name="check" size={13} /></span>
                                   <span className="unit-copy"><strong>{materialLabel(unit)}</strong><small><span lang="fr">{unit.title}</span> · {unit.id.toUpperCase()}{mastered ? ' · Mastered · occasional refresh' : ''}</small></span>
                                 </label>
-                                <span className="unit-count">{mastered ? 'Mastered' : unitCardCounts[unit.id] ?? 0}</span>
+                                <span className="unit-count">{mastered ? 'Mastered' : `${unitCardCounts[unit.id] ?? 0} items`}</span>
                               </div>
                             )
                           })}

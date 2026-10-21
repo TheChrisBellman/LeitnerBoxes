@@ -1345,7 +1345,7 @@ button:disabled {
 
 .selection-total {
   color: var(--ink);
-  font-size: 32px;
+  font-size: 20px;
   font-weight: 700;
   letter-spacing: -0.04em;
   line-height: 0.9;
