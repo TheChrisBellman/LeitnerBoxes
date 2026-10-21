@@ -4206,3 +4206,75 @@ button:disabled {
     width: 480px;
   }
 }
+
+/* Sprint */
+.sprint-hud {
+  display: grid;
+  gap: 8px;
+}
+
+.sprint-hud-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.sprint-hud-row strong {
+  color: var(--ink);
+  font-family: var(--font-editorial);
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.sprint-clock.is-low strong {
+  color: var(--red);
+}
+
+.sprint-penalty {
+  margin-left: 10px;
+  color: var(--red);
+  font-style: normal;
+  font-weight: 700;
+  animation: sprint-penalty-pop 0.9s ease-out both;
+}
+
+@keyframes sprint-penalty-pop {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-8px); }
+}
+
+.sprint-timer-track {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--line);
+}
+
+.sprint-timer-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--cobalt);
+  transition: width 0.1s linear;
+}
+
+.sprint-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sprint-scope {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sprint-penalty { animation: none; }
+  .sprint-timer-fill { transition: none; }
+}

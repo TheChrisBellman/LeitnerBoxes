@@ -21,9 +21,10 @@ import {
   type PracticeMode,
   type PracticeQuestion,
 } from './leitner'
+import { SprintScreen } from './Sprint.tsx'
 import { clearStoredState, completeStreak, defaultState, loadState, saveState, type CorrectAdvanceMode, type StoredState, type Theme } from './storage'
 
-type Screen = 'today' | 'curriculum' | 'quiz' | 'results'
+type Screen = 'today' | 'curriculum' | 'quiz' | 'results' | 'sprint'
 type ViewMode = 'normal' | 'presentation'
 type IconName = 'menu' | 'close' | 'settings' | 'expand' | 'minimize' | 'arrow' | 'arrowLeft' | 'check' | 'chevron' | 'calendar' | 'book' | 'progress' | 'practice' | 'spark' | 'clock' | 'cards'
 
@@ -314,6 +315,7 @@ function MobileHeader({ onMenu, menuOpen, triggerRef, screen, onNavigate }: { on
       <nav className="desktop-nav" aria-label="Primary navigation">
         <button type="button" className={practiceActive ? 'is-active' : ''} aria-current={practiceActive ? 'page' : undefined} onClick={() => onNavigate('today')}>Practice</button>
         <button type="button" className={screen === 'curriculum' ? 'is-active' : ''} aria-current={screen === 'curriculum' ? 'page' : undefined} onClick={() => onNavigate('curriculum')}>Material</button>
+        <button type="button" className={screen === 'sprint' ? 'is-active' : ''} aria-current={screen === 'sprint' ? 'page' : undefined} onClick={() => onNavigate('sprint')}>Sprint</button>
         <button type="button" className={screen === 'results' ? 'is-active' : ''} aria-current={screen === 'results' ? 'page' : undefined} onClick={() => onNavigate('results')}>Progress</button>
       </nav>
       <button ref={triggerRef} type="button" className="menu-button" onClick={onMenu} aria-label="Open menu" aria-haspopup="dialog" aria-expanded={menuOpen} aria-controls="app-menu">
@@ -382,6 +384,7 @@ function MenuSheet({
           <nav className="menu-links" aria-label="App sections">
             <button type="button" className={practiceActive ? 'is-active' : ''} aria-current={practiceActive ? 'page' : undefined} onClick={() => onNavigate('today')}><strong>Practice</strong></button>
             <button type="button" className={screen === 'curriculum' ? 'is-active' : ''} aria-current={screen === 'curriculum' ? 'page' : undefined} onClick={() => onNavigate('curriculum')}><strong>Material</strong></button>
+            <button type="button" className={screen === 'sprint' ? 'is-active' : ''} aria-current={screen === 'sprint' ? 'page' : undefined} onClick={() => onNavigate('sprint')}><strong>Sprint</strong></button>
             <button type="button" className={screen === 'results' ? 'is-active' : ''} aria-current={screen === 'results' ? 'page' : undefined} onClick={() => onNavigate('results')}><strong>Progress</strong></button>
           </nav>
         </section>
@@ -1377,6 +1380,7 @@ export default function App() {
   const readyCardCount = useMemo(() => queueCards(allTargets, state.progress, activeLessonIds, today, state.dailyGoal, { mode: state.practiceMode, maxNewCards: state.dailyGoal, activityTypes: state.enabledActivityTypes, masteredLessonIds: masteredSelectedLessonIds }).length, [activeLessonIds, masteredSelectedLessonIds, state.dailyGoal, state.enabledActivityTypes, state.practiceMode, state.progress, today])
   const activityCounts = useMemo(() => activityAvailability(allTargets, state.selectedLessonIds, 'mixed'), [state.selectedLessonIds])
   const activeUnits = useMemo(() => activeLessonIds.map((id) => curriculumById.get(id)).filter((unit): unit is CurriculumUnit => Boolean(unit)), [activeLessonIds])
+  const sprintCards = useMemo(() => allCards.filter((card) => state.selectedLessonIds.includes(card.lessonId)), [state.selectedLessonIds])
   const activePreset = useMemo(() => practicePresetForSettings(state.practiceMode, state.enabledActivityTypes), [state.enabledActivityTypes, state.practiceMode])
   const unitCardCounts = useMemo(() => allTargets.reduce<Record<string, number>>((counts, card) => {
     if (cardMatchesMode(card, state.practiceMode, state.enabledActivityTypes)) counts[card.lessonId] = (counts[card.lessonId] ?? 0) + 1
@@ -1751,6 +1755,7 @@ export default function App() {
     const hasMoreCards = sessionQueueCounts.overdue + sessionQueueCounts.due + sessionQueueCounts.newCards > 0
     if (screen === 'curriculum') return <CurriculumScreen selectedIds={activeLessonIds} masteredIds={masteredLessonIds} masteredSelectedCount={masteredSelectedLessonIds.size} selectedCardCount={selectedCardCount} practiceMode={state.practiceMode} unitCardCounts={unitCardCounts} onToggleLesson={toggleLesson} onToggleLevel={toggleLevel} onBack={() => setScreen('today')} />
     if (screen === 'quiz' && currentQuestion) return <QuizScreen question={currentQuestion} unit={currentUnit} currentBox={state.progress[currentQuestion.card.id]?.box ?? 1} index={sessionIndex} total={session.length} feedback={feedback} repairing={repairing} onAnswer={handleAnswer} onStartRepair={beginRepair} onContinue={continueSession} onSkip={skipCurrentCard} onExit={exitSession} onMenu={openMenu} menuOpen={menuOpen} menuTriggerRef={menuTriggerRef} viewMode={viewMode} onTogglePresentation={togglePresentationMode} />
+    if (screen === 'sprint') return <SprintScreen selectedCards={sprintCards} onExit={() => navigate('today')} />
     if (screen === 'results') return results ? <ResultsScreen results={results} shelf={sessionShelf} hasMoreCards={hasMoreCards} onDone={() => setScreen('today')} onKeepGoing={() => startSession(sessionLessonIds)} /> : <ProgressionOverviewScreen state={state} shelf={shelf} activeUnits={activeUnits} onToday={() => setScreen('today')} onCurriculum={() => setScreen('curriculum')} />
     return <TodayScreen counts={shelf} queueCounts={queueCounts} activeUnits={activeUnits} masteredSelectedCount={masteredSelectedLessonIds.size} dailyGoal={state.dailyGoal} practiceMode={state.practiceMode} activePreset={activePreset} missMode={state.missMode} enabledActivityTypes={state.enabledActivityTypes} activityCounts={activityCounts} selectedCardCount={selectedCardCount} readyCardCount={readyCardCount} onStart={() => startSession()} notice={notice} motion={shelfMotion} onChooseCurriculum={() => setScreen('curriculum')} onActivityTypesChange={updateActivityTypes} onPresetChange={updatePreset} />
   }
