@@ -9,6 +9,7 @@ import { conjugationsCExpansion1 } from './conjugations-c-expansion-1.ts'
 import { conjugationsCExpansion2 } from './conjugations-c-expansion-2.ts'
 import { conjugationsCExpansion3 } from './conjugations-c-expansion-3.ts'
 import { exerciseTargets } from './pilot-exercises.ts'
+import { numberCards } from './numbers.ts'
 import type { PracticeCard, PracticeTarget } from './types.ts'
 
 export const allCards: PracticeCard[] = [
@@ -22,6 +23,7 @@ export const allCards: PracticeCard[] = [
   ...conjugationsCExpansion1,
   ...conjugationsCExpansion2,
   ...conjugationsCExpansion3,
+  ...numberCards,
 ]
 export const allTargets: PracticeTarget[] = [...allCards, ...exerciseTargets]
 export const allWords = allCards.filter((card) => card.kind === 'vocabulary')

@@ -1,5 +1,5 @@
 export type Level = 'A' | 'B' | 'C'
-export type CardKind = 'vocabulary' | 'conjugation'
+export type CardKind = 'vocabulary' | 'conjugation' | 'number'
 export type ExerciseLanguage = 'fr' | 'en'
 export type CardTier = 'core' | 'expansion' | 'applied'
 export type ConjugationPerson = 'je' | 'tu' | 'il/elle' | 'nous' | 'vous' | 'ils/elles'
@@ -51,7 +51,12 @@ export type ConjugationCard = CardBase & {
   distractors: [string, string, string]
 }
 
-export type PracticeCard = VocabularyCard | ConjugationCard
+export type NumberCard = CardBase & {
+  kind: 'number'
+  label: string
+}
+
+export type PracticeCard = VocabularyCard | ConjugationCard | NumberCard
 export type Word = VocabularyCard
 
 export type QuestionHelp = {
@@ -73,6 +78,7 @@ export type ExerciseKind =
 export const ACTIVITY_TYPES = [
   'vocabulary',
   'noun-gender',
+  'numbers',
   'grammar',
   'conjugation',
   'best-response',
