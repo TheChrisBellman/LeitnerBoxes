@@ -1285,7 +1285,8 @@ function QuizScreen({
                 {selectedTokenIndexes.map((tokenIndex) => <button type="button" className={`word-token is-selected ${draggedToken?.tokenIndex === tokenIndex ? 'is-dragging' : ''}`} key={tokenIndex} {...tokenDragProps(tokenIndex)} onClick={() => toggleToken(tokenIndex)} disabled={Boolean(feedback)} aria-label={`Remove ${question.tokens?.[tokenIndex]}`}>{question.tokens?.[tokenIndex]}</button>)}
               </div>
               <div className="token-bank" aria-label="Available words">
-                {remainingTokenIndexes.map((tokenIndex) => <button type="button" className={`word-token ${draggedToken?.tokenIndex === tokenIndex ? 'is-dragging' : ''}`} key={tokenIndex} {...tokenDragProps(tokenIndex)} onClick={() => toggleToken(tokenIndex)} disabled={Boolean(feedback)}>{question.tokens?.[tokenIndex]}</button>)}
+                {/* Used tiles leave a ghost so the rest of the bank never shifts. */}
+                {tokenOrder.map((tokenIndex) => selectedTokenIndexes.includes(tokenIndex) ? <span className="word-token is-ghost" key={tokenIndex} aria-hidden="true">{question.tokens?.[tokenIndex]}</span> : <button type="button" className={`word-token ${draggedToken?.tokenIndex === tokenIndex ? 'is-dragging' : ''}`} key={tokenIndex} {...tokenDragProps(tokenIndex)} onClick={() => toggleToken(tokenIndex)} disabled={Boolean(feedback)}>{question.tokens?.[tokenIndex]}</button>)}
               </div>
               <button type="button" className="button button-primary arrange-check" onClick={submitArrangedAnswer} disabled={!canCheckArranged}>Check answer</button>
             </div>

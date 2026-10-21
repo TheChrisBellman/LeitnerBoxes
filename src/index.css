@@ -2619,6 +2619,15 @@ button:disabled {
   cursor: default;
 }
 
+.word-token.is-ghost {
+  display: inline-block;
+  border-style: dashed;
+  background: transparent;
+  color: transparent;
+  cursor: default;
+  user-select: none;
+}
+
 .word-token:not(:disabled) {
   touch-action: none;
 }
