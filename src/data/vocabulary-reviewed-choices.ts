@@ -1,5 +1,149 @@
 // Reviewed contrasts for source vocabulary. Keep synonyms out of the wrong choices.
 export const reviewedVocabularyChoices: Record<string, { distractors: [string, string, string]; reverseDistractors: [string, string, string] }> = {
+  "a-02|des": {
+    "distractors": [
+      "the",
+      "a",
+      "a little"
+    ],
+    "reverseDistractors": [
+      "la",
+      "l’",
+      "les"
+    ]
+  },
+  "a-02|du": {
+    "distractors": [
+      "the",
+      "a",
+      "a little"
+    ],
+    "reverseDistractors": [
+      "l’",
+      "les",
+      "un"
+    ]
+  },
+  "a-02|de la": {
+    "distractors": [
+      "the",
+      "a",
+      "a little"
+    ],
+    "reverseDistractors": [
+      "les",
+      "un",
+      "une"
+    ]
+  },
+  "a-02|de l'": {
+    "distractors": [
+      "a",
+      "the",
+      "a little"
+    ],
+    "reverseDistractors": [
+      "un",
+      "une",
+      "le"
+    ]
+  },
+  "a-11|un peu": {
+    "distractors": [
+      "a lot",
+      "a few",
+      "several"
+    ],
+    "reverseDistractors": [
+      "beaucoup",
+      "quelques",
+      "plusieurs"
+    ]
+  },
+  "a-14|un incident": {
+    "distractors": [
+      "a cancellation",
+      "an event",
+      "a delay"
+    ],
+    "reverseDistractors": [
+      "une annulation",
+      "un événement",
+      "un retard"
+    ]
+  },
+  "a-14|une annulation": {
+    "distractors": [
+      "an event",
+      "an incident",
+      "a delay"
+    ],
+    "reverseDistractors": [
+      "un événement",
+      "un incident",
+      "un retard"
+    ]
+  },
+  "a-14|un événement": {
+    "distractors": [
+      "a cancellation",
+      "an incident",
+      "a meeting"
+    ],
+    "reverseDistractors": [
+      "une annulation",
+      "un incident",
+      "une réunion"
+    ]
+  },
+  "a-16|un refus": {
+    "distractors": [
+      "an acceptance",
+      "an offer",
+      "a request"
+    ],
+    "reverseDistractors": [
+      "une acceptation",
+      "une offre",
+      "une demande"
+    ]
+  },
+  "a-16|une acceptation": {
+    "distractors": [
+      "an offer",
+      "a refusal",
+      "a request"
+    ],
+    "reverseDistractors": [
+      "une offre",
+      "un refus",
+      "une demande"
+    ]
+  },
+  "a-16|une offre": {
+    "distractors": [
+      "a refusal",
+      "an acceptance",
+      "a request"
+    ],
+    "reverseDistractors": [
+      "un refus",
+      "une acceptation",
+      "une demande"
+    ]
+  },
+  "a-22|une dizaine": {
+    "distractors": [
+      "about twenty",
+      "about fifteen",
+      "about one hundred"
+    ],
+    "reverseDistractors": [
+      "une vingtaine",
+      "une quinzaine",
+      "une centaine"
+    ]
+  },
   "a-02|diffusion restreinte": {
     "distractors": [
       "confidential",

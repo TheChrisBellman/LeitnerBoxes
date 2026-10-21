@@ -1,11 +1,11 @@
 import type { NumberCard } from './types.ts'
 
-const TEN = 10
-const TWENTY = 20
+export const TEN = 10
+export const TWENTY = 20
 const EIGHTY = 80
-const HUNDRED = 100
-const THOUSAND = 1000
-const MILLION = 1_000_000
+export const HUNDRED = 100
+export const THOUSAND = 1000
+export const MILLION = 1_000_000
 const FIRST_COMPOUND_TEEN = 17
 const SEVENTY = 70
 const MIN_PLURAL_HUNDREDS = 2
@@ -99,19 +99,29 @@ export function pickNumber(card: NumberCard, random: () => number = Math.random)
   return patterns.find((pattern) => pattern.id === card.id)!.pick(random)
 }
 
-// Teens that sound like a unit or a decade: treize/trois/trente, seize/six/soixante.
-const soundAlikePairs: [number, number][] = [[2, 12], [3, 13], [4, 14], [5, 15], [6, 16], [3, 30], [4, 40], [5, 50], [6, 60], [13, 30], [14, 40], [15, 50], [16, 60]]
+// deux…six each have a sound-alike teen (douze…seize); from trois on the decade sounds alike too (treize, trente).
+const FIRST_SOUND_ALIKE_UNIT = 2
+const LAST_SOUND_ALIKE_UNIT = 6
+const FIRST_SOUND_ALIKE_DECADE = 3
+const NINETY = 90
+const soundAlikePairs: [number, number][] = Array.from({ length: LAST_SOUND_ALIKE_UNIT - FIRST_SOUND_ALIKE_UNIT + 1 }, (_, offset) => FIRST_SOUND_ALIKE_UNIT + offset)
+  .flatMap((unit): [number, number][] => {
+    const teen = TEN + unit
+    const decade = unit * TEN
+    return unit < FIRST_SOUND_ALIKE_DECADE ? [[unit, teen]] : [[unit, teen], [unit, decade], [teen, decade]]
+  })
 
 /** Wrong numbers a learner might pick for n, most tempting first: sound-alikes, the 70s/90s mix-up, swapped digits, then neighbours. */
 export function numberLookalikes(n: number): number[] {
   const size = Math.abs(n)
   const sign = Math.sign(n) || 1
-  const swapped = size >= TEN && size < HUNDRED ? (size % TEN) * TEN + Math.floor(size / TEN) : size
-  const step = size >= HUNDRED ? 10 ** Math.floor(Math.log10(size)) : TEN
+  const swapped = size >= TEN && size < HUNDRED && size % TEN !== 0 ? (size % TEN) * TEN + Math.floor(size / TEN) : size
+  const step = size >= HUNDRED ? TEN ** Math.floor(Math.log10(size)) : TEN
   const near = [
-    ...soundAlikePairs.flatMap(([a, b]) => size === a ? [b] : size === b ? [a] : []),
+    ...soundAlikePairs.filter((pair) => pair.includes(size)).map(([a, b]) => a === size ? b : a),
     // soixante-douze and quatre-vingt-douze both end in douze.
-    ...(size >= SEVENTY && size < EIGHTY ? [size + TWENTY] : size >= EIGHTY + TEN && size < HUNDRED ? [size - TWENTY] : []),
+    ...(size >= SEVENTY && size < EIGHTY ? [size + TWENTY] : []),
+    ...(size >= NINETY && size < HUNDRED ? [size - TWENTY] : []),
     swapped,
     ...(size >= HUNDRED ? [size * TEN, size / TEN] : []),
     size + step, size + 1, size - step, size - 1,
@@ -121,22 +131,39 @@ export function numberLookalikes(n: number): number[] {
 }
 
 const teenUnits: Record<string, string> = { onze: 'un', douze: 'deux', treize: 'trois', quatorze: 'quatre', quinze: 'cinq', seize: 'six' }
+// A plural vingts or cents: matches "deux cents", not "cent un".
+// https://regex101.com/?regex=%5Cb%28vingt%7Ccent%29s%5Cb&testString=deux%20cents%0Aquatre-vingts%0Acent%20un
+const FINAL_PLURAL = /\b(vingt|cent)s\b/
+// Quatre-vingt or a multiplied cent with more after it: matches "quatre-vingt-un", "deux cent mille", not "vingt-deux" or "cent un".
+// https://regex101.com/?regex=%5Cb%28quatre-vingt%7C%28%3F%3Adeux%7Ctrois%7Cquatre%7Ccinq%7Csix%7Csept%7Chuit%7Cneuf%29%20cent%29%5Cb%28%3F%3D%5B%20-%5D%29&testString=quatre-vingt-un%0Adeux%20cent%20mille%0Avingt-deux%0Acent%20un
+const INNER_VINGT_OR_CENT = /\b(quatre-vingt|(?:deux|trois|quatre|cinq|six|sept|huit|neuf) cent)\b(?=[ -])/
+// Mille after a multiplier: matches "deux mille", not "mille".
+// https://regex101.com/?regex=%20mille%5Cb&testString=deux%20mille%0Amille
+const MULTIPLIED_MILLE = / mille\b/
+// A hyphenated final un or onze: matches "quatre-vingt-un", not "vingt et un".
+// https://regex101.com/?regex=-%28un%7Conze%29%24&testString=quatre-vingt-un%0Avingt%20et%20un
+const FINAL_UN_OR_ONZE = /-(un|onze)$/
+// Onze to seize as a whole word: matches "soixante-douze", not "dix-sept".
+// https://regex101.com/?regex=%5Cb%28onze%7Cdouze%7Ctreize%7Cquatorze%7Cquinze%7Cseize%29%5Cb&testString=soixante-douze%0Adix-sept
+const TEEN_WORD = /\b(onze|douze|treize|quatorze|quinze|seize)\b/
+// The gaps between groups of three digits: matches inside "10000", not in "100".
+// https://regex101.com/?regex=%5CB%28%3F%3D%28%5Cd%7B3%7D%29%2B%28%3F%21%5Cd%29%29&testString=10000%0A100
+const DIGIT_GROUP = /\B(?=(\d{3})+(?!\d))/g
 
-/** Common misspellings of n: plural -s on the wrong vingt or cent, a missing or extra « et », « dix-six » for seize. Never just a hyphen change. */
+/** Common misspellings of n: -s on quatre-vingt or a multiplied cent where it does not belong (or missing where it does), a missing or extra « et », « dix-six » for seize. Never just a hyphen change. */
 export function frenchNumberMisspellings(n: number): string[] {
   const spelled = spellFrenchNumber(n)
-  const loose = (text: string) => text.replace(/-/g, ' ')
+  const loose = (text: string) => text.split('-').join(' ')
   const wrong = [
-    spelled.replace(/\b(vingt|cent)s\b/, '$1'),
-    spelled.replace(/\b(vingt|cent)\b(?=[ -])/, '$1s'),
-    spelled.replace(/ mille\b/, ' milles'),
+    spelled.replace(FINAL_PLURAL, '$1'),
+    spelled.replace(INNER_VINGT_OR_CENT, '$1s'),
+    spelled.replace(MULTIPLIED_MILLE, ' milles'),
     spelled.replace(' et ', '-'),
-    spelled.replace(/-(un|onze)$/, ' et $1'),
-    spelled.replace(/\b(onze|douze|treize|quatorze|quinze|seize)\b/, (teen) => `dix-${teenUnits[teen]}`).replace(' et dix', '-dix'),
+    spelled.replace(FINAL_UN_OR_ONZE, ' et $1'),
+    spelled.replace(TEEN_WORD, (teen) => `dix-${teenUnits[teen]}`).replace(' et dix', '-dix'),
   ]
   return [...new Set(wrong)].filter((text) => loose(text) !== loose(spelled))
 }
 
-const DIGIT_GROUP = /\B(?=(\d{3})+(?!\d))/g
 /** Writes an integer the way the course does: thin groups of three, « 10 000 ». */
 export const groupDigits = (n: number) => String(n).replace(DIGIT_GROUP, ' ')

@@ -11,8 +11,8 @@ const ONE_STEP = 1
 const TWO_STEPS = ONE_STEP + ONE_STEP
 const NUMBER_NEIGHBOUR_OFFSETS = [ONE_STEP, TWO_STEPS, DIGIT_BASE, DIGIT_BASE * TWO_STEPS].flatMap((offset) => [offset, -offset])
 const TEMPTING_COUNT = 4
-// Half the spelled-out questions that have a classic misspelling (quatre-vingt, soixante-onze) show it as a choice.
-const MISSPELLING_CHANCE = 0.5
+// A quarter of the spelled-out questions that have a classic misspelling (quatre-vingt, soixante-onze) show it as a choice.
+const MISSPELLING_CHANCE = 0.25
 
 export const SPRINT_CATEGORIES = ['noun-gender', 'french-to-english', 'english-to-french', 'verb-forms', 'numbers'] as const
 export type SprintCategory = typeof SPRINT_CATEGORIES[number]

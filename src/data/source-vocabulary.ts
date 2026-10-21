@@ -4,7 +4,7 @@ import { reviewedTranslationKeys, sourceSupplements2140 } from './source-supplem
 import { sourceSupplementsC } from './source-supplements-c.ts'
 import { sourceSupplementsFollowup } from './source-supplements-followup.ts'
 import { sourceSupplementsReview } from './source-supplements-review.ts'
-import { frenchNumberMisspellings, groupDigits, numberLookalikes, spellFrenchNumber } from './numbers.ts'
+import { frenchNumberMisspellings, groupDigits, HUNDRED, MILLION, numberLookalikes, spellFrenchNumber, TEN, THOUSAND, TWENTY } from './numbers.ts'
 import { englishEvidenceFragments, type SourceEvidence, type SourceSupplement } from './source-evidence.ts'
 import { vocabularyPracticeFor } from './vocabulary-practice.ts'
 import { reviewedVocabularyChoices, reviewedVocabularyEquivalences } from './vocabulary-reviewed-choices.ts'
@@ -1335,25 +1335,35 @@ function familyCandidates(row: SourceRow, index: number): SourceRow[] {
 }
 
 // Choices must look alike: one answer with digits or a question mark among plain words gives itself away.
-const hasDigit = (text: string) => /\d/.test(text)
+// Any digit: matches "30 g", not "thirty".
+// https://regex101.com/?regex=%5Cd&testString=30%20g%0Athirty
+const DIGIT = /\d/
+const hasDigit = (text: string) => DIGIT.test(text)
 const isQuestion = (text: string) => text.trim().endsWith('?')
 export const sameChoiceShape = (a: string, b: string) => hasDigit(a) === hasDigit(b) && isQuestion(a) === isQuestion(b)
 
 const englishNumberWords: [number, string][] = [
   ...['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'].map((word, n): [number, string] => [n, word]),
-  ...['twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'].map((word, n): [number, string] => [(n + 2) * 10, word]),
-  [100, 'one hundred'], [1000, 'one thousand'], [1_000_000, 'one million'],
+  ...['twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'].map((word, n): [number, string] => [TWENTY + n * TEN, word]),
+  [HUNDRED, 'one hundred'], [THOUSAND, 'one thousand'], [MILLION, 'one million'],
 ]
 const englishNumberWord = new Map(englishNumberWords)
 const englishNumberValue = new Map(englishNumberWords.map(([n, word]) => [word, n]))
-// First number in « 1 000e », « -5 ºC » or « 75 % »; a space only groups thousands, so « 3 1/2 » gives 3.
-// https://regex101.com/?regex=-%3F%5Cd%7B1%2C3%7D(%3F%3A%20%5Cd%7B3%7D)%2B%7C-%3F%5Cd%2B&testString=1%20000e%0A-5%20%C2%BAC%0A75%20%25%0A3%201%2F2
+// First number in "1 000e", "-5 ºC" or "75 %"; a space only groups thousands, so "3 1/2" gives 3, not "3 1".
+// https://regex101.com/?regex=-%3F%5Cd%7B1%2C3%7D%28%3F%3A%20%5Cd%7B3%7D%29%2B%7C-%3F%5Cd%2B&testString=1%20000e%0A-5%20%C2%BAC%0A75%20%25%0A3%201%2F2
 const numberInAnswer = /-?\d{1,3}(?: \d{3})+|-?\d+/
+// An optional "about " before the rest: "about fifteen" splits into "about " and "fifteen"; "sixteen" has no prefix.
+// https://regex101.com/?regex=%5E%28about%20%29%3F%28.%2A%29%24&testString=about%20fifteen%0Asixteen
+const ABOUT_PREFIX = /^(about )?(.*)$/
+// A whole answer that is a number or an ordinal: matches "10 000" and "23e", not "75 %".
+// https://regex101.com/?regex=%5E%28%5Cd%5B%5Cd%20%5D%2A%29%28e%3F%29%24&testString=10%20000%0A23e%0A75%20%25
+const NUMBER_OR_ORDINAL = /^(\d[\d ]*)(e?)$/
 const closeness = (a: number, b: number) => Math.abs(Math.log((a + 1) / (b + 1)))
+const digitValue = (written: string) => Number(written.split(' ').join(''))
 
 // Number answers get look-alike numbers written the same way: « sixteen » faces six and sixty, « 72 » faces 92.
 function numberAnswerChoices(answer: string): string[] {
-  const [, about = '', word = ''] = normalize(answer).match(/^(about )?(.*)$/) ?? []
+  const [, about = '', word = ''] = normalize(answer).match(ABOUT_PREFIX) ?? []
   const english = englishNumberValue.get(word)
   if (english !== undefined) {
     const nearest = englishNumberWords.map(([n]) => n).sort((a, b) => closeness(a, english) - closeness(b, english))
@@ -1361,21 +1371,28 @@ function numberAnswerChoices(answer: string): string[] {
   }
   const written = answer.match(numberInAnswer)?.[0]
   if (!written) return []
-  return numberLookalikes(Number(written.replace(/ /g, ''))).map((n) => answer.replace(written, groupDigits(n)))
+  return numberLookalikes(digitValue(written)).map((n) => answer.replace(written, groupDigits(n)))
 }
 
-// « trente grammes » is no stand-in for « y compris »; « une quinzaine » still is for « une douzaine » (12).
+// « trente grammes » is no stand-in for « y compris »; « une quinzaine » still is for « une douzaine ».
 const numberTermForWord = (candidate: { answer: string }, row: SourceRow) => hasDigit(candidate.answer) && !hasDigit(row.answer)
-const ordinal = (cardinal: string) => cardinal.replace(/s$/, '').replace(/e$/, '').replace(/cinq$/, 'cinqu').replace(/neuf$/, 'neuv') + 'ième'
+// A final e, or the plural s of vingts or cents, dropped before -ième: matches "quatre" and "deux cents", not "trois" or "cinq".
+// https://regex101.com/?regex=%28%3F%3A%28%3F%3C%3Dvingt%7Ccent%29s%7Ce%29%24&testString=quatre%0Adeux%20cents%0Atrois%0Acinq
+const ORDINAL_DROP = /(?:(?<=vingt|cent)s|e)$/
+const ordinalStems: Record<string, string> = { cinq: 'cinqu', neuf: 'neuv' }
+const ordinal = (cardinal: string) => Object.entries(ordinalStems)
+  .reduce((text, [end, stem]) => text.endsWith(end) ? text.slice(0, -end.length) + stem : text, cardinal.replace(ORDINAL_DROP, '')) + 'ième'
 
-// A spelled-out number gets a common misspelling of itself, then look-alike numbers spelled correctly.
-function numberFrenchChoices(row: SourceRow): string[] {
-  const digits = row.answer.trim().match(/^(\d[\d ]*)(e?)$/)
-  const value = englishNumberValue.get(normalize(row.answer)) ?? (digits ? Number(digits[1].replace(/ /g, '')) : undefined)
+// A spelled-out number gets look-alike numbers spelled correctly; every third one also gets a common misspelling of itself.
+const MISSPELLING_EVERY = 3
+function numberFrenchChoices(row: SourceRow, index: number): string[] {
+  const digits = row.answer.trim().match(NUMBER_OR_ORDINAL)
+  const value = englishNumberValue.get(normalize(row.answer)) ?? (digits ? digitValue(digits[1]) : undefined)
   if (value === undefined) return []
   if (digits?.[2]) return normalize(row.french) === ordinal(spellFrenchNumber(value)) ? numberLookalikes(value).map((n) => ordinal(spellFrenchNumber(n))) : []
   if (normalize(row.french) !== spellFrenchNumber(value)) return []
-  return [...frenchNumberMisspellings(value).slice(0, 1), ...numberLookalikes(value).map(spellFrenchNumber)]
+  const misspelling = index % MISSPELLING_EVERY === 0 ? frenchNumberMisspellings(value).slice(0, 1) : []
+  return [...misspelling, ...numberLookalikes(value).map(spellFrenchNumber)]
 }
 
 function answerChoices(row: SourceRow, index: number): [string, string, string] {
@@ -1418,7 +1435,7 @@ function reverseChoices(row: SourceRow, index: number): [string, string, string]
   const equivalentFrench = new Set(equivalentFrenchByAnswer.get(answer) ?? [])
   vocabularyEquivalentForms(row).french.forEach((french) => equivalentFrench.add(normalize(french)))
   const choices: string[] = []
-  for (const french of numberFrenchChoices(row)) {
+  for (const french of numberFrenchChoices(row, index)) {
     if (choices.length === 3) break
     if (seen.has(normalize(french))) continue
     seen.add(normalize(french))

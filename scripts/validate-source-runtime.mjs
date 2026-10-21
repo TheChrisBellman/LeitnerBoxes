@@ -1,7 +1,7 @@
 import { curriculumUnits } from '../src/data/curriculum.ts'
 import { sameChoiceShape, sourceVocabulary } from '../src/data/source-vocabulary.ts'
-import { allCards, allWords } from '../src/data/words.ts'
-import { buildVocabularyQuestion } from '../src/leitner.ts'
+import { allCards, allTargets, allWords } from '../src/data/words.ts'
+import { buildSessionQuestions, buildVocabularyQuestion } from '../src/leitner.ts'
 import { buildSprintQuestions, SPRINT_CATEGORIES } from '../src/sprint.ts'
 
 const expectedSourceCards = 2337
@@ -34,6 +34,7 @@ if (unexpectedSourceUnits.length > 0) failures.push(`source vocabulary contains 
 // Every choice set must look alike, so the answer never stands out as the only number or the only question.
 const choiceSets = [
   ...runtimeVocabulary.flatMap((card) => [false, true].map((reverse) => buildVocabularyQuestion(card, reverse, allCards)).map((question) => [question.answer, ...question.distractors])),
+  ...buildSessionQuestions(allTargets, {}).filter((question) => question.format === 'choice' && question.kind !== 'vocabulary').map((question) => [question.answer, ...question.distractors]),
   ...SPRINT_CATEGORIES.flatMap((category) => buildSprintQuestions(category, allCards).map((question) => question.choices)),
 ]
 const mixedChoiceSets = choiceSets.filter(([answer, ...distractors]) => distractors.some((distractor) => !sameChoiceShape(distractor, answer)))
