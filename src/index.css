@@ -2609,6 +2609,18 @@ button:disabled {
   cursor: default;
 }
 
+.word-token:not(:disabled) {
+  touch-action: none;
+}
+
+.word-token.is-dragging {
+  position: relative;
+  z-index: 2;
+  cursor: grabbing;
+  transition: none;
+  box-shadow: 0 6px 18px rgba(16, 33, 61, 0.18);
+}
+
 .arrange-check {
   width: 100%;
 }
