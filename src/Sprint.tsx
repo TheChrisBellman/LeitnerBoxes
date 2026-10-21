@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { allCards } from './data/words.ts'
+import { curriculumUnits, materialLabelsById, type Level } from './data/curriculum'
 import type { PracticeCard } from './data/types.ts'
 import {
   SPRINT_PENALTY_SECONDS,
@@ -39,7 +40,7 @@ function Hud({ remainingMs, score, penalty }: { remainingMs: number; score: numb
   )
 }
 
-export function SprintScreen({ selectedCards, onExit }: { selectedCards: readonly PracticeCard[]; onExit: () => void }) {
+export function SprintScreen({ selectedCards, selectedIds, masteredIds, onToggleLesson, onExit }: { selectedCards: readonly PracticeCard[]; selectedIds: readonly string[]; masteredIds: ReadonlySet<string>; onToggleLesson: (id: string) => void; onExit: () => void }) {
   const [phase, setPhase] = useState<Phase>('pick')
   const [category, setCategory] = useState<SprintCategory>('french-to-english')
   const [scope, setScope] = useState<Scope>(selectedCards.length > 0 ? 'selected' : 'all')
@@ -53,7 +54,7 @@ export function SprintScreen({ selectedCards, onExit }: { selectedCards: readonl
   const deadlineRef = useRef(0)
   const headingRef = useRef<HTMLHeadingElement>(null)
 
-  const pool = scope === 'all' ? allCards : selectedCards
+  const pool = scope === 'all' || selectedCards.length === 0 ? allCards : selectedCards
   const counts = useMemo(() => Object.fromEntries(sprintCategoryOptions.map((option) => [option.id, buildSprintQuestions(option.id, pool).length])) as Record<SprintCategory, number>, [pool])
   const question = questions.length > 0 ? questions[run.index % questions.length] : undefined
 
@@ -203,6 +204,29 @@ export function SprintScreen({ selectedCards, onExit }: { selectedCards: readonl
         <button type="button" className={`practice-preset ${scope === 'selected' ? 'is-selected' : ''}`} aria-pressed={scope === 'selected'} disabled={selectedCards.length === 0} onClick={() => setScope('selected')}><strong>Selected material</strong><small>Units chosen on the Material screen.</small></button>
         <button type="button" className={`practice-preset ${scope === 'all' ? 'is-selected' : ''}`} aria-pressed={scope === 'all'} onClick={() => setScope('all')}><strong>Everything</strong><small>All units, all levels.</small></button>
       </div>
+      <details className="sprint-units">
+        <summary>Change units ({selectedIds.length} selected)</summary>
+        {(['A', 'B', 'C'] as Level[]).map((level) => (
+          <div className="unit-group" key={level}>
+            <div className="unit-group-heading"><span>Level {level}</span></div>
+            <div className="unit-options">
+              {curriculumUnits.filter((unit) => unit.level === level).map((unit) => {
+                const checked = selectedIds.includes(unit.id)
+                const mastered = masteredIds.has(unit.id)
+                return (
+                  <label className={`unit-option ${checked ? 'is-selected' : ''} ${mastered ? 'is-mastered' : ''}`} key={unit.id}>
+                    <span className="unit-selection">
+                      <input type="checkbox" checked={checked} disabled={mastered} onChange={() => { onToggleLesson(unit.id); setScope('selected') }} />
+                      <span className="custom-check" aria-hidden="true" />
+                      <span className="unit-copy"><strong>{materialLabelsById[unit.id] ?? unit.title}</strong><small><span lang="fr">{unit.title}</span> · {unit.id.toUpperCase()}{mastered ? ' · Mastered' : ''}</small></span>
+                    </span>
+                  </label>
+                )
+              })}
+            </div>
+          </div>
+        ))}
+      </details>
       <div className="results-actions">
         <button type="button" className="button button-primary" onClick={start} disabled={counts[category] === 0}>Start {SPRINT_SECONDS}-second sprint</button>
       </div>
