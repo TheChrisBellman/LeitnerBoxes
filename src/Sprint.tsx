@@ -40,7 +40,7 @@ function Hud({ remainingMs, score, penalty }: { remainingMs: number; score: numb
   )
 }
 
-export function SprintScreen({ selectedCards, selectedIds, masteredIds, onToggleLesson, onExit }: { selectedCards: readonly PracticeCard[]; selectedIds: readonly string[]; masteredIds: ReadonlySet<string>; onToggleLesson: (id: string) => void; onExit: () => void }) {
+export function SprintScreen({ selectedCards, selectedIds, masteredIds, onToggleLesson }: { selectedCards: readonly PracticeCard[]; selectedIds: readonly string[]; masteredIds: ReadonlySet<string>; onToggleLesson: (id: string) => void }) {
   const [phase, setPhase] = useState<Phase>('pick')
   const [category, setCategory] = useState<SprintCategory>('french-to-english')
   const [scope, setScope] = useState<Scope>(selectedCards.length > 0 ? 'selected' : 'all')
@@ -186,7 +186,6 @@ export function SprintScreen({ selectedCards, selectedIds, masteredIds, onToggle
   return (
     <section className="page sprint-page">
       <header className="screen-header">
-        <button type="button" className="back-button" onClick={onExit}>Back to Practice</button>
         <span className="screen-kicker">Sprint</span>
         <h1 tabIndex={-1}>Beat the clock</h1>
         <p>{SPRINT_SECONDS} seconds, as many right answers as you can. Each miss or skip costs {SPRINT_PENALTY_SECONDS} seconds. Boxes are not affected.</p>
