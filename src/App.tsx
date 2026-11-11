@@ -21,10 +21,12 @@ import {
   type PracticeMode,
   type PracticeQuestion,
 } from './leitner'
+import { answerDisplayFor, choicesFor, exerciseLabel, ExerciseContext } from './question-view.tsx'
 import { SprintScreen } from './Sprint.tsx'
+import { TestPrepScreen } from './TestPrep.tsx'
 import { clearStoredState, completeStreak, defaultState, loadState, saveState, type CorrectAdvanceMode, type StoredState, type Theme } from './storage'
 
-type Screen = 'today' | 'curriculum' | 'quiz' | 'results' | 'sprint'
+type Screen = 'today' | 'curriculum' | 'quiz' | 'results' | 'sprint' | 'testprep'
 type ViewMode = 'normal' | 'presentation'
 type IconName = 'menu' | 'close' | 'settings' | 'expand' | 'minimize' | 'arrow' | 'arrowLeft' | 'check' | 'chevron' | 'calendar' | 'book' | 'progress' | 'practice' | 'spark' | 'clock' | 'cards' | 'half' | 'cycle' | 'chat' | 'sliders' | 'hash'
 
@@ -190,16 +192,6 @@ function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
   )
 }
 
-function choicesFor(question: PracticeQuestion): string[] {
-  if (question.vocabularyPractice === 'noun-gender') return ['Masculine', 'Feminine']
-  if (question.exercise?.kind === 'correction') {
-    return [...question.exercise.segments.map((segment) => segment.id), ...(question.exercise.allowNoCorrection ? ['none'] : [])]
-  }
-  return question.format === 'choice' || question.format === 'cloze'
-    ? shuffle([question.answer, ...question.distractors])
-    : []
-}
-
 type AnswerHint = NonNullable<PracticeQuestion['help']> & {
   note?: string
 }
@@ -231,68 +223,6 @@ function levelForLesson(lessonId: string): CurriculumUnit | undefined {
   return curriculumById.get(lessonId)
 }
 
-function answerDisplayFor(question: PracticeQuestion, value = question.answer): string {
-  if (value === question.answer && question.answerDisplay) return question.answerDisplay
-  if (value === question.answer && question.card.kind === 'conjugation') return question.card.answer
-  return question.choiceLabels?.[value] ?? value
-}
-
-function exerciseLabel(question: PracticeQuestion): string | undefined {
-  switch (question.exercise?.kind) {
-    case 'contextual-cloze': return 'Fill in the blank'
-    case 'correction': return 'Spot the mistake'
-    case 'best-response': return 'Best response'
-    case 'reading': return 'Reading'
-    case 'scenario': return 'Scenario'
-    case 'transformation': return 'Rephrase it'
-    case 'ordered': return 'Tap to order'
-    case 'typed': return 'Spelling & typing'
-    default: return undefined
-  }
-}
-
-function ExerciseContext({ question }: { question: PracticeQuestion }) {
-  if (!question.context && question.exercise?.kind !== 'correction') return null
-  if (question.exercise?.kind === 'correction') {
-    return (
-      <div className="exercise-context correction-context">
-        <span className="exercise-context-label">{question.contextLabel}</span>
-        <p lang={question.contextLanguage ?? 'fr'} className="correction-sentence">
-          {question.exercise.segments.map((segment) => (
-            <span className="correction-segment" key={segment.id}>{segment.text}</span>
-          ))}
-        </p>
-      </div>
-    )
-  }
-  if (!question.context) return null
-  if (question.contextKind === 'passage') {
-    return (
-      <article className="exercise-context reading-passage" lang={question.contextLanguage ?? 'fr'}>
-        <header>
-          {question.contextLabel && <span className="exercise-context-label">{question.contextLabel}</span>}
-          {question.contextTitle && <h2>{question.contextTitle}</h2>}
-        </header>
-        <p>{question.context}</p>
-      </article>
-    )
-  }
-  if (question.contextKind === 'dialogue') {
-    return (
-      <blockquote className="exercise-context dialogue-context" lang={question.contextLanguage ?? 'fr'}>
-        {question.contextTitle && <cite>{question.contextTitle}</cite>}
-        <p>{question.context}</p>
-      </blockquote>
-    )
-  }
-  return (
-    <div className="exercise-context situation-context" lang={question.contextLanguage ?? 'fr'}>
-      {question.contextLabel && <span className="exercise-context-label">{question.contextLabel}</span>}
-      <p>{question.context}</p>
-    </div>
-  )
-}
-
 function groupLabel(group: string): string {
   const objectives = group.match(/objectifs\s+([\d–-]+)/i)
   return objectives ? `Objectives ${objectives[1]}` : group
@@ -321,6 +251,7 @@ function MobileHeader({ onMenu, menuOpen, triggerRef, screen, onNavigate }: { on
         <button type="button" className={practiceActive ? 'is-active' : ''} aria-current={practiceActive ? 'page' : undefined} onClick={() => onNavigate('today')}><Icon name="practice" size={16} />Practice</button>
         <button type="button" className={screen === 'curriculum' ? 'is-active' : ''} aria-current={screen === 'curriculum' ? 'page' : undefined} onClick={() => onNavigate('curriculum')}><Icon name="cards" size={16} />Material</button>
         <button type="button" className={screen === 'sprint' ? 'is-active' : ''} aria-current={screen === 'sprint' ? 'page' : undefined} onClick={() => onNavigate('sprint')}><Icon name="clock" size={16} />Sprint</button>
+        <button type="button" className={screen === 'testprep' ? 'is-active' : ''} aria-current={screen === 'testprep' ? 'page' : undefined} onClick={() => onNavigate('testprep')}><Icon name="check" size={16} />Test prep</button>
         <button type="button" className={screen === 'results' ? 'is-active' : ''} aria-current={screen === 'results' ? 'page' : undefined} onClick={() => onNavigate('results')}><Icon name="progress" size={16} />Progress</button>
       </nav>
       <button ref={triggerRef} type="button" className="menu-button" onClick={onMenu} aria-label="Open menu" aria-haspopup="dialog" aria-expanded={menuOpen} aria-controls="app-menu">
@@ -390,6 +321,7 @@ function MenuSheet({
             <button type="button" className={practiceActive ? 'is-active' : ''} aria-current={practiceActive ? 'page' : undefined} onClick={() => onNavigate('today')}><strong>Practice</strong></button>
             <button type="button" className={screen === 'curriculum' ? 'is-active' : ''} aria-current={screen === 'curriculum' ? 'page' : undefined} onClick={() => onNavigate('curriculum')}><strong>Material</strong></button>
             <button type="button" className={screen === 'sprint' ? 'is-active' : ''} aria-current={screen === 'sprint' ? 'page' : undefined} onClick={() => onNavigate('sprint')}><strong>Sprint</strong></button>
+            <button type="button" className={screen === 'testprep' ? 'is-active' : ''} aria-current={screen === 'testprep' ? 'page' : undefined} onClick={() => onNavigate('testprep')}><strong>Test prep</strong></button>
             <button type="button" className={screen === 'results' ? 'is-active' : ''} aria-current={screen === 'results' ? 'page' : undefined} onClick={() => onNavigate('results')}><strong>Progress</strong></button>
           </nav>
         </section>
@@ -1467,6 +1399,11 @@ export default function App() {
     setSessionStats((current) => ({ ...current, correct: current.correct + (correct ? 1 : 0), promotions: current.promotions + (result.promoted ? 1 : 0), misses: current.misses + (result.missed ? 1 : 0) }))
   }
 
+  // Test prep: a first-attempt miss on a card that already has progress sends it back to Box 1. Unseen cards stay unseen.
+  function recordTestPrepMiss(id: string) {
+    updateState((previous) => previous.progress[id] ? { ...previous, progress: { ...previous.progress, [id]: scheduleAnswer(previous.progress[id], false, dateKey(), 'full-reset').progress } } : previous)
+  }
+
   function beginRepair() {
     if (!feedback || feedback.correct || feedback.stage !== 'first') return
     setRepairContext(feedback)
@@ -1670,6 +1607,7 @@ export default function App() {
     if (screen === 'curriculum') return <CurriculumScreen selectedIds={activeLessonIds} masteredIds={masteredLessonIds} masteredSelectedCount={masteredSelectedLessonIds.size} selectedCardCount={selectedCardCount} practiceMode={state.practiceMode} unitCardCounts={unitCardCounts} onToggleLesson={toggleLesson} onToggleLevel={toggleLevel} onBack={() => setScreen('today')} />
     if (screen === 'quiz' && currentQuestion) return <QuizScreen question={currentQuestion} currentBox={state.progress[currentQuestion.card.id]?.box ?? 1} index={sessionIndex} total={session.length} feedback={feedback} repairing={repairing} onAnswer={handleAnswer} onStartRepair={beginRepair} onContinue={continueSession} advanceMode={state.correctAdvanceMode} onSkip={skipCurrentCard} onExit={exitSession} onMenu={openMenu} menuOpen={menuOpen} menuTriggerRef={menuTriggerRef} viewMode={viewMode} onTogglePresentation={togglePresentationMode} />
     if (screen === 'sprint') return <SprintScreen selectedCards={sprintCards} selectedIds={state.selectedLessonIds} masteredIds={masteredLessonIds} onToggleLesson={toggleLesson} />
+    if (screen === 'testprep') return <TestPrepScreen progress={state.progress} onMiss={recordTestPrepMiss} />
     if (screen === 'results') return results ? <ResultsScreen results={results} shelf={sessionShelf} hasMoreCards={hasMoreCards} onDone={() => setScreen('today')} onKeepGoing={() => startSession(sessionLessonIds)} /> : <ProgressionOverviewScreen state={state} shelf={shelf} activeUnits={activeUnits} onToday={() => setScreen('today')} onCurriculum={() => setScreen('curriculum')} />
     return <TodayScreen counts={shelf} queueCounts={queueCounts} activeUnits={activeUnits} masteredSelectedCount={masteredSelectedLessonIds.size} dailyGoal={state.dailyGoal} practiceMode={state.practiceMode} activePreset={activePreset} missMode={state.missMode} enabledActivityTypes={state.enabledActivityTypes} activityCounts={activityCounts} selectedCardCount={selectedCardCount} readyCardCount={readyCardCount} onStart={() => startSession()} notice={notice} onChooseCurriculum={() => setScreen('curriculum')} onActivityTypesChange={updateActivityTypes} onPresetChange={updatePreset} />
   }

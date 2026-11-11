@@ -3510,3 +3510,134 @@ button:disabled {
   .sprint-penalty { animation: none; }
   .sprint-timer-fill { transition: none; }
 }
+
+/* Test prep */
+.testprep-page {
+  gap: 16px;
+}
+
+.testprep-progress {
+  display: grid;
+  gap: 6px;
+  color: var(--ink-soft);
+  font-size: var(--font-size-ui);
+  font-weight: 600;
+}
+
+.testprep-progress progress {
+  width: 100%;
+  height: 6px;
+  accent-color: var(--cobalt);
+}
+
+.testprep-covered {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.testprep-covered-row {
+  display: flex;
+  min-height: 64px;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 13px 8px 9px;
+  border-bottom: 1px solid var(--line);
+}
+
+.testprep-covered-row:last-child {
+  border-bottom: 0;
+}
+
+.testprep-covered-bar {
+  height: 12px;
+  flex: 1;
+  border-radius: 999px;
+  background: var(--line);
+}
+
+.testprep-hint {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: var(--font-size-ui);
+}
+
+.testprep-feedback {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--red);
+  border-radius: 6px;
+  background: var(--red-soft);
+}
+
+.testprep-feedback p {
+  margin: 0;
+  color: var(--ink);
+}
+
+.testprep-units {
+  display: grid;
+  gap: 8px;
+}
+
+.testprep-unit-row {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) minmax(60px, 120px) 44px;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--font-size-ui);
+}
+
+.testprep-unit-code {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.testprep-unit-name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink-soft);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.testprep-track {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--line);
+}
+
+.testprep-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--cobalt);
+}
+
+.testprep-fill.is-low {
+  background: var(--red);
+}
+
+.testprep-unit-value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.choice-button.is-picked {
+  background: var(--cobalt-soft);
+  box-shadow: inset 0 0 0 2px var(--cobalt);
+}
+
+.choice-button.is-picked .choice-number {
+  border-color: var(--cobalt);
+  background: var(--cobalt);
+  color: white;
+}

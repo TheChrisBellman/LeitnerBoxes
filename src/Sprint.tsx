@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { allCards } from './data/words.ts'
-import { curriculumUnits, materialLabelsById, type Level } from './data/curriculum'
 import type { PracticeCard } from './data/types.ts'
 import {
   SPRINT_PENALTY_SECONDS,
@@ -16,6 +15,7 @@ import {
   type SprintQuestion,
   type SprintRun,
 } from './sprint.ts'
+import { UnitPicker } from './UnitPicker.tsx'
 
 const MS_PER_SECOND = 1000
 const TICK_MS = 100
@@ -205,26 +205,7 @@ export function SprintScreen({ selectedCards, selectedIds, masteredIds, onToggle
       </div>
       <details className="sprint-units">
         <summary>Change units ({selectedIds.length} selected)</summary>
-        {(['A', 'B', 'C'] as Level[]).map((level) => (
-          <div className="unit-group" key={level}>
-            <div className="unit-group-heading"><span>Level {level}</span></div>
-            <div className="unit-options">
-              {curriculumUnits.filter((unit) => unit.level === level).map((unit) => {
-                const checked = selectedIds.includes(unit.id)
-                const mastered = masteredIds.has(unit.id)
-                return (
-                  <label className={`unit-option ${checked ? 'is-selected' : ''} ${mastered ? 'is-mastered' : ''}`} key={unit.id}>
-                    <span className="unit-selection">
-                      <input type="checkbox" checked={checked} disabled={mastered} onChange={() => { onToggleLesson(unit.id); setScope('selected') }} />
-                      <span className="custom-check" aria-hidden="true" />
-                      <span className="unit-copy"><strong>{materialLabelsById[unit.id] ?? unit.title}</strong><small><span lang="fr">{unit.title}</span> · {unit.id.toUpperCase()}{mastered ? ' · Mastered' : ''}</small></span>
-                    </span>
-                  </label>
-                )
-              })}
-            </div>
-          </div>
-        ))}
+        <UnitPicker selectedIds={selectedIds} masteredIds={masteredIds} onToggle={(id) => { onToggleLesson(id); setScope('selected') }} />
       </details>
       <div className="results-actions">
         <button type="button" className="button button-primary" onClick={start} disabled={counts[category] === 0}>Start {SPRINT_SECONDS}-second sprint</button>
