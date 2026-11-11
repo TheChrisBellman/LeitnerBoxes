@@ -38,3 +38,4 @@
 .DS_Store
 Thumbs.db
 NUL
+scripts/build-source-coverage-report.mjs
