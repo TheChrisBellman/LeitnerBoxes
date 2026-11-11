@@ -25,9 +25,9 @@ export const buildAnswerItems: BuildAnswerItem[] = [
   // a-02 · Identifier des objets ou des documents
   { id: 'a-02-build-01', unitId: 'a-02', question: 'Qu’est-ce que c’est?', answer: ['C’est', 'un', 'document', 'confidentiel'], traps: ['une', 'confidentielle'], note: 'document is masculine: un document confidentiel.' },
   { id: 'a-02-build-02', unitId: 'a-02', question: 'Et ça, qu’est-ce que c’est?', answer: ['Ce', 'sont', 'des', 'formulaires'], traps: ['est', 'un'], note: 'Plural: ce sont des …' },
-  { id: 'a-02-build-03', unitId: 'a-02', question: 'Quel document signez-vous?', answer: ['Je', 'signe', 'le', 'contrat'], traps: ['signez', 'la'], note: 'je signe; contrat is masculine.' },
-  { id: 'a-02-build-04', unitId: 'a-02', question: 'Qu’est-ce qu’ils lisent?', answer: ['Ils', 'lisent', 'le', 'procès-verbal'], traps: ['lisez', 'la'], note: 'ils lisent; procès-verbal is masculine.' },
-  { id: 'a-02-build-05', unitId: 'a-02', question: 'Comment ça s’appelle?', answer: ['Ça', 's’appelle', 'un', 'scanneur'], traps: ['une', 's’appellent'], note: 'ça takes a singular verb; scanneur is masculine.' },
+  { id: 'a-02-build-03', unitId: 'a-02', question: 'Qu’est-ce que c’est, ça?', answer: ['C’est', 'une', 'gomme', 'à', 'effacer'], traps: ['un', 'sont'], note: 'gomme is feminine: une gomme à effacer.' },
+  { id: 'a-02-build-04', unitId: 'a-02', question: 'Et ces documents-là, qu’est-ce que c’est?', answer: ['Ce', 'sont', 'des', 'photocopies', 'du', 'rapport'], traps: ['est', 'une'], note: 'Plural: ce sont des …' },
+  { id: 'a-02-build-05', unitId: 'a-02', question: 'Comment est-ce que ça s’appelle?', answer: ['Ça', 's’appelle', 'un', 'scanneur'], traps: ['une', 's’appellent'], note: 'ça takes a singular verb; scanneur is masculine.' },
 
   // a-03 · Exprimer des relations d'appartenance
   { id: 'a-03-build-01', unitId: 'a-03', question: 'À quel ministère travaillez-vous?', answer: ['Je', 'travaille', 'au', 'ministère', 'des', 'Finances'], traps: ['à', 'du'], note: 'à + le = au; Finances is plural, so des.' },
@@ -37,23 +37,23 @@ export const buildAnswerItems: BuildAnswerItem[] = [
   { id: 'a-03-build-05', unitId: 'a-03', question: 'De quelle association êtes-vous membre?', answer: ['Je', 'suis', 'membre', 'de', 'l’association', 'des', 'gestionnaires'], traps: ['es', 'à'], note: 'être membre de, never à.' },
 
   // a-04 · Exprimer des relations de possession
-  { id: 'a-04-build-01', unitId: 'a-04', question: 'À qui est ce stylo?', answer: ['C’est', 'le', 'mien'], traps: ['la', 'miens'], note: 'stylo is masculine singular: le mien.' },
-  { id: 'a-04-build-02', unitId: 'a-04', question: 'À qui est la clé?', answer: ['Elle', 'est', 'à', 'Samira'], traps: ['sont', 'a'], note: 'One key: elle est; être à (with the accent) + person.' },
-  { id: 'a-04-build-03', unitId: 'a-04', question: 'Avez-vous un parapluie?', answer: ['J’ai', 'un', 'parapluie', 'noir'], traps: ['une', 'noire'], note: 'parapluie is masculine: un parapluie noir.' },
+  { id: 'a-04-build-01', unitId: 'a-04', question: 'C’est à qui, ce crayon?', answer: ['C’est', 'le', 'mien'], traps: ['la', 'miens'], note: 'crayon is masculine singular: le mien.' },
+  { id: 'a-04-build-02', unitId: 'a-04', question: 'C’est à qui, la clé?', answer: ['Elle', 'est', 'à', 'Samira'], traps: ['sont', 'a'], note: 'One key: elle est; être à (with the accent) + person.' },
+  { id: 'a-04-build-03', unitId: 'a-04', question: 'Avez-vous un foulard?', answer: ['J’ai', 'un', 'foulard', 'gris'], traps: ['une', 'grise'], note: 'foulard is masculine: un foulard gris.' },
   { id: 'a-04-build-04', unitId: 'a-04', question: 'Comment est votre manteau?', answer: ['Mon', 'manteau', 'est', 'vieux', 'et', 'bleu'], accepted: [['Mon', 'manteau', 'est', 'bleu', 'et', 'vieux']], traps: ['Ma', 'vieille'], note: 'manteau is masculine: mon, vieux.' },
-  { id: 'a-04-build-05', unitId: 'a-04', question: 'À qui appartient le fauteuil?', answer: ['Il', 'appartient', 'au', 'directeur', 'général'], traps: ['à', 'appartiens'], note: 'appartenir à + le = au.' },
+  { id: 'a-04-build-05', unitId: 'a-04', question: 'À qui appartient la bicyclette?', answer: ['Elle', 'appartient', 'au', 'voisin'], traps: ['à', 'appartiens'], note: 'appartenir à + le = au.' },
 
   // a-05 · Indiquer où est une personne, un objet/document, un lieu
   { id: 'a-05-build-01', unitId: 'a-05', question: 'Où est la salle de conférences?', answer: ['Elle', 'est', 'à', 'côté', 'de', 'l’ascenseur'], traps: ['sont', 'le'], note: 'à côté de; l’ before a vowel.' },
   { id: 'a-05-build-02', unitId: 'a-05', question: 'Où est la cafétéria?', answer: ['Elle', 'est', 'au', 'rez-de-chaussée'], traps: ['sont', 'à'], note: 'à + le = au.' },
   { id: 'a-05-build-03', unitId: 'a-05', question: 'Où se trouve le laboratoire?', answer: ['Il', 'se', 'trouve', 'au', 'sous-sol'], traps: ['trouvent', 'à'], note: 'il se trouve au sous-sol.' },
   { id: 'a-05-build-04', unitId: 'a-05', question: 'Qu’est-ce qu’il y a dans l’édifice?', answer: ['Il', 'y', 'a', 'un', 'dépanneur'], traps: ['une', 'sont'], note: 'il y a never changes; dépanneur is masculine.' },
-  { id: 'a-05-build-05', unitId: 'a-05', question: 'Où attendent-ils?', answer: ['Ils', 'attendent', 'dans', 'la', 'salle', 'd’attente'], traps: ['attend', 'le'], note: 'ils attendent; salle is feminine.' },
+  { id: 'a-05-build-05', unitId: 'a-05', question: 'Où est la salle d’attente?', answer: ['Elle', 'est', 'en', 'face', 'de', 'l’ascenseur'], traps: ['sont', 'à'], note: 'en face de; l’ before a vowel.' },
 
   // a-06 · Indiquer des données chiffrées
   { id: 'a-06-build-01', unitId: 'a-06', question: 'Quel est votre numéro de poste? (82)', answer: ['C’est', 'le', 'quatre-vingt-deux'], traps: ['la', 'quatre-vingt-douze'], note: '82 = quatre-vingt-deux; 92 = quatre-vingt-douze.' },
   { id: 'a-06-build-02', unitId: 'a-06', question: 'Combien de documents y a-t-il? (environ 30)', answer: ['Il', 'y', 'a', 'une', 'trentaine', 'de', 'documents'], traps: ['un', 'trente'], note: 'About 30: une trentaine de.' },
-  { id: 'a-06-build-03', unitId: 'a-06', question: 'Combien de personnes compte la division? (75)', answer: ['Elle', 'compte', 'soixante-quinze', 'personnes'], traps: ['comptent', 'soixante-cinq'], note: '75 = soixante-quinze; 65 = soixante-cinq.' },
-  { id: 'a-06-build-04', unitId: 'a-06', question: 'Combien de chaises reste-t-il? (71)', answer: ['Il', 'reste', 'soixante et onze', 'chaises'], traps: ['restent', 'soixante et un'], note: '71 = soixante et onze; il reste never changes.' },
-  { id: 'a-06-build-05', unitId: 'a-06', question: 'Quel fichier est confidentiel?', answer: ['Celui-ci', 'est', 'confidentiel'], traps: ['Celle-ci', 'sont'], note: 'fichier is masculine: celui-ci.' },
+  { id: 'a-06-build-03', unitId: 'a-06', question: 'Combien de candidats y a-t-il? (75)', answer: ['Il', 'y', 'a', 'soixante-quinze', 'candidats'], traps: ['soixante-cinq', 'sont'], note: '75 = soixante-quinze; 65 = soixante-cinq.' },
+  { id: 'a-06-build-04', unitId: 'a-06', question: 'Combien de chaises y a-t-il? (71)', answer: ['Il', 'y', 'a', 'soixante et onze', 'chaises'], traps: ['soixante et un', 'sont'], note: '71 = soixante et onze; 61 = soixante et un.' },
+  { id: 'a-06-build-05', unitId: 'a-06', question: 'Quel dossier est confidentiel?', answer: ['Celui-ci', 'est', 'confidentiel'], traps: ['Celle-ci', 'sont'], note: 'dossier is masculine: celui-ci.' },
 ]
