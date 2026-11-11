@@ -8,7 +8,7 @@
 /coverage/
 *.log
 
-# Local source-audit inputs, reports, and working notes
+# Local working files
 /.tmp/
 /.local-learning-backup/
 
