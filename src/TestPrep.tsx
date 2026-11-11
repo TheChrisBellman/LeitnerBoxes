@@ -149,7 +149,7 @@ export function TestPrepScreen({ onMiss }: { progress: Record<string, CardProgre
   })
 
   useEffect(() => {
-    if (phase === 'recall' || phase === 'mock') headingRef.current?.focus({ preventScroll: true })
+    if (phase === 'mock') headingRef.current?.focus({ preventScroll: true })
   }, [phase, head?.id, index])
 
   function finishMock() {
@@ -186,10 +186,12 @@ export function TestPrepScreen({ onMiss }: { progress: Record<string, CardProgre
   const rows = unitsWeakestFirst(state, unitIds)
 
   if (phase === 'recall' && head) {
-    const label = `Question ${Math.min(run.done + ONE, questions.length)} of ${questions.length}${firstAttempt ? '' : ' · second try'}`
+    // Questions asked so far: a requeued miss keeps its number instead of counting as a new question.
+    const position = questions.length - run.queue.filter((item) => !run.repeated.includes(item.id)).length + (firstAttempt ? ONE : 0)
+    const label = `Question ${position} of ${questions.length}${firstAttempt ? '' : ' · second try'}`
     return (
       <section className="page testprep-page" aria-label="Recall round">
-        <Progress label={label} current={Math.min(run.done + ONE, questions.length)} total={questions.length} />
+        <Progress label={label} current={position} total={questions.length} />
         <PromptCard question={head} headingRef={headingRef} />
         {step === 'think' && <>
           <div className="testprep-covered" aria-hidden="true">
