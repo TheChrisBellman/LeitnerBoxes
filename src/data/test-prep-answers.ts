@@ -26,7 +26,7 @@ export const buildAnswerItems: BuildAnswerItem[] = [
   { id: 'a-02-build-01', unitId: 'a-02', question: 'Qu’est-ce que c’est?', answer: ['C’est', 'un', 'document', 'confidentiel'], traps: ['une', 'confidentielle'], note: 'document is masculine: un document confidentiel.' },
   { id: 'a-02-build-02', unitId: 'a-02', question: 'Et ça, qu’est-ce que c’est?', answer: ['Ce', 'sont', 'des', 'formulaires'], traps: ['est', 'un'], note: 'Plural: ce sont des …' },
   { id: 'a-02-build-03', unitId: 'a-02', question: 'Quel document signez-vous?', answer: ['Je', 'signe', 'le', 'contrat'], traps: ['signez', 'la'], note: 'je signe; contrat is masculine.' },
-  { id: 'a-02-build-04', unitId: 'a-02', question: 'Qu’est-ce qu’ils lisent?', answer: ['Ils', 'lisent', 'le', 'procès-verbal'], traps: ['lit', 'la'], note: 'ils lisent; procès-verbal is masculine.' },
+  { id: 'a-02-build-04', unitId: 'a-02', question: 'Qu’est-ce qu’ils lisent?', answer: ['Ils', 'lisent', 'le', 'procès-verbal'], traps: ['lisez', 'la'], note: 'ils lisent; procès-verbal is masculine.' },
   { id: 'a-02-build-05', unitId: 'a-02', question: 'Comment ça s’appelle?', answer: ['Ça', 's’appelle', 'un', 'scanneur'], traps: ['une', 's’appellent'], note: 'ça takes a singular verb; scanneur is masculine.' },
 
   // a-03 · Exprimer des relations d'appartenance
@@ -38,7 +38,7 @@ export const buildAnswerItems: BuildAnswerItem[] = [
 
   // a-04 · Exprimer des relations de possession
   { id: 'a-04-build-01', unitId: 'a-04', question: 'À qui est ce stylo?', answer: ['C’est', 'le', 'mien'], traps: ['la', 'miens'], note: 'stylo is masculine singular: le mien.' },
-  { id: 'a-04-build-02', unitId: 'a-04', question: 'À qui est la clé?', answer: ['Elle', 'est', 'à', 'Samira'], traps: ['sont', 'de'], note: 'One key: elle est; être à + person.' },
+  { id: 'a-04-build-02', unitId: 'a-04', question: 'À qui est la clé?', answer: ['Elle', 'est', 'à', 'Samira'], traps: ['sont', 'a'], note: 'One key: elle est; être à (with the accent) + person.' },
   { id: 'a-04-build-03', unitId: 'a-04', question: 'Avez-vous un parapluie?', answer: ['J’ai', 'un', 'parapluie', 'noir'], traps: ['une', 'noire'], note: 'parapluie is masculine: un parapluie noir.' },
   { id: 'a-04-build-04', unitId: 'a-04', question: 'Comment est votre manteau?', answer: ['Mon', 'manteau', 'est', 'vieux', 'et', 'bleu'], accepted: [['Mon', 'manteau', 'est', 'bleu', 'et', 'vieux']], traps: ['Ma', 'vieille'], note: 'manteau is masculine: mon, vieux.' },
   { id: 'a-04-build-05', unitId: 'a-04', question: 'À qui appartient le fauteuil?', answer: ['Il', 'appartient', 'au', 'directeur', 'général'], traps: ['à', 'appartiens'], note: 'appartenir à + le = au.' },
