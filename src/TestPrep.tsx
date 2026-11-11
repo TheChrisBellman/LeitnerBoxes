@@ -2,15 +2,19 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { curriculumById, materialLabelsById } from './data/curriculum'
 import { allCards } from './data/words.ts'
 import { exerciseTargets } from './data/pilot-exercises.ts'
+import { buildAnswerItems } from './data/test-prep-answers.ts'
 import { dateKey, type CardProgress } from './leitner.ts'
 import { ExerciseContext } from './question-view.tsx'
 import { UnitPicker } from './UnitPicker.tsx'
 import {
+  BUILD_ROUND_SIZE,
   MOCK_TEST_SIZE,
   READINESS_WARN_PERCENT,
   RECALL_ROUND_SIZE,
   advanceRound,
+  isBuiltAnswerCorrect,
   answerText,
+  buildAnswerRound,
   buildMockTest,
   buildRecallRound,
   loadTestPrep,
@@ -20,6 +24,7 @@ import {
   scoreMockTest,
   startRound,
   unitsWeakestFirst,
+  type BuildQuestion,
   type RoundRun,
   type TestPrepState,
   type TestQuestion,
@@ -30,9 +35,10 @@ const PERCENT = 100
 const FIRST_INDEX = 0
 const ONE = 1
 
-type Phase = 'pick' | 'recall' | 'done' | 'mock' | 'mock-results'
-type RoundKind = 'recall' | 'mock'
-type Step = 'think' | 'choose' | 'result'
+type Phase = 'pick' | 'recall' | 'done' | 'mock' | 'mock-results' | 'build' | 'build-done'
+type RoundKind = 'recall' | 'mock' | 'build'
+type Step = 'think' | 'choose' | 'build' | 'result'
+type MissedRow = { id: string; prompt: string; promptLanguage: string; answer: string; answerLanguage: string; note?: string }
 
 const unitName = (unitId: string) => materialLabelsById[unitId] ?? curriculumById.get(unitId)?.title ?? unitId.toUpperCase()
 
@@ -61,6 +67,36 @@ function PromptCard({ question, headingRef }: { question: TestQuestion; headingR
   )
 }
 
+function RoundDone({ kicker, firstTry, total, missed, onAgain, onChange }: { kicker: string; firstTry: number; total: number; missed: MissedRow[]; onAgain: () => void; onChange: () => void }) {
+  return (
+    <section className="page results-page testprep-page">
+      <header className="screen-header">
+        <span className="screen-kicker">Test prep · {kicker}</span>
+        <h1 tabIndex={-1}>Round complete</h1>
+      </header>
+      <div className="results-score surface-panel">
+        <span className="screen-kicker">First try</span>
+        <strong>{firstTry} / {total}</strong>
+        <p>{missed.length === 0 ? 'No misses.' : `${missed.length} came back and were asked again.`}</p>
+        <div className="results-actions">
+          <button type="button" className="button button-primary" onClick={onAgain}>Again</button>
+          <button type="button" className="button button-secondary" onClick={onChange}>Change round</button>
+        </div>
+      </div>
+      {missed.length > 0 && <details className="missed-recap" open>
+        <summary>Review missed answers ({missed.length})</summary>
+        <ol>{missed.map((item) => <li key={item.id}>
+          <span className="missed-recap-prompt" lang={item.promptLanguage}>{item.prompt}</span>
+          <strong lang={item.answerLanguage}>{item.answer}</strong>
+          {item.note && <p>{item.note}</p>}
+        </li>)}</ol>
+      </details>}
+    </section>
+  )
+}
+
+const builtSentence = (question: BuildQuestion) => question.item.answer.join(' ')
+
 function Progress({ label, current, total }: { label: string; current: number; total: number }) {
   return (
     <div className="testprep-progress">
@@ -81,12 +117,19 @@ export function TestPrepScreen({ onMiss }: { progress: Record<string, CardProgre
   const [answers, setAnswers] = useState<(string | null)[]>([])
   const [index, setIndex] = useState(FIRST_INDEX)
   const [askFinish, setAskFinish] = useState(false)
+  const [buildQuestions, setBuildQuestions] = useState<BuildQuestion[]>([])
+  const [buildRun, setBuildRun] = useState<RoundRun<BuildQuestion>>(() => startRound<BuildQuestion>([]))
+  // Tile indexes in answer order; indexes, not values, because an answer can repeat a word.
+  const [placed, setPlaced] = useState<number[]>([])
   const headingRef = useRef<HTMLHeadingElement>(null)
 
   const unitIds = state.unitIds
   const poolSize = useMemo(() => allCards.filter((card) => unitIds.includes(card.lessonId)).length + exerciseTargets.filter((target) => unitIds.includes(target.lessonId)).length, [unitIds])
   const head = run.queue[FIRST_INDEX]
   const firstAttempt = head !== undefined && !run.repeated.includes(head.id)
+  const buildHead = buildRun.queue[FIRST_INDEX]
+  const buildFirstAttempt = buildHead !== undefined && !buildRun.repeated.includes(buildHead.id)
+  const buildAvailable = buildAnswerItems.some((item) => unitIds.includes(item.unitId))
 
   function commit(next: TestPrepState) {
     setState(next)
@@ -116,8 +159,19 @@ export function TestPrepScreen({ onMiss }: { progress: Record<string, CardProgre
     setPhase('mock')
   }
 
+  function startBuild() {
+    const round = buildAnswerRound(unitIds, buildAnswerItems, state)
+    if (round.length === 0) return
+    setBuildQuestions(round)
+    setBuildRun(startRound(round))
+    setStep('think')
+    setPlaced([])
+    setPhase('build')
+  }
+
   function start() {
     if (roundKind === 'mock') startMock()
+    else if (roundKind === 'build' && buildAvailable) startBuild()
     else startRecall(buildRecallRound(unitIds, allCards, state))
   }
 
@@ -141,10 +195,29 @@ export function TestPrepScreen({ onMiss }: { progress: Record<string, CardProgre
     if (next.queue.length === 0) setPhase('done')
   }
 
+  const builtTiles = buildHead ? placed.map((tileIndex) => buildHead.tiles[tileIndex]) : []
+  const buildCorrect = phase === 'build' && step === 'result' && buildHead !== undefined && isBuiltAnswerCorrect(buildHead.item, builtTiles)
+
+  // Build: Check marks the placed tiles; "I blanked" arrives with none placed, which is a miss.
+  function answerBuild() {
+    if (!buildHead || step === 'result') return
+    if (buildFirstAttempt) commit(recordAnswers(state, [{ unitId: buildHead.unitId, correct: isBuiltAnswerCorrect(buildHead.item, builtTiles) }]))
+    setStep('result')
+  }
+
+  function nextBuild() {
+    const next = advanceRound(buildRun, buildCorrect)
+    setBuildRun(next)
+    setStep('think')
+    setPlaced([])
+    if (next.queue.length === 0) setPhase('build-done')
+  }
+
   const recallCorrect = phase === 'recall' && step === 'result' && picked === head?.answer
   useEffect(() => {
-    if (!recallCorrect) return undefined
-    const timer = window.setTimeout(nextRecall, CORRECT_ADVANCE_MS)
+    const advance = recallCorrect ? nextRecall : buildCorrect ? nextBuild : undefined
+    if (!advance) return undefined
+    const timer = window.setTimeout(advance, CORRECT_ADVANCE_MS)
     return () => window.clearTimeout(timer)
   })
 
@@ -225,27 +298,54 @@ export function TestPrepScreen({ onMiss }: { progress: Record<string, CardProgre
   }
 
   if (phase === 'done') {
+    return <RoundDone kicker="Recall round" firstTry={run.firstTry} total={questions.length} onAgain={() => startRecall(buildRecallRound(unitIds, allCards, state))} onChange={() => setPhase('pick')}
+      missed={run.missed.map((item) => ({ id: item.id, prompt: `${item.prompt}${item.promptNote ? ` · ${item.promptNote}` : ''}`, promptLanguage: item.promptLanguage, answer: answerText(item), answerLanguage: item.answerLanguage }))} />
+  }
+
+  if (phase === 'build' && buildHead) {
+    const position = buildQuestions.length - buildRun.queue.filter((item) => !buildRun.repeated.includes(item.id)).length + (buildFirstAttempt ? ONE : 0)
+    const label = `Question ${position} of ${buildQuestions.length}${buildFirstAttempt ? '' : ' · second try'}`
+    const slots = buildHead.item.answer.length
+    const result = step === 'result'
+    const blanked = result && placed.length === 0
     return (
-      <section className="page results-page testprep-page">
-        <header className="screen-header">
-          <span className="screen-kicker">Test prep · Recall round</span>
-          <h1 tabIndex={-1}>Round complete</h1>
-        </header>
-        <div className="results-score surface-panel">
-          <span className="screen-kicker">First try</span>
-          <strong>{run.firstTry} / {questions.length}</strong>
-          <p>{run.missed.length === 0 ? 'No misses.' : `${run.missed.length} came back and were asked again.`}</p>
-          <div className="results-actions">
-            <button type="button" className="button button-primary" onClick={() => startRecall(buildRecallRound(unitIds, allCards, state))}>Again</button>
-            <button type="button" className="button button-secondary" onClick={() => setPhase('pick')}>Change round</button>
-          </div>
+      <section className="page testprep-page" aria-label="Build the answer">
+        <Progress label={label} current={position} total={buildQuestions.length} />
+        <div key={buildHead.id} className="prompt-card">
+          <div className="question-meta"><span className="question-type-label">Build the answer</span></div>
+          <div className="prompt-headline"><h1 tabIndex={-1} lang="fr">{buildHead.item.question}</h1></div>
         </div>
-        {run.missed.length > 0 && <details className="missed-recap" open>
-          <summary>Review missed answers ({run.missed.length})</summary>
-          <ol>{run.missed.map((item) => <li key={item.id}><span className="missed-recap-prompt" lang={item.promptLanguage}>{item.prompt}{item.promptNote ? ` · ${item.promptNote}` : ''}</span><strong lang={item.answerLanguage}>{answerText(item)}</strong></li>)}</ol>
-        </details>}
+        {step === 'think' && <>
+          <p className="testprep-hint">Think of your full answer first.</p>
+          <div className="sprint-actions">
+            <button type="button" className="button button-secondary" onClick={answerBuild}>I blanked</button>
+            <button key={buildHead.id} type="button" className="button button-primary" autoFocus onClick={() => setStep('build')}>Show tiles</button>
+          </div>
+        </>}
+        {step !== 'think' && !blanked && <div className="arrange-answer">
+          <div className={`arranged-sentence testprep-built ${result ? (buildCorrect ? 'is-correct' : 'is-incorrect') : ''}`} aria-label="Your answer" lang="fr">
+            {placed.length === 0 && <span>Tap tiles to build your answer</span>}
+            {placed.map((tileIndex, position) => <button type="button" className="word-token is-selected" key={tileIndex} onClick={() => setPlaced(placed.filter((_, at) => at !== position))} disabled={result} aria-label={`Remove ${buildHead.tiles[tileIndex]}`}>{buildHead.tiles[tileIndex]}</button>)}
+            {Array.from({ length: slots - placed.length }, (_, slot) => <span className="word-token is-ghost testprep-slot" key={`slot-${slot}`} aria-hidden="true" />)}
+          </div>
+          {!result && <div className="token-bank" aria-label="Tiles" lang="fr">
+            {buildHead.tiles.map((tile, tileIndex) => placed.includes(tileIndex)
+              ? <span className="word-token is-ghost" key={tileIndex} aria-hidden="true">{tile}</span>
+              : <button type="button" className="word-token" key={tileIndex} onClick={() => { if (placed.length < slots) setPlaced([...placed, tileIndex]) }}>{tile}</button>)}
+          </div>}
+          {!result && <button type="button" className="button button-primary arrange-check" onClick={answerBuild} disabled={placed.length < slots}>Check</button>}
+        </div>}
+        {result && !buildCorrect && <div className="testprep-feedback" role="status">
+          <p><strong lang="fr">{builtSentence(buildHead)}</strong>{buildFirstAttempt ? ' · Comes back later.' : ''}{buildHead.item.note && <><br />{buildHead.item.note}</>}</p>
+          <button type="button" className="button button-primary" autoFocus onClick={nextBuild}>Next</button>
+        </div>}
       </section>
     )
+  }
+
+  if (phase === 'build-done') {
+    return <RoundDone kicker="Build the answer" firstTry={buildRun.firstTry} total={buildQuestions.length} onAgain={startBuild} onChange={() => setPhase('pick')}
+      missed={buildRun.missed.map((item) => ({ id: item.id, prompt: item.item.question, promptLanguage: 'fr', answer: builtSentence(item), answerLanguage: 'fr', note: item.item.note }))} />
   }
 
   if (mockQuestion) {
@@ -332,6 +432,10 @@ export function TestPrepScreen({ onMiss }: { progress: Record<string, CardProgre
           <strong>Mock test</strong>
           <small>{MOCK_TEST_SIZE} questions, marked at the end.</small>
         </button>
+        {buildAvailable && <button type="button" className={`practice-preset ${roundKind === 'build' ? 'is-selected' : ''}`} aria-pressed={roundKind === 'build'} onClick={() => setRoundKind('build')}>
+          <strong>Build the answer</strong>
+          <small>Answer the instructor&apos;s question with tiles. {BUILD_ROUND_SIZE} questions.</small>
+        </button>}
       </div>
       <details className="sprint-units">
         <summary>Change units ({unitIds.length} selected)</summary>

@@ -1,3 +1,4 @@
+import type { BuildAnswerItem } from './data/test-prep-answers.ts'
 import type { ExerciseLanguage, ExerciseTarget, PracticeCard } from './data/types.ts'
 import { activityTypesForTarget, buildSessionQuestions, shuffle, type PracticeQuestion } from './leitner.ts'
 import { answerDisplayFor, choicesFor, exerciseLabel } from './question-choices.ts'
@@ -8,6 +9,7 @@ export const DEFAULT_TEST_UNIT_IDS = ['a-01', 'a-02', 'a-03', 'a-04', 'a-05', 'a
 
 export const RECALL_ROUND_SIZE = 20
 export const MOCK_TEST_SIZE = 40
+export const BUILD_ROUND_SIZE = 10
 export const MAX_MOCK_EXERCISES_PER_UNIT = 3
 export const REQUEUE_GAP = 3
 export const READINESS_WINDOW = 30
@@ -151,9 +153,9 @@ function unitCardSource(unitId: string, cards: readonly PracticeCard[], used: Se
 }
 
 /** Takes one question per unit in turn (weakest first) until the round is full or every unit runs dry. */
-function dealRoundRobin(unitIds: readonly string[], sources: Map<string, () => TestQuestion | undefined>, size: number): TestQuestion[] {
+function dealRoundRobin<T>(unitIds: readonly string[], sources: Map<string, () => T | undefined>, size: number): T[] {
   const turns = Array.from({ length: size * unitIds.length }, (_, index) => unitIds[index % unitIds.length])
-  return turns.reduce<TestQuestion[]>((dealt, unitId) => {
+  return turns.reduce<T[]>((dealt, unitId) => {
     const question = dealt.length < size ? sources.get(unitId)?.() : undefined
     return question ? [...dealt, question] : dealt
   }, [])
@@ -166,14 +168,14 @@ export function buildRecallRound(unitIds: readonly string[], cards: readonly Pra
   return dealRoundRobin(ordered, sources, size)
 }
 
-export type RoundRun = { queue: TestQuestion[]; done: number; firstTry: number; missed: TestQuestion[]; repeated: string[] }
+export type RoundRun<T extends { id: string } = TestQuestion> = { queue: T[]; done: number; firstTry: number; missed: T[]; repeated: string[] }
 
-export function startRound(questions: readonly TestQuestion[]): RoundRun {
+export function startRound<T extends { id: string }>(questions: readonly T[]): RoundRun<T> {
   return { queue: [...questions], done: 0, firstTry: 0, missed: [], repeated: [] }
 }
 
 /** Pops the head. A first-attempt miss goes back REQUEUE_GAP places later (or last), once per question. */
-export function advanceRound(run: RoundRun, correct: boolean): RoundRun {
+export function advanceRound<T extends { id: string }>(run: RoundRun<T>, correct: boolean): RoundRun<T> {
   const [head, ...rest] = run.queue
   if (!head) return run
   const firstAttempt = !run.repeated.includes(head.id)
@@ -262,4 +264,24 @@ export function scoreMockTest(questions: readonly TestQuestion[], answers: reado
 /** What to show as the right answer: the corrected sentence for a spot-the-mistake question, else the answer choice. */
 export function answerText(question: TestQuestion): string {
   return question.source ? answerDisplayFor(question.source) : question.answer
+}
+
+/** One Build the answer item with its tiles (answer plus traps) shuffled once for the round. */
+export type BuildQuestion = { id: string; unitId: string; item: BuildAnswerItem; tiles: string[] }
+
+export function buildAnswerRound(unitIds: readonly string[], items: readonly BuildAnswerItem[], state: TestPrepState, random: () => number = Math.random, size: number = BUILD_ROUND_SIZE): BuildQuestion[] {
+  const ordered = unitsWeakestFirst(state, unitIds)
+  const sources = new Map(ordered.map((unitId) => {
+    const pool = shuffle(items.filter((item) => item.unitId === unitId), random)
+    return [unitId, (): BuildQuestion | undefined => {
+      const item = pool.shift()
+      return item && { id: item.id, unitId, item, tiles: shuffle([...item.answer, ...item.traps], random) }
+    }] as const
+  }))
+  return dealRoundRobin(ordered, sources, size)
+}
+
+/** Exact match on the answer or any accepted order. */
+export function isBuiltAnswerCorrect(item: BuildAnswerItem, tiles: readonly string[]): boolean {
+  return [item.answer, ...(item.accepted ?? [])].some((order) => order.length === tiles.length && order.every((tile, index) => tile === tiles[index]))
 }

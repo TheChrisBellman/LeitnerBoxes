@@ -3641,3 +3641,19 @@ button:disabled {
   background: var(--cobalt);
   color: white;
 }
+
+.testprep-built.is-correct {
+  border-style: solid;
+  border-color: var(--green);
+  background: var(--green-soft);
+}
+
+.testprep-built.is-incorrect {
+  border-style: solid;
+  border-color: var(--red);
+  background: var(--red-soft);
+}
+
+.testprep-slot {
+  min-width: 56px;
+}
