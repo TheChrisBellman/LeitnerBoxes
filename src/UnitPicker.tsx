@@ -14,11 +14,9 @@ export function UnitPicker({ selectedIds, masteredIds, onToggle }: { selectedIds
               const mastered = masteredIds?.has(unit.id) ?? false
               return (
                 <label className={`unit-option ${checked ? 'is-selected' : ''} ${mastered ? 'is-mastered' : ''}`} key={unit.id}>
-                  <span className="unit-selection">
                     <input type="checkbox" checked={checked} disabled={mastered} onChange={() => onToggle(unit.id)} />
-                    <span className="custom-check" aria-hidden="true" />
+                    <span className="custom-check" aria-hidden="true"><svg className="icon" width="16" height="16" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10" /></svg></span>
                     <span className="unit-copy"><strong>{materialLabelsById[unit.id] ?? unit.title}</strong><small><span lang="fr">{unit.title}</span> · {unit.id.toUpperCase()}{mastered ? ' · Mastered' : ''}</small></span>
-                  </span>
                 </label>
               )
             })}

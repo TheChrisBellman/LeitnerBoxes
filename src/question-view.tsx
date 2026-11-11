@@ -43,3 +43,12 @@ export function ExerciseContext({ question }: { question: PracticeQuestion }) {
     </div>
   )
 }
+
+const GRID_CHOICE_MAX_CHARS = 24
+const SHORT_PROMPT_MAX_CHARS = 14
+const LONG_PROMPT_MIN_CHARS = 48
+
+export const promptSizeClass = (prompt: string) => prompt.length <= SHORT_PROMPT_MAX_CHARS ? 'is-short' : prompt.length >= LONG_PROMPT_MIN_CHARS ? 'is-long' : undefined
+
+// Two columns only when every label is short enough to sit in a tile.
+export const choiceListClass = (labels: readonly string[]) => `choice-list ${labels.length % 2 === 0 && labels.every((label) => label.length <= GRID_CHOICE_MAX_CHARS) ? 'is-grid' : ''}`

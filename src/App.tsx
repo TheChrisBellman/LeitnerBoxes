@@ -1,15 +1,17 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { curriculumById, curriculumUnits, materialLabelsById, type CurriculumUnit, type Level } from './data/curriculum'
 import { allExercises } from './data/pilot-exercises'
 import { allCards, allTargets } from './data/words'
 import { ACTIVITY_TYPES, type ActivityType, type PracticeTarget } from './data/types'
 import {
   BOXES,
+  BOX_INTERVALS,
   activityAvailability,
   buildSessionQuestions,
   dateKey,
   getMasteredLessonIds,
   getQueueCounts,
+  isDue,
   matchesActivityTypes,
   queueCards,
   responseIsCorrect,
@@ -21,7 +23,7 @@ import {
   type PracticeMode,
   type PracticeQuestion,
 } from './leitner'
-import { answerDisplayFor, choicesFor, exerciseLabel, ExerciseContext } from './question-view.tsx'
+import { answerDisplayFor, choiceListClass, choicesFor, exerciseLabel, ExerciseContext, promptSizeClass } from './question-view.tsx'
 import { SprintScreen } from './Sprint.tsx'
 import { TestPrepScreen } from './TestPrep.tsx'
 import { clearStoredState, completeStreak, defaultState, loadState, saveState, type CorrectAdvanceMode, type StoredState, type Theme } from './storage'
@@ -156,8 +158,8 @@ function shuffleByActivityType<T>(items: readonly T[], getType: (item: T) => Act
 }
 
 const themeColors: Record<Theme, string> = {
-  light: '#f7f6f2',
-  dark: '#111214',
+  light: '#fbf9f4',
+  dark: '#17101d',
 }
 
 const iconPaths: Record<IconName, string> = {
@@ -210,17 +212,9 @@ function AnswerHintPopover({ hint, id, open, onToggle }: { hint: AnswerHint; id:
   )
 }
 
-function practiceModeLabel(mode: PracticeMode): string {
-  return mode === 'vocabulary' ? 'Vocabulary only' : mode === 'conjugation' ? 'Conjugation only' : 'Mixed practice'
-}
-
 function cardMatchesMode(card: PracticeTarget, mode: PracticeMode, enabledActivityTypes?: readonly ActivityType[]): boolean {
   const modeMatches = card.kind === 'exercise' ? mode === 'mixed' : mode === 'mixed' || card.kind === mode
   return modeMatches && matchesActivityTypes(card, enabledActivityTypes)
-}
-
-function levelForLesson(lessonId: string): CurriculumUnit | undefined {
-  return curriculumById.get(lessonId)
 }
 
 function groupLabel(group: string): string {
@@ -232,69 +226,42 @@ function materialLabel(unit: CurriculumUnit): string {
   return materialLabelsById[unit.id] ?? unit.title
 }
 
-function ActiveCurriculumLabel({ units }: { units: CurriculumUnit[] }) {
-  if (units.length === 0) return <span>No material selected</span>
+function TabBar({ screen, onNavigate }: { screen: Screen; onNavigate: (next: Screen) => void }) {
+  const tabs: { id: Screen; label: string; active: boolean }[] = [
+    { id: 'today', label: 'Climb', active: screen === 'today' || screen === 'curriculum' },
+    { id: 'sprint', label: 'Sprint', active: screen === 'sprint' },
+    { id: 'testprep', label: 'Test', active: screen === 'testprep' },
+    { id: 'results', label: 'Me', active: screen === 'results' },
+  ]
   return (
-    <>
-      <span>{materialLabel(units[0])}</span>
-      {units.length > 1 && <span> + {units.length - 1} more</span>}
-    </>
-  )
-}
-
-function MobileHeader({ onMenu, menuOpen, triggerRef, screen, onNavigate }: { onMenu: () => void; menuOpen: boolean; triggerRef: { current: HTMLButtonElement | null }; screen: Screen; onNavigate: (next: Screen) => void }) {
-  const practiceActive = screen === 'today' || screen === 'quiz'
-  return (
-    <header className="mobile-header">
-      <button type="button" className="brand-name" aria-label="Workplace French — Practice" onClick={() => onNavigate('today')}>Workplace French</button>
-      <nav className="desktop-nav" aria-label="Primary navigation">
-        <button type="button" className={practiceActive ? 'is-active' : ''} aria-current={practiceActive ? 'page' : undefined} onClick={() => onNavigate('today')}><Icon name="practice" size={16} />Practice</button>
-        <button type="button" className={screen === 'curriculum' ? 'is-active' : ''} aria-current={screen === 'curriculum' ? 'page' : undefined} onClick={() => onNavigate('curriculum')}><Icon name="cards" size={16} />Material</button>
-        <button type="button" className={screen === 'sprint' ? 'is-active' : ''} aria-current={screen === 'sprint' ? 'page' : undefined} onClick={() => onNavigate('sprint')}><Icon name="clock" size={16} />Sprint</button>
-        <button type="button" className={screen === 'testprep' ? 'is-active' : ''} aria-current={screen === 'testprep' ? 'page' : undefined} onClick={() => onNavigate('testprep')}><Icon name="check" size={16} />Test prep</button>
-        <button type="button" className={screen === 'results' ? 'is-active' : ''} aria-current={screen === 'results' ? 'page' : undefined} onClick={() => onNavigate('results')}><Icon name="progress" size={16} />Progress</button>
-      </nav>
-      <button ref={triggerRef} type="button" className="menu-button" onClick={onMenu} aria-label="Open menu" aria-haspopup="dialog" aria-expanded={menuOpen} aria-controls="app-menu">
-        <Icon name="menu" size={20} />
-        <span className="menu-button-label">Menu</span>
-      </button>
-    </header>
+    <nav className="tab-bar" aria-label="Sections">
+      {tabs.map((tab) => <button type="button" key={tab.id} aria-current={tab.active ? 'page' : undefined} onClick={() => onNavigate(tab.id)}>{tab.label}</button>)}
+    </nav>
   )
 }
 
 function MenuSheet({
-  screen,
   dailyGoal,
   missMode,
   correctAdvanceMode,
-  theme,
   onDailyGoalChange,
   onMissModeChange,
   onCorrectAdvanceModeChange,
-  onThemeChange,
-  onResetLocalData,
-  onNavigate,
   closing,
   onClose,
 }: {
-  screen: Screen
   dailyGoal: number
   missMode: MissMode
   correctAdvanceMode: CorrectAdvanceMode
-  theme: Theme
   onDailyGoalChange: (value: number) => void
   onMissModeChange: (value: MissMode) => void
   onCorrectAdvanceModeChange: (value: CorrectAdvanceMode) => void
-  onThemeChange: (value: Theme) => void
-  onResetLocalData: () => void
-  onNavigate: (next: Screen) => void
   closing: boolean
   onClose: () => void
 }) {
-  const practiceActive = screen === 'today' || screen === 'quiz'
   return (
     <>
-      <button type="button" className={`menu-backdrop ${closing ? 'is-closing' : ''}`} onClick={onClose} aria-label="Close menu" />
+      <button type="button" className={`menu-backdrop ${closing ? 'is-closing' : ''}`} onClick={onClose} aria-label="Close options" />
       <aside id="app-menu" className={`menu-sheet ${closing ? 'is-closing' : ''}`} role="dialog" aria-modal="true" aria-labelledby="menu-title" onKeyDown={(event) => {
         if (event.key !== 'Tab') return
         const focusable = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button, select, [href], input, textarea')).filter((element) => !element.hasAttribute('disabled'))
@@ -310,123 +277,82 @@ function MenuSheet({
         }
       }}>
         <div className="menu-sheet-header">
-          <h2 id="menu-title">Menu</h2>
-          <button type="button" className="icon-button" onClick={onClose} aria-label="Close menu" autoFocus>
+          <h2 id="menu-title">Session options</h2>
+          <button type="button" className="icon-plain" onClick={onClose} aria-label="Close options" autoFocus>
             <Icon name="close" size={20} />
           </button>
         </div>
-        <section className="menu-group" aria-labelledby="menu-navigation-heading">
-          <h3 id="menu-navigation-heading">Navigate</h3>
-          <nav className="menu-links" aria-label="App sections">
-            <button type="button" className={practiceActive ? 'is-active' : ''} aria-current={practiceActive ? 'page' : undefined} onClick={() => onNavigate('today')}><strong>Practice</strong></button>
-            <button type="button" className={screen === 'curriculum' ? 'is-active' : ''} aria-current={screen === 'curriculum' ? 'page' : undefined} onClick={() => onNavigate('curriculum')}><strong>Material</strong></button>
-            <button type="button" className={screen === 'sprint' ? 'is-active' : ''} aria-current={screen === 'sprint' ? 'page' : undefined} onClick={() => onNavigate('sprint')}><strong>Sprint</strong></button>
-            <button type="button" className={screen === 'testprep' ? 'is-active' : ''} aria-current={screen === 'testprep' ? 'page' : undefined} onClick={() => onNavigate('testprep')}><strong>Test prep</strong></button>
-            <button type="button" className={screen === 'results' ? 'is-active' : ''} aria-current={screen === 'results' ? 'page' : undefined} onClick={() => onNavigate('results')}><strong>Progress</strong></button>
-          </nav>
-        </section>
-        <section className="menu-group" aria-labelledby="menu-practice-heading">
-          <h3 id="menu-practice-heading">Session options</h3>
-          <div className="menu-setting">
-            <label htmlFor="miss-mode">On a missed answer</label>
-            <select id="miss-mode" name="miss-mode" autoComplete="off" value={missMode} onChange={(event) => onMissModeChange(event.target.value as MissMode)}>
-              <option value="step-back">Step back one box</option>
-              <option value="full-reset">Return to Box 1</option>
-            </select>
-          </div>
-          <div className="menu-setting">
-            <label htmlFor="correct-advance-mode">After a correct answer</label>
-            <select id="correct-advance-mode" name="correct-advance-mode" autoComplete="off" value={correctAdvanceMode} onChange={(event) => onCorrectAdvanceModeChange(event.target.value as CorrectAdvanceMode)}>
-              <option value="automatic">Continue automatically</option>
-              <option value="manual">Wait for Next</option>
-            </select>
-          </div>
-          <div className="menu-setting">
-            <label htmlFor="daily-goal">Cards per session</label>
-            <select id="daily-goal" name="daily-goal" autoComplete="off" value={dailyGoal} onChange={(event) => onDailyGoalChange(Number(event.target.value))}>
-              {[5, 8, 12, 20].map((value) => <option key={value} value={value}>{value} cards</option>)}
-            </select>
-          </div>
-        </section>
-        <section className="menu-group" aria-labelledby="menu-how-heading">
-          <h3 id="menu-how-heading">How it works</h3>
-          <p className="menu-helper">Every card sits in one of five boxes. A right answer moves it forward and spaces the next review further out; a missed card steps back. Due cards come first, then new cards fill the session.</p>
-        </section>
-        <section className="menu-group" aria-labelledby="menu-appearance-heading">
-          <h3 id="menu-appearance-heading">Appearance</h3>
-          <div className="menu-setting menu-theme-setting">
-            <span className="menu-setting-label">Theme</span>
-            <label className="theme-switch">
-              <span className="theme-switch-label">Dark mode</span>
-              <input type="checkbox" role="switch" aria-label="Dark mode" aria-checked={theme === 'dark'} checked={theme === 'dark'} onChange={(event) => onThemeChange(event.target.checked ? 'dark' : 'light')} />
-              <span className="switch-track" aria-hidden="true"><span className="switch-thumb" /></span>
-            </label>
-          </div>
-        </section>
-        <section className="menu-group menu-data-group" aria-labelledby="menu-data-heading">
-          <h3 id="menu-data-heading">This browser</h3>
-          <div className="menu-data-controls">
-            <button type="button" className="button menu-reset-button" onClick={onResetLocalData}>Reset all local data</button>
-            <p>Erases progress, streak, material selection, and preferences from this browser.</p>
-          </div>
-          <p className="menu-disclaimer">Unofficial companion. Vocabulary cards use selected PFL2 PDF terms with reviewed English glosses; other activities are independently authored. Progress stays in this browser.</p>
-          <p className="menu-last-updated"><time dateTime="2026-09-07">Last updated: 7 September 2026</time></p>
-        </section>
+        <div className="menu-setting">
+          <label htmlFor="miss-mode">On a missed answer</label>
+          <select id="miss-mode" name="miss-mode" autoComplete="off" value={missMode} onChange={(event) => onMissModeChange(event.target.value as MissMode)}>
+            <option value="step-back">Step back one box</option>
+            <option value="full-reset">Return to Box 1</option>
+          </select>
+        </div>
+        <div className="menu-setting">
+          <label htmlFor="correct-advance-mode">After a correct answer</label>
+          <select id="correct-advance-mode" name="correct-advance-mode" autoComplete="off" value={correctAdvanceMode} onChange={(event) => onCorrectAdvanceModeChange(event.target.value as CorrectAdvanceMode)}>
+            <option value="automatic">Continue automatically</option>
+            <option value="manual">Wait for Next</option>
+          </select>
+        </div>
+        <div className="menu-setting">
+          <label htmlFor="daily-goal">Cards per session</label>
+          <select id="daily-goal" name="daily-goal" autoComplete="off" value={dailyGoal} onChange={(event) => onDailyGoalChange(Number(event.target.value))}>
+            {[5, 8, 12, 20].map((value) => <option key={value} value={value}>{value} cards</option>)}
+          </select>
+        </div>
       </aside>
     </>
   )
 }
 
-function ScreenHeader({ title, description, onBack }: { title: string; description: string; onBack?: () => void }) {
+function PageTitle({ title, onBack }: { title: string; onBack: () => void }) {
   return (
-    <div className="screen-header">
-      {onBack && <button type="button" className="back-button" onClick={onBack} aria-label="Back to practice"><Icon name="arrowLeft" size={20} /></button>}
+    <div className="page-title">
+      <button type="button" className="icon-plain" onClick={onBack} aria-label="Back to practice"><Icon name="arrowLeft" size={20} /></button>
       <h1 tabIndex={-1}>{title}</h1>
-      <p>{description}</p>
     </div>
   )
 }
 
-function StatBlock({ icon, value, label, accent = '' }: { icon: IconName; value: string | number; label: string; accent?: string }) {
+const BOX_CADENCE: Record<Box, string> = { 1: 'New', 2: '1-day review', 3: '2-day review', 4: '4-day review', 5: '14+ day review' }
+const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`
+const boxTotal = (counts: Record<Box, number>) => BOXES.reduce((sum, box) => sum + counts[box], 0)
+
+// Box 5 on top, Box 1 at the bottom. `due` adds due badges (home); `deltas` makes the compact after-session version.
+function Ladder({ counts, due, deltas }: { counts: Record<Box, number>; due?: Record<Box, number>; deltas?: Record<Box, number> }) {
   return (
-    <div className={`stat-block ${accent}`}>
-      <span className="stat-icon"><Icon name={icon} size={18} /></span>
-      <strong>{value}</strong>
-      <span>{label}</span>
+    <div className={`ladder ${deltas ? 'is-compact' : ''}`} role="group" aria-label="Cards in each box">
+      {[...BOXES].reverse().map((box) => (
+        <div className={`rung box-${box}`} key={box}>
+          <strong aria-label={plural(counts[box], 'card')}>{counts[box]}</strong>
+          {due && due[box] > 0 && <span className="rung-pill">{due[box]} due</span>}
+          <span className="rung-label"><b>Box {box}</b>{!deltas && BOX_CADENCE[box]}</span>
+          {deltas && (deltas[box] === 0 ? <span className="rung-delta">no change</span> : <span className={`rung-pill ${deltas[box] < 0 ? 'is-outline' : ''}`}>{deltas[box] > 0 ? '+' : '−'}{Math.abs(deltas[box])}</span>)}
+        </div>
+      ))}
     </div>
   )
 }
 
-function MemoryShelf({ counts, showHint = true }: { counts: Record<Box, number>; showHint?: boolean }) {
+function BoxBar({ counts, labelled = false }: { counts: Record<Box, number>; labelled?: boolean }) {
   return (
-    <section className="memory-shelf" aria-label="Five-box memory shelf">
-      <div className="shelf-heading">
-        <h2>Memory shelf</h2>
-        {showHint && <p>Right answers move cards forward.</p>}
-      </div>
-      <div className="shelf-compartments">
-        {BOXES.map((box) => {
-          const count = counts[box]
-          return (
-            <div className="shelf-compartment" key={box}>
-              <div className="compartment-copy">
-                <span className="compartment-label">Box {box}</span>
-                <strong aria-label={`${count} ${count === 1 ? 'card' : 'cards'}`}>{count}</strong>
-                <span className="compartment-unit">{count === 1 ? 'card' : 'cards'}</span>
-              </div>
-              <div className="compartment-meter">
-                <span className="compartment-cadence">{box === 1 ? 'New' : box === 2 ? '1-day review' : box === 3 ? '2-day review' : box === 4 ? '4-day review' : '14+ day review'}</span>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </section>
+    <div className={`box-bar ${labelled ? 'is-labelled' : ''}`} role="img" aria-label={BOXES.map((box) => `Box ${box}: ${counts[box]}`).join(', ')}>
+      {BOXES.filter((box) => counts[box] > 0).map((box) => <span className={`box-${box}`} key={box} style={{ flexGrow: counts[box] }}>{labelled && counts[box]}</span>)}
+    </div>
   )
+}
+
+function boxMoveLabel(feedback: Feedback): string {
+  const days = feedback.correct ? (feedback.previousBox === 5 ? 0 : BOX_INTERVALS[feedback.previousBox - 1]) : BOX_INTERVALS[feedback.nextBox - 1]
+  const when = !days ? '' : days === 1 ? ' · back tomorrow' : ` · back in ${days} days`
+  return `${feedback.nextBox > feedback.previousBox ? '↑ Up to' : feedback.nextBox < feedback.previousBox ? '↓ Back to' : 'Stays in'} Box ${feedback.nextBox}${when}`
 }
 
 function TodayScreen({
   counts,
+  dueCounts,
   queueCounts,
   activeUnits,
   masteredSelectedCount,
@@ -445,6 +371,7 @@ function TodayScreen({
   onPresetChange,
 }: {
   counts: Record<Box, number>
+  dueCounts: Record<Box, number>
   queueCounts: ReturnType<typeof getQueueCounts>
   activeUnits: CurriculumUnit[]
   masteredSelectedCount: number
@@ -462,102 +389,80 @@ function TodayScreen({
   onActivityTypesChange: (value: ActivityType[]) => void
   onPresetChange: (preset: PracticePreset) => void
 }) {
-  const actionPanelRef = useRef<HTMLElement>(null)
   const [customOpen, setCustomOpen] = useState(activePreset === 'custom')
+  const [styleOpen, setStyleOpen] = useState(false)
 
   useEffect(() => {
     if (activePreset !== 'custom') setCustomOpen(false)
   }, [activePreset])
 
-  useLayoutEffect(() => {
-    const panel = actionPanelRef.current
-    if (!panel) return undefined
-    const updateHeight = () => document.documentElement.style.setProperty('--mobile-cta-height', `${panel.getBoundingClientRect().height}px`)
-    updateHeight()
-    if (typeof ResizeObserver === 'undefined') return () => document.documentElement.style.removeProperty('--mobile-cta-height')
-    const observer = new ResizeObserver(updateHeight)
-    observer.observe(panel)
-    return () => {
-      observer.disconnect()
-      document.documentElement.style.removeProperty('--mobile-cta-height')
-    }
-  }, [])
-
-  const sessionSize = readyCardCount
   const hasCards = readyCardCount > 0
   const hasFutureCards = queueCounts.future > 0
   const modeDescription = practiceMode === 'conjugation' ? 'conjugation cards' : practiceMode === 'vocabulary' ? 'vocabulary cards' : 'cards'
   const masteredOnly = activeUnits.length === 0 && masteredSelectedCount > 0
   const selectedUnitCount = activeUnits.length + masteredSelectedCount
-  return (
-    <section className="page today-page">
-      <h1 className="visually-hidden" tabIndex={-1}>Practice</h1>
-      <section className="today-focus-panel">
-        <div className="today-study-column">
-          <section className="practice-setup surface-panel" aria-label="Practice setup">
-            <section className="setup-section" aria-labelledby="curriculum-step-heading">
-              <div className="setup-section-heading">
-                <span className="setup-step" aria-hidden="true">1</span>
-                <h3 id="curriculum-step-heading">Material</h3>
-              </div>
-              <button type="button" className="selection-control" onClick={onChooseCurriculum}>
-                <span className="selection-control-copy">
-                  <strong>{selectedUnitCount > 0 ? <ActiveCurriculumLabel units={activeUnits} /> : 'Choose material'}</strong>
-                  <small>{selectedUnitCount > 0 ? `${selectedUnitCount} unit${selectedUnitCount === 1 ? '' : 's'} selected` : 'Select one or more units'}</small>
-                </span>
-                <Icon name="arrow" size={17} />
-              </button>
-            </section>
-            <fieldset className="setup-section home-activity-picker" disabled={selectedUnitCount === 0}>
-              <legend className="setup-section-heading">
-                <span className="setup-step" aria-hidden="true">2</span>
-                <span className="setup-legend-title">Practice style</span>
-              </legend>
-              <div className="practice-presets" role="group" aria-label="Practice styles">
-                {presetOptions.map((preset) => (
-                  <button type="button" key={preset.id} className={`practice-preset ${activePreset === preset.id && !customOpen ? 'is-selected' : ''}`} aria-pressed={activePreset === preset.id && !customOpen} onClick={() => { setCustomOpen(false); onPresetChange(preset.id) }}>
-                    <Icon name={preset.icon} size={20} />
-                    <strong>{preset.label}</strong>
-                  </button>
-                ))}
-                <button type="button" className={`practice-preset ${activePreset === 'custom' || customOpen ? 'is-selected' : ''}`} aria-pressed={activePreset === 'custom' || customOpen} onClick={() => setCustomOpen(true)}>
-                  <Icon name="sliders" size={20} />
-                  <strong>Custom</strong>
-                </button>
-              </div>
-              {(activePreset === 'custom' || customOpen) && <div className="custom-activity-options">
-                {activityOptions.map(({ type, label, description }) => {
-                    const checked = enabledActivityTypes.includes(type)
-                    const available = activityCounts[type] ?? 0
-                    const unavailable = available === 0
-                    return (
-                      <label className={`activity-option home-activity-option ${checked ? 'is-selected' : ''} ${unavailable ? 'is-unavailable' : ''}`} aria-disabled={unavailable && !checked} key={type}>
-                        <input type="checkbox" aria-label={label} checked={checked} disabled={(unavailable && !checked) || (checked && enabledActivityTypes.length === 1)} onChange={() => onActivityTypesChange(checked ? enabledActivityTypes.filter((item) => item !== type) : [...enabledActivityTypes, type])} />
-                        <span className="custom-check" aria-hidden="true"><Icon name="check" size={13} /></span>
-                        <span className="activity-option-copy"><strong>{label}</strong><small>{description}</small></span>
-                        <span className="activity-option-count" aria-label={`${available} available`}>{available}</span>
-                      </label>
-                    )
-                  })}
-              </div>}
-            </fieldset>
-          </section>
-          {notice && <p className="inline-notice today-message" role="alert">{notice}</p>}
-          {!hasCards && !notice && activeUnits.length > 0 && <p className="quiet-note today-message">{selectedCardCount === 0 ? `No ${modeDescription} are authored for the selected units yet. Switch practice mode or choose A-01–A-03.` : hasFutureCards ? 'No cards are due right now. Come back when the next review is ready.' : 'No cards are available right now.'}</p>}
-          {!hasCards && !notice && masteredOnly && <p className="quiet-note today-message">Mastered objectives return for occasional refreshes. {hasFutureCards ? 'The next refresh is scheduled.' : 'No refresh is due right now.'}</p>}
-          {activeUnits.length > 0 && selectedCardCount === 0 && <p className="empty-guidance today-message">Choose an available activity or add another material unit.</p>}
-        </div>
-        <section ref={actionPanelRef} className="next-card-panel">
-          <div className="next-card-copy">
-            <h2>{masteredOnly ? hasCards ? `${sessionSize} refresh item${sessionSize === 1 ? '' : 's'} ready` : 'All caught up' : activeUnits.length === 0 ? 'Choose your material.' : selectedCardCount === 0 ? `No ${modeDescription} here yet` : hasCards ? `${sessionSize} practice item${sessionSize === 1 ? '' : 's'} ready` : 'All caught up'}</h2>
-            {hasCards && <p>{enabledActivityTypes.length} activit{enabledActivityTypes.length === 1 ? 'y' : 'ies'} selected · up to {dailyGoal} items</p>}
-          </div>
-          <button type="button" className="button button-primary button-large" onClick={activeUnits.length === 0 && !masteredOnly ? onChooseCurriculum : onStart} disabled={!hasCards && (activeUnits.length > 0 || masteredOnly)}>
-            {hasCards ? 'Start practice' : masteredOnly ? 'All caught up' : activeUnits.length === 0 ? 'Choose material' : 'No practice ready'}
-            {(hasCards || activeUnits.length === 0) && <Icon name="arrow" size={17} />}
+  const needsMaterial = activeUnits.length === 0 && !masteredOnly
+  const customActive = activePreset === 'custom' || customOpen
+  const styleLabel = customActive ? 'Custom' : presetOptions.find((preset) => preset.id === activePreset)?.label ?? 'Custom'
+  const dueTotal = boxTotal(dueCounts)
+
+  if (styleOpen) {
+    return (
+      <section className="page fill-page">
+        <PageTitle title="Practice style" onBack={() => setStyleOpen(false)} />
+        <div className="tile-grid" role="group" aria-label="Practice styles">
+          {presetOptions.map((preset) => (
+            <button type="button" key={preset.id} className="tile" aria-pressed={activePreset === preset.id && !customOpen} onClick={() => { setCustomOpen(false); onPresetChange(preset.id) }}>
+              <Icon name={preset.icon} size={20} />
+              <strong>{preset.label}</strong>
+            </button>
+          ))}
+          <button type="button" className="tile" aria-pressed={customActive} onClick={() => setCustomOpen(true)}>
+            <Icon name="sliders" size={20} />
+            <strong>Custom</strong>
+            <small>{plural(enabledActivityTypes.length, 'question type')}</small>
           </button>
-        </section>
+        </div>
+        {customActive && <>
+          <h2 className="section-label">Question types in Custom</h2>
+          <div className="chip-group" role="group" aria-label="Question types">
+            {activityOptions.map(({ type, label, description }) => {
+              const checked = enabledActivityTypes.includes(type)
+              const available = activityCounts[type] ?? 0
+              const unavailable = available === 0
+              return (
+                <label className="chip-check" title={description} key={type}>
+                  <input type="checkbox" aria-label={`${label}, ${available} available`} checked={checked} disabled={(unavailable && !checked) || (checked && enabledActivityTypes.length === 1)} onChange={() => onActivityTypesChange(checked ? enabledActivityTypes.filter((item) => item !== type) : [...enabledActivityTypes, type])} />
+                  <span>{label}</span>
+                  <small>{available}</small>
+                </label>
+              )
+            })}
+          </div>
+        </>}
+        <div className="spacer" />
+        <button type="button" className="button button-primary" onClick={() => setStyleOpen(false)}>Use {styleLabel}</button>
       </section>
+    )
+  }
+
+  return (
+    <section className="page fill-page today-page">
+      <div className="pill-row">
+        <button type="button" className="pill" onClick={onChooseCurriculum}>{selectedUnitCount > 0 ? plural(selectedUnitCount, 'unit') : 'Choose material'}<Icon name="chevron" size={14} /></button>
+        <button type="button" className="pill" onClick={() => setStyleOpen(true)} disabled={selectedUnitCount === 0}>{styleLabel}<Icon name="chevron" size={14} /></button>
+      </div>
+      <div className="headline">
+        <h1 tabIndex={-1}>{needsMaterial ? 'Choose material' : dueTotal > 0 ? `${dueTotal} due` : hasCards ? `${readyCardCount} ready` : 'All caught up'}</h1>
+        <span>{plural(boxTotal(counts), 'card')} on the ladder</span>
+      </div>
+      <Ladder counts={counts} due={dueCounts} />
+      {notice && <p className="inline-notice" role="alert">{notice}</p>}
+      {!hasCards && !notice && activeUnits.length > 0 && <p className="quiet-note">{selectedCardCount === 0 ? `No ${modeDescription} are authored for the selected units yet. Choose another practice style or add another unit.` : hasFutureCards ? 'No cards are due right now. Come back when the next review is ready.' : 'No cards are available right now.'}</p>}
+      {!hasCards && !notice && masteredOnly && <p className="quiet-note">Mastered objectives return for occasional refreshes. {hasFutureCards ? 'The next refresh is scheduled.' : 'No refresh is due right now.'}</p>}
+      <button type="button" className="button button-primary" onClick={needsMaterial ? onChooseCurriculum : onStart} disabled={!hasCards && !needsMaterial}>
+        {hasCards ? `Start · ${plural(readyCardCount, 'card')}` : needsMaterial ? 'Choose material' : masteredOnly ? 'All caught up' : 'No practice ready'}
+      </button>
     </section>
   )
 }
@@ -583,82 +488,68 @@ function CurriculumScreen({
   onToggleLevel: (level: Level) => void
   onBack: () => void
 }) {
-  const [expandedLevels, setExpandedLevels] = useState<Record<Level, boolean>>({ A: true, B: false, C: false })
+  const [level, setLevel] = useState<Level>('A')
   const [search, setSearch] = useState('')
   const selected = new Set(selectedIds)
   const searchTerm = search.trim().toLocaleLowerCase()
   const visibleUnits = curriculumUnits.filter((unit) => !searchTerm || unit.id.includes(searchTerm) || unit.title.toLocaleLowerCase().includes(searchTerm) || materialLabel(unit).toLocaleLowerCase().includes(searchTerm))
+  const levels: Level[] = ['A', 'B', 'C']
+  const totalSelected = selectedIds.length + masteredSelectedCount
 
   return (
     <section className="page curriculum-page">
-      <ScreenHeader title="Choose material" description="Pick one or more units. This only controls which material appears when you practice." onBack={onBack} />
-      <label className="curriculum-search-label" htmlFor="curriculum-search">Find material</label>
-      <input id="curriculum-search" className="curriculum-search" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by unit name or ID" />
-      <div className="selection-summary surface-panel">
-        <span className="screen-kicker">Your material</span>
-        <strong className="selection-total">{selectedIds.length + masteredSelectedCount}</strong>
-        <span className="selection-label">unit{selectedIds.length + masteredSelectedCount === 1 ? '' : 's'} selected</span>
-        <p>{selectedCardCount} practice item{selectedCardCount === 1 ? '' : 's'} available · {practiceModeLabel(practiceMode)}</p>
-        <button type="button" className="button button-primary button-full" onClick={onBack} disabled={selectedIds.length === 0 && masteredSelectedCount === 0}>Use this material <Icon name="arrow" size={16} /></button>
-      </div>
+      <PageTitle title="Material" onBack={onBack} />
+      <input id="curriculum-search" className="curriculum-search" type="search" aria-label="Find material" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by unit name or ID" />
+      {!searchTerm && <div className="segmented" role="group" aria-label="Level">
+        {levels.map((item) => <button type="button" key={item} aria-pressed={level === item} onClick={() => setLevel(item)}>Level {item}</button>)}
+      </div>}
       <div className="curriculum-list">
-        {(['A', 'B', 'C'] as Level[]).map((level) => {
-          const units = visibleUnits.filter((unit) => unit.level === level)
+        {/* A search looks across every level; otherwise only the chosen level shows. */}
+        {(searchTerm ? levels : [level]).map((shownLevel) => {
+          const units = visibleUnits.filter((unit) => unit.level === shownLevel)
+          if (units.length === 0) return null
           const groups = [...new Set(units.map((unit) => unit.group))]
           const selectableUnits = units.filter((unit) => !masteredIds.has(unit.id))
           const selectedInLevel = selectableUnits.filter((unit) => selected.has(unit.id)).length
           const allLevelMastered = selectableUnits.length === 0
-          const expanded = expandedLevels[level]
           return (
-            <section className="level-section" key={level}>
-              <button type="button" className="level-header" onClick={() => setExpandedLevels((current) => ({ ...current, [level]: !current[level] }))} aria-expanded={expanded}>
-                <span className={`level-badge level-${level.toLowerCase()}`}>{level}</span>
-                <span className="level-header-copy"><strong>Level {level} · {levelNames[level]}</strong><small>{levelDescriptions[level]} · {allLevelMastered ? 'All mastered' : `${selectedInLevel} / ${selectableUnits.length} selected`}</small></span>
-                <Icon name="chevron" size={18} />
-              </button>
-              <div className={`level-body ${expanded ? 'is-expanded' : ''}`} aria-hidden={!expanded} inert={!expanded}>
-                <div className="level-body-inner">
-                  <div className="level-actions">
-                    <span>{allLevelMastered ? 'Every unit is mastered.' : selectedInLevel === selectableUnits.length ? 'Every available unit is active.' : 'Select the whole level'}</span>
-                    <button type="button" className="text-button" onClick={() => onToggleLevel(level)} disabled={allLevelMastered} aria-pressed={!allLevelMastered && selectedInLevel === selectableUnits.length}>{allLevelMastered ? 'All mastered' : selectedInLevel === selectableUnits.length ? 'Deselect all' : 'Select all'}</button>
-                  </div>
-                  {groups.map((group) => {
-                    const groupUnits = units.filter((unit) => unit.group === group)
-                    const selectableGroupUnits = groupUnits.filter((unit) => !masteredIds.has(unit.id))
-                    const allGroupMastered = selectableGroupUnits.length === 0
-                    return (
-                      <div className="unit-group" key={group}>
-                        <div className="unit-group-heading">
-                          <span>{groupLabel(group)}</span>
-                          {allGroupMastered && <span>All mastered</span>}
-                        </div>
-                        <div className="unit-options">
-                          {groupUnits.map((unit) => {
-                            const mastered = masteredIds.has(unit.id)
-                            const inputId = `curriculum-${unit.id}`
-                            return (
-                              <div className={`unit-option ${selected.has(unit.id) ? 'is-selected' : ''} ${mastered ? 'is-mastered' : ''}`} key={unit.id}>
-                                <label className="unit-selection" htmlFor={inputId}>
-                                  <input id={inputId} type="checkbox" checked={selected.has(unit.id)} disabled={mastered} onChange={() => onToggleLesson(unit.id)} />
-                                  <span className="custom-check" aria-hidden="true"><Icon name="check" size={13} /></span>
-                                  <span className="unit-copy"><strong>{materialLabel(unit)}</strong><small><span lang="fr">{unit.title}</span> · {unit.id.toUpperCase()}{mastered ? ' · Mastered · occasional refresh' : ''}</small></span>
-                                </label>
-                                <span className="unit-count">{mastered ? 'Mastered' : `${unitCardCounts[unit.id] ?? 0} items`}</span>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
+            <section className="level-section" key={shownLevel} aria-label={`Level ${shownLevel}`}>
+              <div className="level-actions">
+                <span>{levelNames[shownLevel]} · {levelDescriptions[shownLevel]} · {allLevelMastered ? 'All mastered' : `${selectedInLevel} / ${selectableUnits.length} selected`}</span>
+                <button type="button" className="text-button" onClick={() => onToggleLevel(shownLevel)} disabled={allLevelMastered} aria-pressed={!allLevelMastered && selectedInLevel === selectableUnits.length}>{allLevelMastered ? 'All mastered' : selectedInLevel === selectableUnits.length ? 'Deselect all' : 'Select all'}</button>
               </div>
+              {groups.map((group) => {
+                const groupUnits = units.filter((unit) => unit.group === group)
+                const allGroupMastered = groupUnits.every((unit) => masteredIds.has(unit.id))
+                return (
+                  <div className="unit-group" key={group}>
+                    <div className="unit-group-heading">
+                      <span>{groupLabel(group)}</span>
+                      {allGroupMastered && <span>All mastered</span>}
+                    </div>
+                    <div className="unit-options">
+                      {groupUnits.map((unit) => {
+                        const mastered = masteredIds.has(unit.id)
+                        return (
+                          <label className={`unit-option ${mastered ? 'is-mastered' : ''}`} key={unit.id}>
+                            <input type="checkbox" checked={selected.has(unit.id)} disabled={mastered} onChange={() => onToggleLesson(unit.id)} />
+                            <span className="custom-check" aria-hidden="true"><Icon name="check" size={14} /></span>
+                            <span className="unit-copy"><strong>{materialLabel(unit)}</strong><small><span lang="fr">{unit.title}</span> · {unit.id.toUpperCase()}{mastered ? ' · Mastered · occasional refresh' : ''}</small></span>
+                            <span className="unit-count">{mastered ? 'Mastered' : plural(unitCardCounts[unit.id] ?? 0, 'card')}</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
             </section>
           )
         })}
       </div>
-      {visibleUnits.length === 0 && <p className="quiet-note curriculum-empty">No material matches “{search}”.</p>}
-      <div className="taxonomy-note"><Icon name="book" size={18} /><p><strong>Unofficial companion.</strong> Unit names follow the archived Government of Canada PFL2 taxonomy. Vocabulary terms are selected from public PDFs and paired with reviewed English glosses. This app is not affiliated with or endorsed by the Government of Canada.</p></div>
+      {visibleUnits.length === 0 && <p className="quiet-note">No material matches “{search}”.</p>}
+      <p className="fine-print"><strong>Unofficial companion.</strong> Unit names follow the archived Government of Canada PFL2 taxonomy. Vocabulary terms are selected from public PDFs and paired with reviewed English glosses. This app is not affiliated with or endorsed by the Government of Canada.</p>
+      <button type="button" className="button button-primary sticky-cta" onClick={onBack} disabled={totalSelected === 0}>Use {plural(totalSelected, 'unit')} · {plural(selectedCardCount, 'card')}</button>
     </section>
   )
 }
@@ -705,23 +596,18 @@ function FeedbackPanel({
   const title = feedback.stage === 'repair'
     ? feedback.correct ? 'Correct on retry' : 'Still not quite'
     : feedback.correct ? 'Correct' : 'Not quite'
-  const moved = feedback.previousBox !== feedback.nextBox
 
   return (
     <div className={`feedback-panel ${feedback.correct ? 'is-correct' : 'is-incorrect'}`}>
-      <div className="feedback-mark" aria-hidden="true"><Icon name={feedback.correct ? 'check' : 'close'} size={22} /></div>
       <div className="feedback-copy" role={feedback.correct ? 'status' : 'alert'} aria-live={feedback.correct ? 'polite' : 'assertive'} aria-atomic="true">
         <strong>{title}</strong>
         {revealed && <span className="feedback-answer" lang={question.answerLanguage}>{fullAnswer}</span>}
         {feedback.stage === 'repair' && !feedback.correct && <span className="feedback-chosen">You chose <strong lang={question.answerLanguage}>{selectedAnswer}</strong></span>}
         {explanation && <span className="feedback-explanation">{explanation}</span>}
       </div>
-      {feedback.stage === 'first' && <span className="feedback-box-chip" aria-label={moved ? `Box ${feedback.previousBox} to Box ${feedback.nextBox}` : `Stays in Box ${feedback.nextBox}`}>
-        {moved ? <>Box {feedback.previousBox} <Icon name="arrow" size={12} /> {feedback.nextBox}</> : `Box ${feedback.nextBox}`}
-      </span>}
       {!feedback.correct && feedback.stage === 'first'
-        ? <button ref={actionRef} type="button" className="button button-primary feedback-next" onClick={onStartRepair}>Try again</button>
-        : !shouldAutoAdvance && <button ref={actionRef} type="button" className="button button-primary feedback-next" onClick={onContinue}>{index + 1 === total ? 'Results' : 'Next'} <Icon name="arrow" size={15} /></button>}
+        ? <button ref={actionRef} type="button" className="button button-primary" onClick={onStartRepair}>Try again</button>
+        : !shouldAutoAdvance && <button ref={actionRef} type="button" className="button button-primary" onClick={onContinue}>{index + 1 === total ? 'Results' : 'Next'}</button>}
     </div>
   )
 }
@@ -778,6 +664,8 @@ function QuizScreen({
   const [phraseHelpOpen, setPhraseHelpOpen] = useState(false)
 
   useEffect(() => {
+    // The page scrolls inside main, so a new card has to be sent back to the top by hand.
+    document.getElementById('main-content')?.scrollTo(0, 0)
     questionHeadingRef.current?.focus({ preventScroll: true })
   }, [question.card.id])
 
@@ -982,153 +870,157 @@ function QuizScreen({
     insertAccent(character)
   }
 
+  const stageBox = feedback?.nextBox ?? currentBox
+  const doneCount = index + (feedback?.correct ? 1 : 0)
+  const isChoiceFormat = question.format === 'choice' || question.format === 'cloze' || question.format === 'correction'
+  const canSkip = !feedback && !repairing
+  const skipButton = canSkip && <button type="button" className="button button-secondary" onClick={onSkip}>Skip</button>
+
   return (
-    <section className="page quiz-page">
-      <div className={`quiz-topline ${viewMode === 'presentation' ? 'is-presentation' : ''}`}>
-        <button type="button" className="back-button" onClick={onExit} aria-label="Back to practice"><Icon name="arrowLeft" size={20} /></button>
-        <div className="quiz-context">
-          <span className="quiz-progress-label">Card {index + 1} of {total} <span className="quiz-box-chip">Box {currentBox}</span></span>
-          <progress className="quiz-progress-bar" max={total} value={index + 1} aria-label={`Session progress: card ${index + 1} of ${total}`} />
-        </div>
-        <div className="quiz-topline-actions">
-          <button type="button" className="presentation-button" onClick={onTogglePresentation} aria-pressed={viewMode === 'presentation'} aria-label={viewMode === 'presentation' ? 'Exit presentation mode' : 'Enter presentation mode'}>
-            <Icon name={viewMode === 'presentation' ? 'minimize' : 'expand'} size={17} />
-            <span>{viewMode === 'presentation' ? 'Exit presentation' : 'Present'}</span>
+    <section className={`page quiz-page box-${stageBox}`}>
+      <div className="stage">
+        <div className="stage-top">
+          <button type="button" className="icon-plain" onClick={onExit} aria-label="End session"><Icon name="close" size={20} /></button>
+          <div className="segments" role="img" aria-label={`Card ${index + 1} of ${total}`}>
+            {Array.from({ length: total }, (_, segment) => <i key={segment} className={segment < doneCount ? 'is-done' : segment === index ? 'is-current' : ''} />)}
+          </div>
+          <span className="stage-count">{index + 1}/{total}</span>
+          <button type="button" className="icon-plain presentation-button" onClick={onTogglePresentation} aria-pressed={viewMode === 'presentation'} aria-label={viewMode === 'presentation' ? 'Exit presentation mode' : 'Enter presentation mode'}>
+            <Icon name={viewMode === 'presentation' ? 'minimize' : 'expand'} size={18} />
           </button>
-          {viewMode !== 'presentation' && <button ref={menuTriggerRef} type="button" className="menu-button quiz-settings-button" onClick={onMenu} aria-label="Open settings" aria-haspopup="dialog" aria-expanded={menuOpen} aria-controls="app-menu">
-            <Icon name="settings" size={20} />
+          {viewMode !== 'presentation' && <button ref={menuTriggerRef} type="button" className="icon-plain" onClick={onMenu} aria-label="Open session options" aria-haspopup="dialog" aria-expanded={menuOpen} aria-controls="app-menu">
+            <Icon name="settings" size={18} />
           </button>}
         </div>
-      </div>
-      <div className="quiz-workspace">
-        <div className="quiz-prompt-column">
-          <div key={question.card.id} className={`prompt-card question-type-${question.kind} exercise-format-${question.format} exercise-kind-${question.exercise?.kind ?? 'none'}`}>
-            <div className="question-meta">
-              <span className="question-type-label">{questionLabel}</span>
-            </div>
-            <ExerciseContext question={question} />
-            <div className="prompt-copy">
-              {question.exercise?.kind === 'contextual-cloze' && <span className="prompt-task-label">Complete the French sentence</span>}
-              <div className={`prompt-headline ${question.kind === 'conjugation' ? 'is-conjugation' : ''}`}>
-                <h1 ref={questionHeadingRef} tabIndex={-1} lang={question.promptLanguage}>{question.prompt}</h1>
-                {question.card.kind === 'conjugation' && question.format !== 'cloze' && <span className="conjugation-person">{question.card.person}</span>}
-              </div>
-              {question.exercise?.kind !== 'scenario' && question.format !== 'typed' && question.format !== 'arrange' && <p>{questionInstruction}</p>}
-            </div>
+        <div key={question.card.id} className="stage-body">
+          {feedback?.stage === 'first'
+            ? <span className="stage-pill is-solid">{boxMoveLabel(feedback)}</span>
+            : <span className="stage-pill">Box {currentBox}</span>}
+          <span className="visually-hidden">{questionLabel}</span>
+          <ExerciseContext question={question} />
+          {question.exercise?.kind === 'contextual-cloze' && <span className="prompt-task-label">Complete the French sentence</span>}
+          {question.exercise?.kind !== 'scenario' && <p className="stage-instruction">{questionInstruction}</p>}
+          <div className="prompt-headline">
+            <h1 ref={questionHeadingRef} tabIndex={-1} lang={question.promptLanguage} className={promptSizeClass(question.prompt)}>{question.prompt}</h1>
+            {question.card.kind === 'conjugation' && question.format !== 'cloze' && <span className="conjugation-person">{question.card.person}</span>}
           </div>
         </div>
-        <div className="quiz-answer-column">
-          {repairing && <div className="repair-prompt" role="status" aria-live="polite">
-            <span>{question.format === 'typed'
-              ? 'Type the answer again without looking at the correction.'
-              : question.format === 'arrange'
-                ? 'Build the answer again without looking at the correction.'
-                : question.exercise?.kind === 'correction'
-                  ? 'Read the full text again, then choose the underlined part with the error.'
-                  : question.card.kind === 'conjugation'
-                    ? `Choose the form that matches ${question.card.person}.`
-                    : 'Choose the answer again without looking at the correction.'}</span>
+      </div>
+      <div className="sheet">
+        {repairing && <div className="repair-prompt" role="status" aria-live="polite">
+          <span>{question.format === 'typed'
+            ? 'Type the answer again without looking at the correction.'
+            : question.format === 'arrange'
+              ? 'Build the answer again without looking at the correction.'
+              : question.exercise?.kind === 'correction'
+                ? 'Read the full text again, then choose the underlined part with the error.'
+                : question.card.kind === 'conjugation'
+                  ? `Choose the form that matches ${question.card.person}.`
+                  : 'Choose the answer again without looking at the correction.'}</span>
+        </div>}
+        {isChoiceFormat && <div className={choiceListClass(question.choices.map((choice) => question.choiceLabels?.[choice] ?? choice))} role="group" aria-label={answerGroupLabel}>
+          {question.choices.map((choice, choiceIndex) => {
+            const choiceLabel = question.choiceLabels?.[choice] ?? choice
+            const isCorrect = Boolean(feedback?.correct || feedback?.stage === 'repair') && feedback?.answer === choice
+            const isSelected = feedback?.selectedChoice === choice
+            const repairLabel = feedback?.stage === 'repair' && !feedback.correct && choice === feedback.answer
+              ? `${index + 1 === total ? 'Show results' : 'Continue to the next card'}`
+              : undefined
+            const accessibleLabel = repairLabel ? `${choiceLabel}. ${repairLabel}` : undefined
+            return (
+              <button ref={choiceIndex === 0 ? firstChoiceRef : undefined} type="button" className={`choice-button ${isCorrect ? 'is-correct' : ''} ${isSelected && !isCorrect ? 'is-incorrect' : ''}`} key={choice} onClick={() => onAnswer(choice)} disabled={Boolean(feedback?.correct || (feedback?.stage === 'repair' && choice !== feedback.answer))} aria-label={accessibleLabel}>
+                <span className="choice-number" aria-hidden="true">{choiceIndex + 1}</span>
+                <span lang={question.answerLanguage}>{choiceLabel}</span>
+                {feedback && isCorrect && <Icon name="check" size={18} />}
+                {feedback && isSelected && !isCorrect && <Icon name="close" size={18} />}
+              </button>
+            )
+          })}
+        </div>}
+        {question.format === 'typed' && <form className="typed-answer-form" onSubmit={submitTypedAnswer}>
+          <label htmlFor="typed-answer">Your answer</label>
+          <input ref={typedInputRef} id="typed-answer" className="typed-answer-input" value={typedAnswer} onChange={(event) => setTypedAnswer(event.target.value)} onSelect={captureAccentSelection} onBlur={captureAccentSelection} lang={question.answerLanguage} placeholder={question.kind === 'conjugation' ? 'Present-tense form' : 'French answer'} inputMode="text" enterKeyHint="done" autoComplete="off" autoCapitalize="none" spellCheck={false} disabled={Boolean(feedback)} />
+          <div className="accent-palette" role="group" aria-label="French accented characters">
+            {FRENCH_ACCENTS.map((character) => <button key={character} type="button" className="accent-button" aria-label={`Insert ${character}`} onPointerDown={(event) => handleAccentPointerDown(event, character)} onMouseDown={handleAccentMouseDown} onClick={() => handleAccentClick(character)} disabled={Boolean(feedback)}>{character}</button>)}
+          </div>
+          {!feedback && <div className="action-row">
+            {skipButton}
+            <button type="submit" className="button button-primary" disabled={!typedAnswer.trim()}>Check</button>
           </div>}
-          {(question.format === 'choice' || question.format === 'cloze' || question.format === 'correction') && <div className="answer-choice-area">
-            <div className="choice-list" role="group" aria-label={answerGroupLabel}>
-              {question.choices.map((choice, choiceIndex) => {
-                const choiceLabel = question.choiceLabels?.[choice] ?? choice
-                const isCorrect = Boolean(feedback?.correct || feedback?.stage === 'repair') && feedback?.answer === choice
-                const isSelected = feedback?.selectedChoice === choice
-                const repairLabel = feedback?.stage === 'repair' && !feedback.correct && choice === feedback.answer
-                  ? `${index + 1 === total ? 'Show results' : 'Continue to the next card'}`
-                  : undefined
-                const accessibleLabel = repairLabel ? `${choiceLabel}. ${repairLabel}` : undefined
-                return (
-                  <button ref={choiceIndex === 0 ? firstChoiceRef : undefined} type="button" className={`choice-button ${isCorrect ? 'is-correct' : ''} ${isSelected && !isCorrect ? 'is-incorrect' : ''}`} key={choice} onClick={() => onAnswer(choice)} disabled={Boolean(feedback?.correct || (feedback?.stage === 'repair' && choice !== feedback.answer))} aria-label={accessibleLabel}>
-                    <span className="choice-number">{feedback && isCorrect ? <Icon name="check" size={16} /> : choiceIndex + 1}</span>
-                    <span lang={question.answerLanguage}>{choiceLabel}</span>
-                    {feedback && isSelected && !isCorrect && <Icon name="close" size={18} />}
-                  </button>
-                )
-              })}
-            </div>
+        </form>}
+        {question.format === 'arrange' && <div className="arrange-answer">
+          <div ref={answerRowRef} className="arranged-sentence" aria-label="Your arranged answer" lang={question.answerLanguage}>
+            {selectedTokenIndexes.length === 0 && <span>Drag or tap tiles below to build the answer.</span>}
+            {selectedTokenIndexes.map((tokenIndex) => <button type="button" className={`word-token is-selected ${draggedToken?.tokenIndex === tokenIndex ? 'is-dragging' : ''}`} key={tokenIndex} {...tokenDragProps(tokenIndex)} onClick={() => toggleToken(tokenIndex)} disabled={Boolean(feedback)} aria-label={`Remove ${question.tokens?.[tokenIndex]}`}>{question.tokens?.[tokenIndex]}</button>)}
+          </div>
+          <div className="token-bank" aria-label="Available words" lang={question.answerLanguage}>
+            {/* Used tiles leave a ghost so the rest of the bank never shifts. */}
+            {tokenOrder.map((tokenIndex) => selectedTokenIndexes.includes(tokenIndex) ? <span className="word-token is-ghost" key={tokenIndex} aria-hidden="true">{question.tokens?.[tokenIndex]}</span> : <button type="button" className={`word-token ${draggedToken?.tokenIndex === tokenIndex ? 'is-dragging' : ''}`} key={tokenIndex} {...tokenDragProps(tokenIndex)} onClick={() => toggleToken(tokenIndex)} disabled={Boolean(feedback)}>{question.tokens?.[tokenIndex]}</button>)}
+          </div>
+          {!feedback && <div className="action-row">
+            {skipButton}
+            <button type="button" className="button button-primary" onClick={submitArrangedAnswer} disabled={!canCheckArranged}>Check</button>
           </div>}
-          {question.format === 'typed' && <div className="question-help-area">
-            <form className="typed-answer-form" onSubmit={submitTypedAnswer}>
-              <label htmlFor="typed-answer">Your answer</label>
-              <input ref={typedInputRef} id="typed-answer" className="typed-answer-input" value={typedAnswer} onChange={(event) => setTypedAnswer(event.target.value)} onSelect={captureAccentSelection} onBlur={captureAccentSelection} lang={question.answerLanguage} placeholder={question.kind === 'conjugation' ? 'Present-tense form' : 'French answer'} inputMode="text" enterKeyHint="done" autoComplete="off" autoCapitalize="none" spellCheck={false} disabled={Boolean(feedback)} />
-              <div className="accent-palette" role="group" aria-label="French accented characters">
-                <span className="accent-palette-label">French accents</span>
-                {FRENCH_ACCENTS.map((character) => <button key={character} type="button" className="accent-button" aria-label={`Insert ${character}`} onPointerDown={(event) => handleAccentPointerDown(event, character)} onMouseDown={handleAccentMouseDown} onClick={() => handleAccentClick(character)} disabled={Boolean(feedback)}>{character}</button>)}
-              </div>
-              <button type="submit" className="button button-primary" disabled={!typedAnswer.trim() || Boolean(feedback)}>Check answer</button>
-            </form>
-          </div>}
-          {question.format === 'arrange' && <div className="question-help-area arrange-help-area">
-            <div className="arrange-answer">
-              <div ref={answerRowRef} className="arranged-sentence" aria-label="Your arranged answer" lang={question.answerLanguage}>
-                {selectedTokenIndexes.length === 0 && <span>Drag or tap tiles below to build the answer.</span>}
-                {selectedTokenIndexes.map((tokenIndex) => <button type="button" className={`word-token is-selected ${draggedToken?.tokenIndex === tokenIndex ? 'is-dragging' : ''}`} key={tokenIndex} {...tokenDragProps(tokenIndex)} onClick={() => toggleToken(tokenIndex)} disabled={Boolean(feedback)} aria-label={`Remove ${question.tokens?.[tokenIndex]}`}>{question.tokens?.[tokenIndex]}</button>)}
-              </div>
-              <div className="token-bank" aria-label="Available words">
-                {/* Used tiles leave a ghost so the rest of the bank never shifts. */}
-                {tokenOrder.map((tokenIndex) => selectedTokenIndexes.includes(tokenIndex) ? <span className="word-token is-ghost" key={tokenIndex} aria-hidden="true">{question.tokens?.[tokenIndex]}</span> : <button type="button" className={`word-token ${draggedToken?.tokenIndex === tokenIndex ? 'is-dragging' : ''}`} key={tokenIndex} {...tokenDragProps(tokenIndex)} onClick={() => toggleToken(tokenIndex)} disabled={Boolean(feedback)}>{question.tokens?.[tokenIndex]}</button>)}
-              </div>
-              <button type="button" className="button button-primary arrange-check" onClick={submitArrangedAnswer} disabled={!canCheckArranged}>Check answer</button>
-            </div>
-          </div>}
-          {!feedback && !repairing && <div className="quiz-support-actions">
-            <div className="skip-action">
-              <button type="button" className="button button-secondary skip-button" onClick={onSkip}>Skip for now</button>
-              <span>No penalty. This item stays in your pile.</span>
-            </div>
-            {answerHint && answerHintId && <AnswerHintPopover hint={answerHint} id={answerHintId} open={phraseHelpOpen} onToggle={() => setPhraseHelpOpen((open) => !open)} />}
-          </div>}
-          {feedback && <FeedbackPanel question={question} feedback={feedback} index={index} total={total} advanceMode={advanceMode} onStartRepair={onStartRepair} onContinue={onContinue} />}
-        </div>
+        </div>}
+        {canSkip && (isChoiceFormat || answerHint) && <div className="quiz-support-actions">
+          {isChoiceFormat && <button type="button" className="text-button" onClick={onSkip}>Skip</button>}
+          {answerHint && answerHintId && <AnswerHintPopover hint={answerHint} id={answerHintId} open={phraseHelpOpen} onToggle={() => setPhraseHelpOpen((open) => !open)} />}
+        </div>}
+        {feedback && <FeedbackPanel question={question} feedback={feedback} index={index} total={total} advanceMode={advanceMode} onStartRepair={onStartRepair} onContinue={onContinue} />}
       </div>
     </section>
   )
 }
 
-function ProgressionOverviewScreen({ state, shelf, activeUnits, onToday, onCurriculum }: { state: StoredState; shelf: Record<Box, number>; activeUnits: CurriculumUnit[]; onToday: () => void; onCurriculum: () => void }) {
-  const studiedCount = Object.keys(state.progress).length
+function ProgressionOverviewScreen({ state, shelf, unitShelves, onThemeChange, onResetLocalData, onMenu, menuOpen, menuTriggerRef }: { state: StoredState; shelf: Record<Box, number>; unitShelves: { unit: CurriculumUnit; counts: Record<Box, number> }[]; onThemeChange: (value: Theme) => void; onResetLocalData: () => void; onMenu: () => void; menuOpen: boolean; menuTriggerRef: { current: HTMLButtonElement | null } }) {
+  const total = boxTotal(shelf)
   return (
-    <section className="page results-page progress-overview-page">
-      <ScreenHeader title="Your progress" description="Cards studied, current box counts, and active material." onBack={onToday} />
-      <div className="results-grid">
-        <StatBlock icon="book" value={studiedCount} label="cards studied" accent="accent-blue" />
-        <StatBlock icon="clock" value={state.streak.count} label={state.streak.count === 1 ? 'day in a row' : 'days in a row'} accent="accent-yellow" />
-        <StatBlock icon="spark" value={shelf[5]} label="cards in Box 5" accent="accent-green" />
-        <StatBlock icon="cards" value={activeUnits.length} label={activeUnits.length === 1 ? 'active unit' : 'active units'} accent="accent-ink" />
+    <section className="page fill-page me-page">
+      <div className="headline">
+        <h1 tabIndex={-1}>{plural(total, 'card')}</h1>
+        <span>{shelf[5]} in Box 5 · {state.streak.count} {state.streak.count === 1 ? 'day' : 'days'} in a row</span>
       </div>
-      <div className="progress-summary surface-panel">
-        <span className="screen-kicker">Current material</span>
-        <strong><ActiveCurriculumLabel units={activeUnits} /></strong>
-        <p>{activeUnits.length === 0 ? 'Choose material to start a session.' : `${activeUnits.length} active unit${activeUnits.length === 1 ? '' : 's'}.`}</p>
-        <div className="progress-actions"><button type="button" className="button button-primary" onClick={onToday}>Practice <Icon name="practice" size={16} /></button><button type="button" className="button button-secondary" onClick={onCurriculum}>Material <Icon name="cards" size={16} /></button></div>
+      <BoxBar counts={shelf} labelled />
+      {unitShelves.length > 0 && <div className="unit-bars">
+        <h2 className="section-label">By unit</h2>
+        {unitShelves.map(({ unit, counts }) => (
+          <div className="unit-bar" key={unit.id}>
+            <div><span>{materialLabel(unit)}</span><span>{plural(boxTotal(counts), 'card')}</span></div>
+            <BoxBar counts={counts} />
+          </div>
+        ))}
+      </div>}
+      <div className="spacer" />
+      <div className="row-list">
+        <button ref={menuTriggerRef} type="button" className="row" onClick={onMenu} aria-haspopup="dialog" aria-expanded={menuOpen} aria-controls="app-menu">Session options<Icon name="arrow" size={16} /></button>
+        <details>
+          <summary className="row">How the boxes work<Icon name="chevron" size={16} /></summary>
+          <p>Every card sits in one of five boxes. A right answer moves it forward and spaces the next review further out; a missed card steps back. Due cards come first, then new cards fill the session.</p>
+        </details>
+        <label className="row theme-switch">
+          Dark theme
+          <input type="checkbox" role="switch" aria-checked={state.theme === 'dark'} checked={state.theme === 'dark'} onChange={(event) => onThemeChange(event.target.checked ? 'dark' : 'light')} />
+          <span className="switch-track" aria-hidden="true"><span className="switch-thumb" /></span>
+        </label>
+        <button type="button" className="row" onClick={onResetLocalData}>Reset progress</button>
       </div>
-      <MemoryShelf counts={shelf} />
+      <p className="fine-print">Unofficial companion. Vocabulary cards use selected PFL2 PDF terms with reviewed English glosses; other activities are independently authored. Progress stays in this browser. <time dateTime="2026-09-07">Last updated: 7 September 2026</time></p>
     </section>
   )
 }
 
-function ResultsScreen({ results, shelf, hasMoreCards, onDone, onKeepGoing }: { results: SessionStats & { box5Count: number; missedAnswers: MissedAnswer[] }; shelf: Record<Box, number>; hasMoreCards: boolean; onDone: () => void; onKeepGoing: () => void }) {
-  const accuracy = results.total === 0 ? 0 : Math.round((results.correct / results.total) * 100)
+function ResultsScreen({ results, shelf, startShelf, hasMoreCards, onDone, onKeepGoing }: { results: SessionStats & { box5Count: number; missedAnswers: MissedAnswer[] }; shelf: Record<Box, number>; startShelf: Record<Box, number>; hasMoreCards: boolean; onDone: () => void; onKeepGoing: () => void }) {
+  const deltas = Object.fromEntries(BOXES.map((box) => [box, shelf[box] - startShelf[box]])) as Record<Box, number>
   return (
-    <section className="page results-page session-results-page">
-      <ScreenHeader title="Session complete" description="First-try accuracy, retries, skips, and shelf movement." />
-      <div className="results-score surface-panel">
-        <span className="screen-kicker">First-try accuracy</span>
-        <strong>{accuracy}%</strong>
-        <p>{results.correct} correct answer{results.correct === 1 ? '' : 's'} out of {results.total} answered item{results.total === 1 ? '' : 's'}. {results.skipped > 0 && `${results.skipped} skipped item${results.skipped === 1 ? '' : 's'} remain in your queue. `}Retries are practice, not first-try answers.</p>
-        <div className="results-actions"><button type="button" className="button button-primary" onClick={onDone}>Done <Icon name="check" size={16} /></button><button type="button" className="button button-secondary" onClick={onKeepGoing} disabled={!hasMoreCards}>{hasMoreCards ? 'Keep going' : 'All caught up'}{hasMoreCards && <Icon name="arrow" size={16} />}</button></div>
+    <section className="page fill-page results-page">
+      <div className="result-head">
+        <p className="kicker">Session complete</p>
+        <h1 tabIndex={-1}>{results.correct} of {results.total}</h1>
+        <p>right on the first try. {plural(results.promotions, 'card')} climbed a box.{results.repairs > 0 && ` ${results.repairs} correct on retry.`}{results.skipped > 0 && ` ${results.skipped} skipped, still in your queue.`}</p>
       </div>
-      <div className="results-grid">
-        <StatBlock icon="arrow" value={results.promotions} label="cards moved forward" accent="accent-blue" />
-        <StatBlock icon="close" value={results.misses} label="missed answers" accent="accent-red" />
-        <StatBlock icon="check" value={results.repairs} label="correct on retry" accent="accent-yellow" />
-        <StatBlock icon="book" value={results.box5Count} label="cards in Box 5" accent="accent-green" />
-      </div>
-      <MemoryShelf counts={shelf} />
+      <Ladder counts={shelf} deltas={deltas} />
       {results.missedAnswers.length > 0 && <details className="missed-recap" open>
-        <summary>Review missed answers ({results.missedAnswers.length})</summary>
+        <summary>Missed ({results.missedAnswers.length})</summary>
         <ol>
           {results.missedAnswers.map((item) => <li key={item.id}>
             <span className="missed-recap-prompt" lang={item.promptLanguage}>{item.prompt}</span>
@@ -1137,6 +1029,11 @@ function ResultsScreen({ results, shelf, hasMoreCards, onDone, onKeepGoing }: { 
           </li>)}
         </ol>
       </details>}
+      <div className="spacer" />
+      <div className="action-row">
+        <button type="button" className="button button-secondary" onClick={onDone}>Done</button>
+        <button type="button" className="button button-primary" onClick={onKeepGoing} disabled={!hasMoreCards}>{hasMoreCards ? 'Keep going' : 'All caught up'}</button>
+      </div>
     </section>
   )
 }
@@ -1152,6 +1049,7 @@ export default function App() {
   const [focusedSession, setFocusedSession] = useState(false)
   const [sessionMode, setSessionMode] = useState<PracticeMode>('mixed')
   const [sessionActivityTypes, setSessionActivityTypes] = useState<ActivityType[]>([...ACTIVITY_TYPES])
+  const [sessionStartProgress, setSessionStartProgress] = useState<StoredState['progress']>({})
   const [sessionIndex, setSessionIndex] = useState(0)
   const [feedback, setFeedback] = useState<Feedback | null>(null)
   const [repairing, setRepairing] = useState(false)
@@ -1241,6 +1139,8 @@ export default function App() {
   const selectedCardCount = useMemo(() => allTargets.filter((card) => activeLessonIds.includes(card.lessonId) && cardMatchesMode(card, state.practiceMode, state.enabledActivityTypes)).length, [activeLessonIds, state.enabledActivityTypes, state.practiceMode])
   const displayMode = screen === 'quiz' || (screen === 'results' && results) ? sessionMode : state.practiceMode
   const shelf = useMemo(() => shelfCounts(state.progress, activeLessonIds, allTargets, displayMode, state.enabledActivityTypes), [activeLessonIds, state.enabledActivityTypes, state.progress, displayMode])
+  const dueShelf = useMemo(() => shelfCounts(Object.fromEntries(Object.entries(state.progress).filter(([, item]) => isDue(item, today))), activeLessonIds, allTargets, displayMode, state.enabledActivityTypes), [activeLessonIds, state.enabledActivityTypes, state.progress, displayMode, today])
+  const unitShelves = useMemo(() => activeUnits.map((unit) => ({ unit, counts: shelfCounts(state.progress, [unit.id], allTargets, displayMode, state.enabledActivityTypes) })), [activeUnits, state.enabledActivityTypes, state.progress, displayMode])
   const sessionSelection = useMemo(() => {
     const selectedIds = sessionLessonIds.length > 0 ? sessionLessonIds : [...activeLessonIds, ...masteredSelectedLessonIds]
     const mastered = new Set(selectedIds.filter((id) => masteredLessonIds.has(id)))
@@ -1248,6 +1148,7 @@ export default function App() {
   }, [activeLessonIds, masteredLessonIds, masteredSelectedLessonIds, sessionLessonIds])
   const sessionQueueCounts = useMemo(() => getQueueCounts(allTargets, state.progress, sessionSelection.active, today, sessionMode, sessionActivityTypes, sessionSelection.mastered), [sessionActivityTypes, sessionMode, sessionSelection, state.progress, today])
   const sessionShelf = useMemo(() => shelfCounts(state.progress, focusedSession && sessionLessonIds.length > 0 ? sessionLessonIds : sessionSelection.active, allTargets, displayMode, sessionActivityTypes), [displayMode, focusedSession, sessionActivityTypes, sessionLessonIds, sessionSelection.active, state.progress])
+  const sessionStartShelf = useMemo(() => shelfCounts(sessionStartProgress, focusedSession && sessionLessonIds.length > 0 ? sessionLessonIds : sessionSelection.active, allTargets, displayMode, sessionActivityTypes), [displayMode, focusedSession, sessionActivityTypes, sessionLessonIds, sessionSelection.active, sessionStartProgress])
   const currentQuestion = session[sessionIndex]
   const currentChoices = currentQuestion?.choices ?? []
 
@@ -1337,6 +1238,7 @@ export default function App() {
       activityTypeForQuestion,
     )
     setSession(nextSession)
+    setSessionStartProgress(state.progress)
     setSessionLessonIds([...requestedLessonIds])
     setFocusedSession(focused)
     setSessionMode(sessionPracticeMode)
@@ -1573,6 +1475,7 @@ export default function App() {
     const shouldFocus = changed || focusMainOnNavigationRef.current
     focusMainOnNavigationRef.current = false
     if (!shouldFocus || menuOpen || screen === 'quiz') return undefined
+    document.getElementById('main-content')?.scrollTo(0, 0)
     const frame = window.requestAnimationFrame(() => document.querySelector<HTMLElement>('#main-content h1')?.focus({ preventScroll: true }))
     return () => window.cancelAnimationFrame(frame)
   }, [menuOpen, screen])
@@ -1608,18 +1511,19 @@ export default function App() {
     if (screen === 'quiz' && currentQuestion) return <QuizScreen question={currentQuestion} currentBox={state.progress[currentQuestion.card.id]?.box ?? 1} index={sessionIndex} total={session.length} feedback={feedback} repairing={repairing} onAnswer={handleAnswer} onStartRepair={beginRepair} onContinue={continueSession} advanceMode={state.correctAdvanceMode} onSkip={skipCurrentCard} onExit={exitSession} onMenu={openMenu} menuOpen={menuOpen} menuTriggerRef={menuTriggerRef} viewMode={viewMode} onTogglePresentation={togglePresentationMode} />
     if (screen === 'sprint') return <SprintScreen selectedCards={sprintCards} selectedIds={state.selectedLessonIds} masteredIds={masteredLessonIds} onToggleLesson={toggleLesson} />
     if (screen === 'testprep') return <TestPrepScreen progress={state.progress} onMiss={recordTestPrepMiss} />
-    if (screen === 'results') return results ? <ResultsScreen results={results} shelf={sessionShelf} hasMoreCards={hasMoreCards} onDone={() => setScreen('today')} onKeepGoing={() => startSession(sessionLessonIds)} /> : <ProgressionOverviewScreen state={state} shelf={shelf} activeUnits={activeUnits} onToday={() => setScreen('today')} onCurriculum={() => setScreen('curriculum')} />
-    return <TodayScreen counts={shelf} queueCounts={queueCounts} activeUnits={activeUnits} masteredSelectedCount={masteredSelectedLessonIds.size} dailyGoal={state.dailyGoal} practiceMode={state.practiceMode} activePreset={activePreset} missMode={state.missMode} enabledActivityTypes={state.enabledActivityTypes} activityCounts={activityCounts} selectedCardCount={selectedCardCount} readyCardCount={readyCardCount} onStart={() => startSession()} notice={notice} onChooseCurriculum={() => setScreen('curriculum')} onActivityTypesChange={updateActivityTypes} onPresetChange={updatePreset} />
+    if (screen === 'results') return results ? <ResultsScreen results={results} shelf={sessionShelf} startShelf={sessionStartShelf} hasMoreCards={hasMoreCards} onDone={() => setScreen('today')} onKeepGoing={() => startSession(sessionLessonIds)} /> : <ProgressionOverviewScreen state={state} shelf={shelf} unitShelves={unitShelves} onThemeChange={updateTheme} onResetLocalData={resetLocalData} onMenu={openMenu} menuOpen={menuOpen} menuTriggerRef={menuTriggerRef} />
+    return <TodayScreen counts={shelf} dueCounts={dueShelf} queueCounts={queueCounts} activeUnits={activeUnits} masteredSelectedCount={masteredSelectedLessonIds.size} dailyGoal={state.dailyGoal} practiceMode={state.practiceMode} activePreset={activePreset} missMode={state.missMode} enabledActivityTypes={state.enabledActivityTypes} activityCounts={activityCounts} selectedCardCount={selectedCardCount} readyCardCount={readyCardCount} onStart={() => startSession()} notice={notice} onChooseCurriculum={() => setScreen('curriculum')} onActivityTypesChange={updateActivityTypes} onPresetChange={updatePreset} />
   }
 
+  const showTabs = screen !== 'quiz' && !(screen === 'results' && results)
   return (
-    <div className={`app-shell ${screen === 'quiz' ? 'is-quiz' : ''} ${viewMode === 'presentation' && screen === 'quiz' ? 'is-presentation' : ''}`}>
+    <div className={`app-shell ${viewMode === 'presentation' && screen === 'quiz' ? 'is-presentation' : ''}`}>
       <div className="app-view" inert={menuOpen}>
         <a className="skip-link" href="#main-content">Skip to practice</a>
-        {screen !== 'quiz' && <MobileHeader onMenu={openMenu} menuOpen={menuOpen} triggerRef={menuTriggerRef} screen={screen} onNavigate={navigate} />}
-        <main id="main-content" className={`app-content ${screen === 'quiz' ? 'is-quiz' : ''}`} tabIndex={-1}>{renderScreen()}</main>
+        <main id="main-content" className="app-content" tabIndex={-1}>{renderScreen()}</main>
+        {showTabs && <TabBar screen={screen} onNavigate={navigate} />}
       </div>
-      {menuOpen && <MenuSheet screen={screen} dailyGoal={state.dailyGoal} missMode={state.missMode} correctAdvanceMode={state.correctAdvanceMode} theme={state.theme} onDailyGoalChange={updateDailyGoal} onMissModeChange={updateMissMode} onCorrectAdvanceModeChange={updateCorrectAdvanceMode} onThemeChange={updateTheme} onResetLocalData={resetLocalData} onNavigate={navigate} closing={menuClosing} onClose={closeMenu} />}
+      {menuOpen && <MenuSheet dailyGoal={state.dailyGoal} missMode={state.missMode} correctAdvanceMode={state.correctAdvanceMode} onDailyGoalChange={updateDailyGoal} onMissModeChange={updateMissMode} onCorrectAdvanceModeChange={updateCorrectAdvanceMode} closing={menuClosing} onClose={closeMenu} />}
     </div>
   )
 }

@@ -15,6 +15,7 @@ import {
   type SprintQuestion,
   type SprintRun,
 } from './sprint.ts'
+import { choiceListClass, promptSizeClass } from './question-view.tsx'
 import { UnitPicker } from './UnitPicker.tsx'
 
 const MS_PER_SECOND = 1000
@@ -121,32 +122,38 @@ export function SprintScreen({ selectedCards, selectedIds, masteredIds, onToggle
     return () => window.removeEventListener('keydown', onKeyDown)
   })
 
+  const categoryLabel = sprintCategoryOptions.find((option) => option.id === category)?.label
+
   if (phase === 'run' && question) {
     return (
-      <section className="page sprint-page" aria-label="Sprint round">
-        <Hud remainingMs={remainingMs} score={run.score} penalty={penaltyFlash} />
-        <div key={question.id} className="prompt-card sprint-prompt">
-          <div className="question-meta"><span className="question-type-label">{sprintCategoryOptions.find((option) => option.id === category)?.label}</span></div>
-          <div className={`prompt-headline ${question.promptNote ? 'is-conjugation' : ''}`}>
-            <h1 ref={headingRef} tabIndex={-1} lang={question.promptLanguage}>{question.prompt}</h1>
-            {question.promptNote && <span className="conjugation-person">{question.promptNote}</span>}
+      <section className="page run-page is-ink" aria-label="Sprint round">
+        <div className="stage">
+          <Hud remainingMs={remainingMs} score={run.score} penalty={penaltyFlash} />
+          <div key={question.id} className="stage-body">
+            <p className="stage-instruction">{categoryLabel}</p>
+            <div className="prompt-headline">
+              <h1 ref={headingRef} tabIndex={-1} lang={question.promptLanguage} className={promptSizeClass(question.prompt)}>{question.prompt}</h1>
+              {question.promptNote && <span className="conjugation-person">{question.promptNote}</span>}
+            </div>
           </div>
         </div>
-        <div className="choice-list" role="group" aria-label="Answers">
-          {question.choices.map((choice, index) => {
-            const isCorrect = reveal !== null && choice === question.answer
-            const isIncorrect = reveal === choice && choice !== question.answer
-            return (
-              <button type="button" key={choice} className={`choice-button ${isCorrect ? 'is-correct' : ''} ${isIncorrect ? 'is-incorrect' : ''}`} onClick={() => answer(choice)} disabled={reveal !== null}>
-                <span className="choice-number">{index + 1}</span>
-                <span lang={question.answerLanguage}>{choice}</span>
-              </button>
-            )
-          })}
-        </div>
-        <div className="sprint-actions">
-          <button type="button" className="button button-secondary" onClick={() => answer('')} disabled={reveal !== null}>Skip (−{SPRINT_PENALTY_SECONDS} s)</button>
-          <button type="button" className="button button-secondary" onClick={() => setPhase('pick')}>End round</button>
+        <div className="sheet">
+          <div className={choiceListClass(question.choices)} role="group" aria-label="Answers">
+            {question.choices.map((choice, index) => {
+              const isCorrect = reveal !== null && choice === question.answer
+              const isIncorrect = reveal === choice && choice !== question.answer
+              return (
+                <button type="button" key={choice} className={`choice-button ${isCorrect ? 'is-correct' : ''} ${isIncorrect ? 'is-incorrect' : ''}`} onClick={() => answer(choice)} disabled={reveal !== null}>
+                  <span className="choice-number" aria-hidden="true">{index + 1}</span>
+                  <span lang={question.answerLanguage}>{choice}</span>
+                </button>
+              )
+            })}
+          </div>
+          <div className="quiz-support-actions">
+            <button type="button" className="text-button" onClick={() => answer('')} disabled={reveal !== null}>Skip (−{SPRINT_PENALTY_SECONDS} s)</button>
+            <button type="button" className="text-button" onClick={() => setPhase('pick')}>End round</button>
+          </div>
         </div>
       </section>
     )
@@ -156,22 +163,14 @@ export function SprintScreen({ selectedCards, selectedIds, masteredIds, onToggle
     const answered = run.score + run.misses
     const accuracy = answered === 0 ? 0 : Math.round((run.score / answered) * PERCENT)
     return (
-      <section className="page results-page sprint-page">
-        <header className="screen-header">
-          <span className="screen-kicker">Sprint · {sprintCategoryOptions.find((option) => option.id === category)?.label}</span>
-          <h1 tabIndex={-1}>Time's up</h1>
-        </header>
-        <div className="results-score surface-panel">
-          <span className="screen-kicker">{newBest ? 'New best score' : 'Score'}</span>
-          <strong>{run.score}</strong>
-          <p>{run.score} correct in {SPRINT_SECONDS} seconds, {run.misses} missed, {accuracy}% accuracy. Best for this category: {best[category] ?? 0}.</p>
-          <div className="results-actions">
-            <button type="button" className="button button-primary" onClick={start}>Again</button>
-            <button type="button" className="button button-secondary" onClick={() => setPhase('pick')}>Change category</button>
-          </div>
+      <section className="page fill-page results-page">
+        <div className="result-head">
+          <p className="kicker">Time's up · {categoryLabel}{newBest ? ' · New best score' : ''}</p>
+          <h1 tabIndex={-1}>{run.score} correct</h1>
+          <p>in {SPRINT_SECONDS} seconds. {run.misses} missed, {accuracy}% accuracy. Best for this category: {best[category] ?? 0}.</p>
         </div>
         {run.missed.length > 0 && <details className="missed-recap" open>
-          <summary>Review missed answers ({run.missed.length})</summary>
+          <summary>Missed ({run.missed.length})</summary>
           <ol>
             {run.missed.map((item) => <li key={item.id}>
               <span className="missed-recap-prompt" lang={item.promptLanguage}>{item.prompt}{item.promptNote ? ` · ${item.promptNote}` : ''}</span>
@@ -179,37 +178,38 @@ export function SprintScreen({ selectedCards, selectedIds, masteredIds, onToggle
             </li>)}
           </ol>
         </details>}
+        <div className="spacer" />
+        <div className="action-row">
+          <button type="button" className="button button-secondary" onClick={() => setPhase('pick')}>Change category</button>
+          <button type="button" className="button button-primary" onClick={start}>Again</button>
+        </div>
       </section>
     )
   }
 
   return (
-    <section className="page sprint-page">
-      <header className="screen-header">
-        <span className="screen-kicker">Sprint</span>
-        <h1 tabIndex={-1}>Beat the clock</h1>
-        <p>{SPRINT_SECONDS} seconds, as many right answers as you can. Each miss or skip costs {SPRINT_PENALTY_SECONDS} seconds. Boxes are not affected.</p>
-      </header>
-      <div className="practice-presets" role="group" aria-label="Sprint categories">
+    <section className="page fill-page sprint-page">
+      <div className="pill-row" role="group" aria-label="Material">
+        <button type="button" className="pill" aria-pressed={scope === 'selected'} disabled={selectedCards.length === 0} onClick={() => setScope('selected')}>Selected material</button>
+        <button type="button" className="pill" aria-pressed={scope === 'all'} onClick={() => setScope('all')}>Everything</button>
+      </div>
+      <div className="headline is-stacked">
+        <h1 tabIndex={-1}>{SPRINT_SECONDS} seconds</h1>
+        <p>As many right answers as you can. A miss or a skip costs {SPRINT_PENALTY_SECONDS} seconds. Boxes are not affected.</p>
+      </div>
+      <div className="option-list" role="group" aria-label="Sprint categories">
         {sprintCategoryOptions.map((option) => (
-          <button type="button" key={option.id} className={`practice-preset ${category === option.id ? 'is-selected' : ''}`} aria-pressed={category === option.id} disabled={counts[option.id] === 0} onClick={() => setCategory(option.id)}>
+          <button type="button" key={option.id} className="option-row" title={option.description} aria-pressed={category === option.id} disabled={counts[option.id] === 0} onClick={() => setCategory(option.id)}>
             <strong>{option.label}</strong>
-            <small>{option.description}</small>
-            <small>{counts[option.id]} items · best {best[option.id] ?? 0}</small>
+            <span className="option-meta">{counts[option.id] === 0 ? 'no items' : best[option.id] ? <><b>{best[option.id]}</b>best</> : 'not played'}</span>
           </button>
         ))}
       </div>
-      <div className="sprint-scope" role="group" aria-label="Material">
-        <button type="button" className={`practice-preset ${scope === 'selected' ? 'is-selected' : ''}`} aria-pressed={scope === 'selected'} disabled={selectedCards.length === 0} onClick={() => setScope('selected')}><strong>Selected material</strong><small>Units chosen on the Material screen.</small></button>
-        <button type="button" className={`practice-preset ${scope === 'all' ? 'is-selected' : ''}`} aria-pressed={scope === 'all'} onClick={() => setScope('all')}><strong>Everything</strong><small>All units, all levels.</small></button>
-      </div>
-      <details className="sprint-units">
+      <details className="unit-details">
         <summary>Change units ({selectedIds.length} selected)</summary>
         <UnitPicker selectedIds={selectedIds} masteredIds={masteredIds} onToggle={(id) => { onToggleLesson(id); setScope('selected') }} />
       </details>
-      <div className="results-actions">
-        <button type="button" className="button button-primary" onClick={start} disabled={counts[category] === 0}>Start {SPRINT_SECONDS}-second sprint</button>
-      </div>
+      <button type="button" className="button button-primary sticky-cta" onClick={start} disabled={counts[category] === 0}>Start sprint</button>
     </section>
   )
 }

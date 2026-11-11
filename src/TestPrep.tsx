@@ -4,7 +4,7 @@ import { allCards } from './data/words.ts'
 import { exerciseTargets } from './data/pilot-exercises.ts'
 import { buildAnswerItems } from './data/test-prep-answers.ts'
 import { dateKey, type CardProgress } from './leitner.ts'
-import { ExerciseContext } from './question-view.tsx'
+import { ExerciseContext, choiceListClass, promptSizeClass } from './question-view.tsx'
 import { UnitPicker } from './UnitPicker.tsx'
 import {
   BUILD_ROUND_SIZE,
@@ -45,66 +45,62 @@ const unitName = (unitId: string) => materialLabelsById[unitId] ?? curriculumByI
 function UnitRow({ unitId, fraction, value }: { unitId: string; fraction: number | undefined; value: string }) {
   const percent = fraction === undefined ? 0 : Math.round(fraction * PERCENT)
   return (
-    <div className="testprep-unit-row">
-      <span className="testprep-unit-code">{unitId.toUpperCase()}</span>
-      <span className="testprep-unit-name">{unitName(unitId)}</span>
+    <div className="unit-bar">
+      <div><span>{unitName(unitId)}</span><span>{value}</span></div>
       <span className="testprep-track" aria-hidden="true"><span className={`testprep-fill ${fraction !== undefined && percent < READINESS_WARN_PERCENT ? 'is-low' : ''}`} style={{ width: `${percent}%` }} /></span>
-      <span className="testprep-unit-value">{value}</span>
     </div>
   )
 }
 
-function PromptCard({ question, headingRef }: { question: TestQuestion; headingRef?: { current: HTMLHeadingElement | null } }) {
+function StageBody({ question, note, headingRef }: { question: TestQuestion; note?: string; headingRef?: { current: HTMLHeadingElement | null } }) {
   return (
-    <div key={question.id} className="prompt-card">
-      <div className="question-meta"><span className="question-type-label">{question.label}</span></div>
+    <div key={question.id} className="stage-body">
       {question.source && <ExerciseContext question={question.source} />}
-      <div className={`prompt-headline ${question.promptNote ? 'is-conjugation' : ''}`}>
-        <h1 ref={headingRef} tabIndex={-1} lang={question.promptLanguage}>{question.prompt}</h1>
+      <p className="stage-instruction">{question.label}{note ? ` · ${note}` : ''}</p>
+      <div className="prompt-headline">
+        <h1 ref={headingRef} tabIndex={-1} lang={question.promptLanguage} className={promptSizeClass(question.prompt)}>{question.prompt}</h1>
         {question.promptNote && <span className="conjugation-person">{question.promptNote}</span>}
       </div>
     </div>
   )
 }
 
+function StageTop({ label, current, total, onExit }: { label: string; current: number; total: number; onExit: () => void }) {
+  return (
+    <div className="stage-top">
+      <button type="button" className="icon-plain" onClick={onExit} aria-label="End round"><svg className="icon" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button>
+      <progress className="run-progress" max={total} value={current} aria-label={label} />
+      <span className="stage-count" aria-hidden="true">{current}/{total}</span>
+    </div>
+  )
+}
+
 function RoundDone({ kicker, firstTry, total, missed, onAgain, onChange }: { kicker: string; firstTry: number; total: number; missed: MissedRow[]; onAgain: () => void; onChange: () => void }) {
   return (
-    <section className="page results-page testprep-page">
-      <header className="screen-header">
-        <span className="screen-kicker">Test prep · {kicker}</span>
-        <h1 tabIndex={-1}>Round complete</h1>
-      </header>
-      <div className="results-score surface-panel">
-        <span className="screen-kicker">First try</span>
-        <strong>{firstTry} / {total}</strong>
-        <p>{missed.length === 0 ? 'No misses.' : `${missed.length} came back and were asked again.`}</p>
-        <div className="results-actions">
-          <button type="button" className="button button-primary" onClick={onAgain}>Again</button>
-          <button type="button" className="button button-secondary" onClick={onChange}>Change round</button>
-        </div>
+    <section className="page fill-page results-page">
+      <div className="result-head">
+        <p className="kicker">{kicker} complete</p>
+        <h1 tabIndex={-1}>{firstTry} of {total}</h1>
+        <p>right on the first try. {missed.length === 0 ? 'No misses.' : `${missed.length} came back and were asked again.`}</p>
       </div>
       {missed.length > 0 && <details className="missed-recap" open>
-        <summary>Review missed answers ({missed.length})</summary>
+        <summary>Missed ({missed.length})</summary>
         <ol>{missed.map((item) => <li key={item.id}>
           <span className="missed-recap-prompt" lang={item.promptLanguage}>{item.prompt}</span>
           <strong lang={item.answerLanguage}>{item.answer}</strong>
           {item.note && <p>{item.note}</p>}
         </li>)}</ol>
       </details>}
+      <div className="spacer" />
+      <div className="action-row">
+        <button type="button" className="button button-secondary" onClick={onChange}>Change round</button>
+        <button type="button" className="button button-primary" onClick={onAgain}>Again</button>
+      </div>
     </section>
   )
 }
 
 const builtSentence = (question: BuildQuestion) => question.item.answer.join(' ')
-
-function Progress({ label, current, total }: { label: string; current: number; total: number }) {
-  return (
-    <div className="testprep-progress">
-      <span>{label}</span>
-      <progress max={total} value={current} aria-label={label} />
-    </div>
-  )
-}
 
 export function TestPrepScreen({ onMiss }: { progress: Record<string, CardProgress>; onMiss: (progressId: string) => void }) {
   const [phase, setPhase] = useState<Phase>('pick')
@@ -257,48 +253,52 @@ export function TestPrepScreen({ onMiss }: { progress: Record<string, CardProgre
   })
 
   const rows = unitsWeakestFirst(state, unitIds)
+  const exitRound = () => setPhase('pick')
 
   if (phase === 'recall' && head) {
     // Questions asked so far: a requeued miss keeps its number instead of counting as a new question.
     const position = questions.length - run.queue.filter((item) => !run.repeated.includes(item.id)).length + (firstAttempt ? ONE : 0)
     const label = `Question ${position} of ${questions.length}${firstAttempt ? '' : ' · second try'}`
     return (
-      <section className="page testprep-page" aria-label="Recall round">
-        <Progress label={label} current={position} total={questions.length} />
-        <PromptCard question={head} headingRef={headingRef} />
-        {step === 'think' && <>
-          <div className="testprep-covered" aria-hidden="true">
-            {head.choices.map((choice, position) => <div className="testprep-covered-row" key={choice.value}><span className="choice-number">{position + ONE}</span><span className="testprep-covered-bar" /></div>)}
-          </div>
-          <p className="testprep-hint">Say it first. Choices are covered.</p>
-          <div className="sprint-actions">
-            <button type="button" className="button button-secondary" onClick={() => answerRecall(null)}>I blanked</button>
-            <button key={head.id} type="button" className="button button-primary" autoFocus onClick={() => setStep('choose')}>Show choices</button>
-          </div>
-        </>}
-        {step !== 'think' && <div className="choice-list" role="group" aria-label="Answers">
-          {head.choices.map((choice, position) => {
-            const reveal = step === 'result'
-            const isCorrect = reveal && choice.value === head.answer
-            const isIncorrect = reveal && picked === choice.value && choice.value !== head.answer
-            return (
-              <button type="button" key={choice.value} className={`choice-button ${isCorrect ? 'is-correct' : ''} ${isIncorrect ? 'is-incorrect' : ''}`} onClick={() => answerRecall(choice.value)} disabled={reveal}>
-                <span className="choice-number">{position + ONE}</span>
-                <span lang={head.answerLanguage}>{choice.label}</span>
-              </button>
-            )
-          })}
-        </div>}
-        {step === 'result' && !recallCorrect && <div className="testprep-feedback" role="status">
-          <p><strong lang={head.answerLanguage}>{answerText(head)}</strong>{firstAttempt ? ' · Comes back later.' : ''}</p>
-          <button type="button" className="button button-primary" autoFocus onClick={nextRecall}>Next</button>
-        </div>}
+      <section className="page run-page is-neutral" aria-label="Recall round">
+        <div className="stage">
+          <StageTop label={label} current={position} total={questions.length} onExit={exitRound} />
+          <StageBody question={head} note={step === 'think' ? 'Say it first' : firstAttempt ? undefined : 'Second try'} headingRef={headingRef} />
+        </div>
+        <div className="sheet">
+          {step === 'think' && <>
+            <div className={`${choiceListClass(head.choices.map((choice) => choice.label))} is-covered`} role="img" aria-label="Choices are covered">
+              {head.choices.map((choice) => <div key={choice.value} />)}
+            </div>
+            <div className="action-row">
+              <button type="button" className="button button-secondary" onClick={() => answerRecall(null)}>I blanked</button>
+              <button key={head.id} type="button" className="button button-primary" autoFocus onClick={() => setStep('choose')}>Show choices</button>
+            </div>
+          </>}
+          {step !== 'think' && <div className={choiceListClass(head.choices.map((choice) => choice.label))} role="group" aria-label="Answers">
+            {head.choices.map((choice, position) => {
+              const reveal = step === 'result'
+              const isCorrect = reveal && choice.value === head.answer
+              const isIncorrect = reveal && picked === choice.value && choice.value !== head.answer
+              return (
+                <button type="button" key={choice.value} className={`choice-button ${isCorrect ? 'is-correct' : ''} ${isIncorrect ? 'is-incorrect' : ''}`} onClick={() => answerRecall(choice.value)} disabled={reveal}>
+                  <span className="choice-number" aria-hidden="true">{position + ONE}</span>
+                  <span lang={head.answerLanguage}>{choice.label}</span>
+                </button>
+              )
+            })}
+          </div>}
+          {step === 'result' && !recallCorrect && <div className="feedback-panel" role="status">
+            <div className="feedback-copy"><strong lang={head.answerLanguage}>{answerText(head)}</strong>{firstAttempt && <span>Comes back later.</span>}</div>
+            <button type="button" className="button button-primary" autoFocus onClick={nextRecall}>Next</button>
+          </div>}
+        </div>
       </section>
     )
   }
 
   if (phase === 'done') {
-    return <RoundDone kicker="Recall round" firstTry={run.firstTry} total={questions.length} onAgain={() => startRecall(buildRecallRound(unitIds, allCards, state))} onChange={() => setPhase('pick')}
+    return <RoundDone kicker="Recall round" firstTry={run.firstTry} total={questions.length} onAgain={() => startRecall(buildRecallRound(unitIds, allCards, state))} onChange={exitRound}
       missed={run.missed.map((item) => ({ id: item.id, prompt: `${item.prompt}${item.promptNote ? ` · ${item.promptNote}` : ''}`, promptLanguage: item.promptLanguage, answer: answerText(item), answerLanguage: item.answerLanguage }))} />
   }
 
@@ -309,65 +309,70 @@ export function TestPrepScreen({ onMiss }: { progress: Record<string, CardProgre
     const result = step === 'result'
     const blanked = result && placed.length === 0
     return (
-      <section className="page testprep-page" aria-label="Build the answer">
-        <Progress label={label} current={position} total={buildQuestions.length} />
-        <div key={buildHead.id} className="prompt-card">
-          <div className="question-meta"><span className="question-type-label">Build the answer</span></div>
-          <div className="prompt-headline"><h1 tabIndex={-1} lang="fr">{buildHead.item.question}</h1></div>
+      <section className="page run-page is-neutral" aria-label="Build the answer">
+        <div className="stage">
+          <StageTop label={label} current={position} total={buildQuestions.length} onExit={exitRound} />
+          <div key={buildHead.id} className="stage-body">
+            <p className="stage-instruction">Build the answer{step === 'think' ? ' · Think of your full answer first' : buildFirstAttempt ? '' : ' · Second try'}</p>
+            <div className="prompt-headline"><h1 tabIndex={-1} lang="fr" className={promptSizeClass(buildHead.item.question)}>{buildHead.item.question}</h1></div>
+          </div>
         </div>
-        {step === 'think' && <>
-          <p className="testprep-hint">Think of your full answer first.</p>
-          <div className="sprint-actions">
+        <div className="sheet">
+          {step === 'think' && <div className="action-row">
             <button type="button" className="button button-secondary" onClick={answerBuild}>I blanked</button>
             <button key={buildHead.id} type="button" className="button button-primary" autoFocus onClick={() => setStep('build')}>Show tiles</button>
-          </div>
-        </>}
-        {step !== 'think' && !blanked && <div className="arrange-answer">
-          <div className={`arranged-sentence testprep-built ${result ? (buildCorrect ? 'is-correct' : 'is-incorrect') : ''}`} aria-label="Your answer" lang="fr">
-            {placed.length === 0 && <span>Tap tiles to build your answer</span>}
-            {placed.map((tileIndex, position) => <button type="button" className="word-token is-selected" key={tileIndex} onClick={() => setPlaced(placed.filter((_, at) => at !== position))} disabled={result} aria-label={`Remove ${buildHead.tiles[tileIndex]}`}>{buildHead.tiles[tileIndex]}</button>)}
-            {Array.from({ length: slots - placed.length }, (_, slot) => <span className="word-token is-ghost testprep-slot" key={`slot-${slot}`} aria-hidden="true" />)}
-          </div>
-          {!result && <div className="token-bank" aria-label="Tiles" lang="fr">
-            {buildHead.tiles.map((tile, tileIndex) => placed.includes(tileIndex)
-              ? <span className="word-token is-ghost" key={tileIndex} aria-hidden="true">{tile}</span>
-              : <button type="button" className="word-token" key={tileIndex} onClick={() => { if (placed.length < slots) setPlaced([...placed, tileIndex]) }}>{tile}</button>)}
           </div>}
-          {!result && <button type="button" className="button button-primary arrange-check" onClick={answerBuild} disabled={placed.length < slots}>Check</button>}
-        </div>}
-        {result && !buildCorrect && <div className="testprep-feedback" role="status">
-          <p><strong lang="fr">{builtSentence(buildHead)}</strong>{buildFirstAttempt ? ' · Comes back later.' : ''}{buildHead.item.note && <><br />{buildHead.item.note}</>}</p>
-          <button type="button" className="button button-primary" autoFocus onClick={nextBuild}>Next</button>
-        </div>}
+          {step !== 'think' && !blanked && <div className="arrange-answer">
+            <div className={`arranged-sentence ${result && !buildCorrect ? 'is-incorrect' : ''}`} aria-label="Your answer" lang="fr">
+              {placed.length === 0 && <span>Tap tiles to build your answer</span>}
+              {placed.map((tileIndex, position) => <button type="button" className="word-token is-selected" key={tileIndex} onClick={() => setPlaced(placed.filter((_, at) => at !== position))} disabled={result} aria-label={`Remove ${buildHead.tiles[tileIndex]}`}>{buildHead.tiles[tileIndex]}</button>)}
+              {Array.from({ length: slots - placed.length }, (_, slot) => <span className="word-token is-selected is-ghost testprep-slot" key={`slot-${slot}`} aria-hidden="true" />)}
+            </div>
+            {!result && <div className="token-bank" aria-label="Tiles" lang="fr">
+              {buildHead.tiles.map((tile, tileIndex) => placed.includes(tileIndex)
+                ? <span className="word-token is-ghost" key={tileIndex} aria-hidden="true">{tile}</span>
+                : <button type="button" className="word-token" key={tileIndex} onClick={() => { if (placed.length < slots) setPlaced([...placed, tileIndex]) }}>{tile}</button>)}
+            </div>}
+            {!result && <button type="button" className="button button-primary" onClick={answerBuild} disabled={placed.length < slots}>Check</button>}
+          </div>}
+          {result && !buildCorrect && <div className="feedback-panel" role="status">
+            <div className="feedback-copy"><strong lang="fr">{builtSentence(buildHead)}</strong>{buildFirstAttempt && <span>Comes back later.</span>}{buildHead.item.note && <span>{buildHead.item.note}</span>}</div>
+            <button type="button" className="button button-primary" autoFocus onClick={nextBuild}>Next</button>
+          </div>}
+        </div>
       </section>
     )
   }
 
   if (phase === 'build-done') {
-    return <RoundDone kicker="Build the answer" firstTry={buildRun.firstTry} total={buildQuestions.length} onAgain={startBuild} onChange={() => setPhase('pick')}
+    return <RoundDone kicker="Build the answer" firstTry={buildRun.firstTry} total={buildQuestions.length} onAgain={startBuild} onChange={exitRound}
       missed={buildRun.missed.map((item) => ({ id: item.id, prompt: item.item.question, promptLanguage: 'fr', answer: builtSentence(item), answerLanguage: 'fr', note: item.item.note }))} />
   }
 
   if (mockQuestion) {
     const isLast = index === questions.length - ONE
     return (
-      <section className="page testprep-page" aria-label="Mock test">
-        <Progress label={`Question ${index + ONE} of ${questions.length} · Marked at the end`} current={index + ONE} total={questions.length} />
-        <PromptCard question={mockQuestion} headingRef={headingRef} />
-        <div className="choice-list" role="group" aria-label="Answers">
-          {mockQuestion.choices.map((choice, position) => (
-            <button type="button" key={choice.value} className={`choice-button ${answers[index] === choice.value ? 'is-picked' : ''}`} aria-pressed={answers[index] === choice.value} onClick={() => pickMock(choice.value)}>
-              <span className="choice-number">{position + ONE}</span>
-              <span lang={mockQuestion.answerLanguage}>{choice.label}</span>
-            </button>
-          ))}
+      <section className="page run-page is-neutral" aria-label="Mock test">
+        <div className="stage">
+          <StageTop label={`Question ${index + ONE} of ${questions.length} · Marked at the end`} current={index + ONE} total={questions.length} onExit={exitRound} />
+          <StageBody question={mockQuestion} note="Marked at the end" headingRef={headingRef} />
         </div>
-        {askFinish && <p className="testprep-hint" role="status">{unanswered} unanswered</p>}
-        <div className="sprint-actions">
-          <button type="button" className="button button-secondary" onClick={() => { setIndex(index - ONE); setAskFinish(false) }} disabled={index === FIRST_INDEX}>Back</button>
-          {!isLast && <button type="button" className="button button-primary" onClick={() => setIndex(index + ONE)}>Next</button>}
-          {isLast && !askFinish && <button type="button" className="button button-primary" onClick={() => unanswered > 0 ? setAskFinish(true) : finishMock()}>Finish</button>}
-          {isLast && askFinish && <button type="button" className="button button-primary" onClick={finishMock}>Finish anyway</button>}
+        <div className="sheet">
+          <div className={choiceListClass(mockQuestion.choices.map((choice) => choice.label))} role="group" aria-label="Answers">
+            {mockQuestion.choices.map((choice, position) => (
+              <button type="button" key={choice.value} className={`choice-button ${answers[index] === choice.value ? 'is-picked' : ''}`} aria-pressed={answers[index] === choice.value} onClick={() => pickMock(choice.value)}>
+                <span className="choice-number" aria-hidden="true">{position + ONE}</span>
+                <span lang={mockQuestion.answerLanguage}>{choice.label}</span>
+              </button>
+            ))}
+          </div>
+          {askFinish && <p className="quiet-note" role="status">{unanswered} unanswered</p>}
+          <div className="action-row">
+            <button type="button" className="button button-secondary" onClick={() => { setIndex(index - ONE); setAskFinish(false) }} disabled={index === FIRST_INDEX}>Back</button>
+            {!isLast && <button type="button" className="button button-primary" onClick={() => setIndex(index + ONE)}>Next</button>}
+            {isLast && !askFinish && <button type="button" className="button button-primary" onClick={() => unanswered > 0 ? setAskFinish(true) : finishMock()}>Finish</button>}
+            {isLast && askFinish && <button type="button" className="button button-primary" onClick={finishMock}>Finish anyway</button>}
+          </div>
         </div>
       </section>
     )
@@ -380,70 +385,67 @@ export function TestPrepScreen({ onMiss }: { progress: Record<string, CardProgre
     const weakest = mockUnits.reduce<string | undefined>((lowest, unitId) => lowest === undefined || ratio(unitId) < ratio(lowest) ? unitId : lowest, undefined)
     const recallable = result.missed.filter((question) => question.recallable)
     return (
-      <section className="page results-page testprep-page">
-        <header className="screen-header">
-          <span className="screen-kicker">Test prep · Mock test</span>
-          <h1 tabIndex={-1}>Mock test results</h1>
-        </header>
-        <div className="results-score surface-panel">
-          <span className="screen-kicker">Score</span>
-          <strong>{result.score} / {result.total}</strong>
-          {weakest && <p>Weakest: {weakest.toUpperCase()} · {unitName(weakest)}</p>}
-          <div className="testprep-units">
-            {mockUnits.map((unitId) => <UnitRow key={unitId} unitId={unitId} fraction={ratio(unitId)} value={`${result.byUnit[unitId].score}/${result.byUnit[unitId].total}`} />)}
-          </div>
-          <div className="results-actions">
-            {recallable.length > 0 && <button type="button" className="button button-primary" onClick={() => startRecall(recallable)}>Recall the {recallable.length} {recallable.length === ONE ? 'miss' : 'misses'}</button>}
-            <button type="button" className={`button ${recallable.length > 0 ? 'button-secondary' : 'button-primary'}`} onClick={startMock}>New mock test</button>
-            <button type="button" className="button button-secondary" onClick={() => setPhase('pick')}>Change round</button>
-          </div>
+      <section className="page fill-page results-page">
+        <div className="result-head">
+          <p className="kicker">Mock test results</p>
+          <h1 tabIndex={-1}>{result.score} of {result.total}</h1>
+          {weakest && <p>Weakest: {unitName(weakest)}</p>}
+        </div>
+        <div className="testprep-units">
+          {mockUnits.map((unitId) => <UnitRow key={unitId} unitId={unitId} fraction={ratio(unitId)} value={`${result.byUnit[unitId].score}/${result.byUnit[unitId].total}`} />)}
         </div>
         {result.missed.length > 0 && <details className="missed-recap" open>
-          <summary>Review missed answers ({result.missed.length})</summary>
+          <summary>Missed ({result.missed.length})</summary>
           <ol>{result.missed.map((item) => <li key={item.id}>
             <span className="missed-recap-prompt" lang={item.promptLanguage}>{item.prompt}{item.promptNote ? ` · ${item.promptNote}` : ''}</span>
             <strong lang={item.answerLanguage}>{answerText(item)}</strong>
             {item.feedback && <p>{item.feedback}</p>}
           </li>)}</ol>
         </details>}
+        <div className="spacer" />
+        {recallable.length > 0 && <button type="button" className="button button-primary" onClick={() => startRecall(recallable)}>Recall the {recallable.length} {recallable.length === ONE ? 'miss' : 'misses'}</button>}
+        <div className="action-row">
+          <button type="button" className="button button-secondary" onClick={exitRound}>Change round</button>
+          <button type="button" className={`button ${recallable.length > 0 ? 'button-secondary' : 'button-primary'}`} onClick={startMock}>New mock test</button>
+        </div>
       </section>
     )
   }
 
+  const scores = rows.map((unitId) => readiness(state, unitId)).filter((value): value is number => value !== undefined)
+  const overall = scores.length === 0 ? undefined : Math.round(scores.reduce((sum, value) => sum + value, 0) / scores.length)
   return (
-    <section className="page testprep-page">
-      <header className="screen-header">
-        <span className="screen-kicker">Test prep</span>
-        <h1 tabIndex={-1}>Ready for the test?</h1>
+    <section className="page fill-page testprep-page">
+      <div className="headline is-stacked">
+        <h1 tabIndex={-1}>{overall === undefined ? 'Ready for the test?' : `${overall}% ready`}</h1>
         <p>{unitIds.length} {unitIds.length === ONE ? 'unit' : 'units'}, {poolSize} items. Boxes only change when you miss a card you have already practised.</p>
-      </header>
-      <div className="testprep-units" aria-label="Readiness by unit">
+      </div>
+      <div className="testprep-units" role="group" aria-label="Readiness by unit">
         {rows.map((unitId) => {
           const percent = readiness(state, unitId)
           return <UnitRow key={unitId} unitId={unitId} fraction={percent === undefined ? undefined : percent / PERCENT} value={percent === undefined ? '—' : `${percent}%`} />
         })}
       </div>
-      <div className="practice-presets" role="group" aria-label="Test prep rounds">
-        <button type="button" className={`practice-preset ${roundKind === 'recall' ? 'is-selected' : ''}`} aria-pressed={roundKind === 'recall'} onClick={() => setRoundKind('recall')}>
+      <div className="spacer" />
+      <div className="option-list is-tall" role="group" aria-label="Test prep rounds">
+        <button type="button" className="option-row" aria-pressed={roundKind === 'recall'} onClick={() => setRoundKind('recall')}>
           <strong>Recall round</strong>
           <small>Answer in your head, then check. {RECALL_ROUND_SIZE} questions.</small>
         </button>
-        <button type="button" className={`practice-preset ${roundKind === 'mock' ? 'is-selected' : ''}`} aria-pressed={roundKind === 'mock'} onClick={() => setRoundKind('mock')}>
+        <button type="button" className="option-row" aria-pressed={roundKind === 'mock'} onClick={() => setRoundKind('mock')}>
           <strong>Mock test</strong>
           <small>{MOCK_TEST_SIZE} questions, marked at the end.</small>
         </button>
-        {buildAvailable && <button type="button" className={`practice-preset ${roundKind === 'build' ? 'is-selected' : ''}`} aria-pressed={roundKind === 'build'} onClick={() => setRoundKind('build')}>
+        {buildAvailable && <button type="button" className="option-row" aria-pressed={roundKind === 'build'} onClick={() => setRoundKind('build')}>
           <strong>Build the answer</strong>
           <small>Answer the instructor&apos;s question with tiles. {BUILD_ROUND_SIZE} questions.</small>
         </button>}
       </div>
-      <details className="sprint-units">
+      <details className="unit-details">
         <summary>Change units ({unitIds.length} selected)</summary>
         <UnitPicker selectedIds={unitIds} onToggle={toggleUnit} />
       </details>
-      <div className="results-actions">
-        <button type="button" className="button button-primary" onClick={start} disabled={poolSize === 0}>Start</button>
-      </div>
+      <button type="button" className="button button-primary sticky-cta" onClick={start} disabled={poolSize === 0}>Start {roundKind === 'mock' ? 'mock test' : roundKind === 'build' && buildAvailable ? 'build round' : 'recall round'}</button>
     </section>
   )
 }
